@@ -7,3 +7,9 @@ edition = "2018"
 
 [dependencies]
 tokio-tungstenite = "*"
+log = "0.4"
+futures-channel = "0.3"
+futures-util = "0.3"
+tokio  =  { version = "1.0.0", default-features = true, features = ["io-std", "macros", "net", "rt-multi-thread", "time"] }
+url = "2.0.0"
+env_logger = "0.7"
