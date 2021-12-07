@@ -6,7 +6,7 @@ use tokio_tungstenite::{accept_async, tungstenite::Error,WebSocketStream};
 use tokio_tungstenite::tungstenite::{Message, Result};
 
 mod state_types;
-use state_types::{IoTServerConnections,PeerMap};
+use state_types::{IoTServerConnections,PeerMap,User};
 
 pub struct ServerState{
     iot_server_connections : IoTServerConnections,
@@ -18,6 +18,7 @@ impl struct ServerState{
         Self{
             iot_server_connections:IoTServerConnections::new(Mutex::new(HashMap::new())),
             peer_map:PeerMap::new(Mutex::new(HashMap::new())),
+            active_users:User::new(Mutex::new(HashMap::new)));
         }
     }
 }

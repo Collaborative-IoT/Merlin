@@ -15,7 +15,8 @@ pub struct Board{
 pub struct User{
     avatar_url:String,
     followers:HashSet<String>,
-    following:HashSet<String>
+    following:HashSet<String>,
+    blocked_users:HashSet<String>
 }
 
 pub struct Room{
@@ -23,19 +24,23 @@ pub struct Room{
     owner_user_id:String,
     speakers:HashSet<String>,
     user_ids:HashSet<String>,
-    public:bool
+    public:bool,
+    blocked_users:HashSet<String>,
+    blocked_ips:HashSet<String>
 }
 
 //IoTServerConnectionId -> Permissions for the connection(represented as the board)
 //Read the docs about the Board concept
-pub type IoTServerConnections = Arc<Mutex<HashMap<String,Board>>>
+pub type IoTServerConnections = Arc<Mutex<HashMap<String,Board>>>;
 
 //user id -> write connection.
 //broadcasting requires you to acquire the lock of the mutex
 //to access peer connections.
 pub type PeerMap =  Arc<Mutex<HashMap<String,
-    SplitSink<WebSocketStream<tokio::net::TcpStream>, Message>>>>
+    SplitSink<WebSocketStream<tokio::net::TcpStream>, Message>>>>;
 
 //current connected and authed users
-pub type ActiveUsers = Arc<Mutex<HashMap<String,User>>>
+pub type ActiveUsers = Arc<Mutex<HashMap<String,User>>>;
 
+//room collection
+pub type ActiveRooms = Arc<Mutex<HashMap<String,Room>>>
