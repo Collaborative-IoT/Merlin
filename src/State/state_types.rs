@@ -22,7 +22,8 @@ pub struct Room{
     room_id:String,
     owner_user_id:String,
     speakers:HashSet<String>,
-    user_ids:HashSet<String>
+    user_ids:HashSet<String>,
+    public:bool
 }
 
 //IoTServerConnectionId -> Permissions for the connection(represented as the board)
