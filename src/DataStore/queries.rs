@@ -91,3 +91,37 @@ pub const INSERT_SCHEDULED_ATTENDANCE = "
     INSERT INTO scheduled_room_attendance (Id,userId,scheduledRoomId,isOwner)
     ($1,$2,$3,$4)
 ";
+
+//update 
+pub const UPDATE_ROOM_OWNER = "
+    UPDATE room
+    SET ownerId = $1
+    WHERE Id = $2
+";
+pub const UPDATE_ROOM_MOD_STATUS = "
+    UPDATE room_permissions 
+    SET isMod = $1
+    WHERE Id = $2
+";
+pub const UPDATE_USER_AVATAR = "
+    UPDATE user
+    SET avatarUrl = $1
+    WHERE Id = $2
+";
+pub const UPDATE_USER_DISPLAY_NAME = "
+    UPDATE user 
+    SET displayName = $1
+    WHERE Id = $2
+";
+pub const UPDATE_SCHEDULED_ROOM = "
+    UPDATE scheduled_room
+    SET roomName = $1,
+        numAttending = $2,
+        scheduledFor = $3
+    WHERE Id = $4
+";
+pub const UPDATE_SCHEDULED_ROOM_OWNER = "
+    UPDATE scheduled_room_attendance
+    SET isOwner = $1
+    WHERE Id = $2
+"
