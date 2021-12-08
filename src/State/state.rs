@@ -13,11 +13,6 @@ pub struct ServerState{
     peer_map : PeerMap,
 }
 
-struct Removal<K,V>
-    map:HashMap<K,V>,
-    value:String
-}
-
 //Holds all server memory state
 impl struct ServerState{
     pub fn new()-> Self{
