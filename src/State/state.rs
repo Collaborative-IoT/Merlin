@@ -29,21 +29,47 @@ impl struct ServerState{
         }
     }
 
-    pub fn remove<V>(&mut self, map:HashMap<String,V>, key:String){
+    pub fn remove_from_map<V>(&mut self, map:&mut HashMap<String,V>, key:String)->bool{
         if map.contains_key(key){
             map.remove(key);
+            return true;
         }
         else{
-            info!("Attempt to add remove a key that doesn't exist `{}`",key);
+            warn!("Attempt to add remove a key that doesn't exist `{}`",key);
+            return false;
         }
     }
 
-    pub fn add<V>(&mut self, map:HashMap<String,V>, key:String, data:V){
+    pub fn add_to_map<V>(&mut self, map:&mut HashMap<String,V>, key:String, data:V)->bool{
         if !map.contains_key(key){
             map.insert(key,data);
+            return true;
         }
         else{
-            info!("There was an attempt to add a key that exists `{}`",key);
+            warn!("There was an attempt to add a key that exists `{}`",key);
+            return false;
+        }
+    }
+
+    pub fn remove_from_set(&mut self, set:&mut HashSet<String>, key:String)->bool{
+        if set.contains(key){
+            set.remove(key);
+            return true;
+        }
+        else{
+            warn!("There was an attempt to remove a key that doesn't exist");
+            return false;
+        }
+    }
+
+    pub fn add_to_set(&mut self,set:&mut HashSet<String>, key:String)->bool{
+        if !set.contains(key){
+            set.insert(key);
+            return true;
+        }
+        else{
+            info("There was an attempt to add a key that exists");
+            return false;
         }
     }
 }
