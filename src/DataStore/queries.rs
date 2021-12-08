@@ -124,4 +124,4 @@ pub const UPDATE_SCHEDULED_ROOM_OWNER = "
     UPDATE scheduled_room_attendance
     SET isOwner = $1
     WHERE Id = $2
-"
+";
