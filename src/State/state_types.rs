@@ -14,6 +14,7 @@ pub struct Board{
 
 pub struct User{
     avatar_url:String,
+    display_name:String,
     followers:HashSet<String>,
     following:HashSet<String>,
     blocked_users:HashSet<String>
