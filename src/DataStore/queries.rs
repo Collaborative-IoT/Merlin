@@ -1,12 +1,13 @@
+//initial creation
 pub const ROOM_TABLE_CREATION = "
     CREATE TABLE IF NOT EXISTS room(
-        Id SERIAL PRIMARY KEY,
-        OwnerId  VARCHAR(30)
+        Id int PRIMARY KEY,
+        ownerId  VARCHAR(30)
     );
 ";
 pub const ROOM_PERMISSIONS_TABLE_CREATION = "
     CREATE TABLE IF NOT EXISTS room_permissions(
-        Id SERIAL PRIMARY KEY,
+        Id int PRIMARY KEY,
         roomId VARCHAR(30),
         isMod BOOLEAN NOT NULL,
         isSpeaker BOOLEAN NOT NULL,
@@ -15,45 +16,78 @@ pub const ROOM_PERMISSIONS_TABLE_CREATION = "
 ";
 pub const FOLLOWER_TABLE_CREATION = "
     CREATE TABLE IF NOT EXISTS follower(
-        Id SERIAL PRIMARY KEY,
+        Id int PRIMARY KEY,
         followerId VARCHAR(30),
         userId VARCHAR(30)
     );
 ";
 pub const USER_TABLE_CREATION = "
     CREATE TABLE IF NOT EXISTS user(
-        Id SERIAL PRIMARY KEY,
+        Id int PRIMARY KEY,
         displayName VARCHAR(30),
         avatarUrl VARCHAR(30),
     );
 ";
 pub const USER_BLOCK_TABLE_CREATION = "
     CREATE TABLE IF NOT EXISTS user_block(
-        Id SERIAL PRIMARY KEY,
-        owneruserId VARCHAR(30),
+        Id int PRIMARY KEY,
+        ownerUserId VARCHAR(30),
         blockedUserId VARCHAR(30)
     );
 ";
 pub const ROOM_BLOCK_CREATION = "
     CREATE TABLE IF NOT EXISTS room_block(
-        Id SERIAL PRIMARY KEY,
+        Id int PRIMARY KEY,
         ownerRoomId VARCHAR(30),
         blockedUserId VARCHAR(30)
     );
 ";
 pub const SCHEDULED_ROOM_CREATION = "
     CREATE TABLE IF NOT EXISTS scheduled_room(
-        Id SERIAL PRIMARY KEY,
-        name VARCHAR(30),
+        Id int PRIMARY KEY,
+        roomName VARCHAR(30),
         numAttending int,
         scheduledFor TIMESTAMP,
     );
 ";
 pub const SHEDULED_ROOM_ATTENDANCE = "
     CREATE TABLE IF NOT EXISTS scheduled_room_attendance(
-        Id SERIAL PRIMARY KEY,
+        Id int PRIMARY KEY,
         userId VARCHAR(30),
         scheduledRoomId VARCHAR(30),
         isOwner BOOLEAN NOT NULL
     );
+";
+
+//insertion
+pub const INSERT_ROOM = "
+    INSERT INTO room (Id,ownerId) VALUES($1,$2)
+";
+pub const INSERT_ROOM_PERMISSION = "
+    INSERT INTO room_permissions (Id,roomId,isMod,isSpeaker,askedToSpeak)
+    VALUES ($1,$2,$3,$4,$5)
+";
+pub const INSERT_FOLLOWER = "
+    INSERT INTO follower (Id,followerId,userId) 
+    VALUES($1,$2,$3)
+";
+pub const INSERT_USER = "
+    INSERT INTO user (Id,displayName,avatarUrl)
+    VALUES($1,$2,$3)
+";
+pub const INSERT_USER_BLOCK = "
+    INSERT INTO user_block (Id,ownerUserId,blockedUserId)
+    VALUES($1,$2,$3)
+";
+pub const INSERT_ROOM_BLOCK = "
+    INSERT INTO room_block (Id,ownerRoomId,blockedUserId)
+    VALUES($1,$2,$3)
+";
+pub const INSERT_SCHEDULED_ROOM = "
+    INSERT INTO scheduled_room (Id,roomName,numAttending,scheduledFor)
+    VALUES($1,$2,$3,$4)
+";
+pub const INSERT_SCHEDULED_ATTENDANCE = "
+    INSERT INTO scheduled_room_attendance (Id,userId,scheduledRoomId,isOwner)
+    ($1,$2,$3,$4)
 ";
