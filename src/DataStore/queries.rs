@@ -2,13 +2,13 @@
 pub const ROOM_TABLE_CREATION = "
     CREATE TABLE IF NOT EXISTS room(
         Id int PRIMARY KEY,
-        ownerId  VARCHAR(30)
+        ownerId int
     );
 ";
 pub const ROOM_PERMISSIONS_TABLE_CREATION = "
     CREATE TABLE IF NOT EXISTS room_permissions(
         Id int PRIMARY KEY,
-        roomId VARCHAR(30),
+        roomId int,
         isMod BOOLEAN NOT NULL,
         isSpeaker BOOLEAN NOT NULL,
         askedToSpeak BOOLEAN NOT NULL,
@@ -17,8 +17,8 @@ pub const ROOM_PERMISSIONS_TABLE_CREATION = "
 pub const FOLLOWER_TABLE_CREATION = "
     CREATE TABLE IF NOT EXISTS follower(
         Id int PRIMARY KEY,
-        followerId VARCHAR(30),
-        userId VARCHAR(30)
+        followerId int,
+        userId int
     );
 ";
 pub const USER_TABLE_CREATION = "
@@ -31,21 +31,21 @@ pub const USER_TABLE_CREATION = "
 pub const USER_BLOCK_TABLE_CREATION = "
     CREATE TABLE IF NOT EXISTS user_block(
         Id int PRIMARY KEY,
-        ownerUserId VARCHAR(30),
-        blockedUserId VARCHAR(30)
+        ownerUserId int,
+        blockedUserId int
     );
 ";
 pub const ROOM_BLOCK_CREATION = "
     CREATE TABLE IF NOT EXISTS room_block(
         Id int PRIMARY KEY,
-        ownerRoomId VARCHAR(30),
-        blockedUserId VARCHAR(30)
+        ownerRoomId int,
+        blockedUserId int
     );
 ";
 pub const SCHEDULED_ROOM_CREATION = "
     CREATE TABLE IF NOT EXISTS scheduled_room(
         Id int PRIMARY KEY,
-        roomName VARCHAR(30),
+        roomName int,
         numAttending int,
         scheduledFor TIMESTAMP,
     );
@@ -53,8 +53,8 @@ pub const SCHEDULED_ROOM_CREATION = "
 pub const SHEDULED_ROOM_ATTENDANCE = "
     CREATE TABLE IF NOT EXISTS scheduled_room_attendance(
         Id int PRIMARY KEY,
-        userId VARCHAR(30),
-        scheduledRoomId VARCHAR(30),
+        userId int,
+        scheduledRoomId int,
         isOwner BOOLEAN NOT NULL
     );
 ";
@@ -124,4 +124,9 @@ pub const UPDATE_SCHEDULED_ROOM_OWNER = "
     UPDATE scheduled_room_attendance
     SET isOwner = $1
     WHERE Id = $2
+";
+
+//gather
+pub const SELECT_USERS = "
+    SELECT * FROM user
 ";

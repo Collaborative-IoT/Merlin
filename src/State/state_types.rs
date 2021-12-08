@@ -4,6 +4,7 @@ use std::{net::SocketAddr, time::Duration, sync::{Arc, Mutex},collections::{Hash
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{accept_async, tungstenite::Error,WebSocketStream};
 use tokio_tungstenite::tungstenite::{Message, Result};
+use chrono::{DateTime, Utc};
 
 pub struct Board{
     room_id:String,
@@ -17,7 +18,10 @@ pub struct User{
     display_name:String,
     followers:HashSet<String>,
     following:HashSet<String>,
-    blocked_users:HashSet<String>
+    blocked_users:HashSet<String>,
+    user_name:String,
+    last_online:DateTime<Utc>,
+    
 }
 
 pub struct Room{
