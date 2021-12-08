@@ -5,6 +5,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{accept_async, tungstenite::Error,WebSocketStream};
 use tokio_tungstenite::tungstenite::{Message, Result};
 use chrono::{DateTime, Utc};
+//.keys().cloned().collect::<Vec<_>>();
 
 pub struct Board{
     room_id:String,
@@ -21,7 +22,15 @@ pub struct User{
     blocked_users:HashSet<String>,
     user_name:String,
     last_online:DateTime<Utc>,
-    
+    github_id:String,
+    discord_id:String,
+    github_access_token:String,
+    discord_access_token:String,
+    banned:bool,
+    banned_reason:String,
+    bio:String,
+    contributions:i32,
+    banner_url:String
 }
 
 pub struct Room{
@@ -31,7 +40,9 @@ pub struct Room{
     user_ids:HashSet<String>,
     public:bool,
     blocked_users:HashSet<String>,
-    blocked_ips:HashSet<String>
+    blocked_ips:HashSet<String>,
+    chat_mode:String,
+    description:String
 }
 
 //IoTServerConnectionId -> Permissions for the connection(represented as the board)
