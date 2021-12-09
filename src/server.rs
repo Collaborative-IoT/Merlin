@@ -6,12 +6,13 @@ use tokio_tungstenite::{accept_async, tungstenite::Error,WebSocketStream};
 use tokio_tungstenite::tungstenite::{Message, Result};
 type PeerMap =  Arc<Mutex<HashMap<i32,
 SplitSink<WebSocketStream<tokio::net::TcpStream>, Message>>>>;
-pub struct Server{};
+use crate::State::state::ServerState;
+pub struct Server;
 
 impl Server{
 
-    pub async fn accept_connection(stream: TcpStream) {
-        if let Err(e) = handle_connection(stream).await {
+    pub async fn accept_connection(stream: TcpStream,state: Arc<Mutex<ServerState>>){
+        if let Err(e) = Server::handle_connection(stream,state).await {
             match e {
                 Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => (),
                 err => error!("Error processing connection: {}", err),
@@ -19,11 +20,11 @@ impl Server{
         }
     }
 
-    async fn handle_connection(stream: TcpStream) -> Result<()> {
+    async fn handle_connection(stream: TcpStream,state:Arc<Mutex<ServerState>>) -> Result<()> {
         let ws_stream = accept_async(stream).await.expect("Failed to accept");
         let (mut ws_sender, mut ws_receiver) = ws_stream.split();
         let mut interval = tokio::time::interval(Duration::from_millis(1000));
-        peer_map.lock().unwrap().insert(333, ws_sender);
+        state.lock().unwrap().peer_map.lock().unwrap().insert("test".to_string(), ws_sender);
         // Echo incoming WebSocket messages and send a message periodically every second.
 
         loop {

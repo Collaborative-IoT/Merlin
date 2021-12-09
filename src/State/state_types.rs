@@ -59,4 +59,4 @@ pub type PeerMap =  Arc<Mutex<HashMap<String,
 pub type ActiveUsers = Arc<Mutex<HashMap<String,User>>>;
 
 //room collection
-pub type ActiveRooms = Arc<Mutex<HashMap<String,Room>>>
+pub type ActiveRooms = Arc<Mutex<HashMap<String,Room>>>;

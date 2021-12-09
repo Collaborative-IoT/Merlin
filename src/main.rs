@@ -1,12 +1,15 @@
 mod server;
 use server::Server;
-
+extern crate chrono;
 use std::{env, io::Error};
-
 use futures_util::{future, StreamExt, TryStreamExt};
 use log::info;
+use std::sync::{Mutex,Arc};
 use tokio::net::{TcpListener, TcpStream};
-
+pub mod State{
+    pub mod state;
+    pub mod state_types;
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -18,9 +21,10 @@ async fn main() -> Result<(), Error> {
     let try_socket = TcpListener::bind(&addr).await;
     let listener = try_socket.expect("Failed to bind");
     info!("Listening on: {}", addr);
-
+    let mut state_holder = Arc::new(Mutex::new(State::state::ServerState::new()));
+    
     while let Ok((stream, _)) = listener.accept().await {
-        tokio::spawn(Server.accept_connection(stream));
+        tokio::spawn(Server::accept_connection(stream,state_holder.clone()));
     }
     Ok(())
 }
