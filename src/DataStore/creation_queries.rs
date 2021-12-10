@@ -53,6 +53,7 @@ pub const USER_BLOCK_TABLE_CREATION = "
         blockedUserId int
     );
 ";
+//ownerRoomId is the room that owns this block.
 pub const ROOM_BLOCK_CREATION = "
     CREATE TABLE IF NOT EXISTS room_block(
         Id SERIAL PRIMARY KEY,
