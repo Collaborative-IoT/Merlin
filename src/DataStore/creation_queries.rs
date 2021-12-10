@@ -44,7 +44,6 @@ pub const USER_TABLE_CREATION = "
         bio VARCHAR(255),
         contributions int NOT NULL,
         bannerUrl VARCHAR(255)
-
     );
 ";
 pub const USER_BLOCK_TABLE_CREATION = "

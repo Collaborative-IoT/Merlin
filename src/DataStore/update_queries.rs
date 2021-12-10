@@ -11,7 +11,6 @@ pub fn update_room_owner_query(new_owner:i32,room_id:i32)-> String{
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
-
 pub fn update_room_mod_status_query(user_id:i32, is_mod:bool)-> String{
     let query = Query::update()
         .table("room_permissions")
@@ -20,7 +19,6 @@ pub fn update_room_mod_status_query(user_id:i32, is_mod:bool)-> String{
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
-
 pub fn update_user_avatar_query(user_id:i32,avatar_url:&str)-> String{
     let query = Query::update()
         .table("user")
@@ -29,7 +27,6 @@ pub fn update_user_avatar_query(user_id:i32,avatar_url:&str)-> String{
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
-
 pub fn update_display_name_query(user_id:i32,new_name:&str)-> String{
     let query = Query::update()
         .table("user")
@@ -38,12 +35,19 @@ pub fn update_display_name_query(user_id:i32,new_name:&str)-> String{
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
-
-pub update_scheduled_room_query(num_attending:i32,scheduled_for:DateTime<Utc>, room_id:i32){
+pub fn update_scheduled_room_query(num_attending:i32,scheduled_for:DateTime<Utc>, room_id:i32){
     let query = Query::update()
         .table("scheduled_room")
         .values(vec![("numAttending",num_attending),("scheduledFor",scheduled_for)])
         .and_where(Expr::col("Id").eq(room_id))
+        .to_owned();
+    return query.to_string(PostgresQueryBuilder);
+}
+pub fn ban_user_query(user_id:i32,reason:&str)->String{
+    let query = Query::update()
+        .table("user")
+        .values(vec![("banned",true),("bannedReason",reason)])
+        .and_where(Expr::col("Id").eq(user_id))
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }

@@ -42,21 +42,27 @@ pub fn select_all_following_for_user_query(user_id:i32)->String{
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
-pub fn select_all_blocked_for_user(user_id:i32)->String{
+pub fn select_all_blocked_for_user_query(user_id:i32)->String{
     let query = Query::select()
         .from("user_block")
         .and_where(Expr::col("ownerUserId").eq(user_id))
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
-pub fn select_all_blockers_for_user(user_id:i32)->String{
+pub fn select_all_blockers_for_user_query(user_id:i32)->String{
     let query = Query::select()
         .from("user_block")
         .and_where(Expr::col("blockedUserId").eq(user_id))
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
-pub fn select_room_permissions_for_user(user_id:i32,room_id:i32)->String{
+pub fn select_all_blocked_users_for_room_query(room_id:i32)->String{
+    let query = Query::select() 
+        .from("room_block")
+        .to_owned();
+    return query.to_string(PostgresQueryBuilder);
+}
+pub fn select_room_permissions_for_user_query(user_id:i32,room_id:i32)->String{
     let query = Query::select()
         .from("room_permission")
         .and_where(Expr::col("userId").eq(user_id))
