@@ -12,7 +12,6 @@ use db_models::{
 };
 
 //Dry violations on purpose, helps read and follow each specific query
-
 pub fn insert_user_query(user:DBUser)->String{
     let query = Query::insert()
         .into_table("user")
@@ -45,6 +44,7 @@ pub fn insert_user_query(user:DBUser)->String{
             user.contributions,
             user.bannerUrl
         ])
+        .returning_col("Id")
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
@@ -53,6 +53,7 @@ pub fn insert_room_query(room:DBRoom)->String{
         .into_table("room")
         .columns(vec!["ownerId","chatMode"])
         .values_panic(vec![room.owner_id,room.chat_mode])
+        .returning_col("Id")
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
@@ -115,6 +116,7 @@ pub fn insert_scheduled_room_query(scheduled_room:DBScheduledRoom)->String{
             scheduled_room.room_name,
             scheduled_room.num_attending,
             scheduled_room.scheduled_room])
+        .returning_col("Id")
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
@@ -129,6 +131,7 @@ pub fn insert_scheduled_attendance_query(attendance:DBScheduledRoomAttendance)->
             attendance.user_id,
             attendance.scheduled_room_id,
             attendance.is_owner])
+        .returning_col("Id")
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }

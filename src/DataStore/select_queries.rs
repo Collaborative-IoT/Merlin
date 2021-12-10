@@ -21,7 +21,7 @@ pub fn select_all_scheduled_room_attendance_for_room_query(scheduled_room_id:i32
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
-pub fn select_all_attendaces_for_user_query(user_id:i32)->String{
+pub fn select_all_attendances_for_user_query(user_id:i32)->String{
     let query = Query::select()
         .from("scheduled_room_attendance")
         .and_where(Expr::col("userId").eq(user_id))
