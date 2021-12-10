@@ -11,6 +11,8 @@ use db_models::{
     DBScheduledRoomAttendance
 };
 
+//Dry violations on purpose, helps read and follow each specific query
+
 pub fn insert_user_query(user:DBUser)->String{
     let query = Query::insert()
         .into_table("user")

@@ -13,14 +13,14 @@ pub mod State{
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-
+    
     let _ = env_logger::try_init();
-    let addr = env::args().nth(1).unwrap_or_else(|| "127.0.0.1:8080".to_string());
-
+    let addr =  "127.0.0.1:8080".to_string();
+    
     // Create the event loop and TCP listener we'll accept connections on.
+    info!("Listening on: {}", addr);
     let try_socket = TcpListener::bind(&addr).await;
     let listener = try_socket.expect("Failed to bind");
-    info!("Listening on: {}", addr);
     let mut state_holder = Arc::new(Mutex::new(State::state::ServerState::new()));
     
     while let Ok((stream, _)) = listener.accept().await {

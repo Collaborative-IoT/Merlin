@@ -1,6 +1,8 @@
 use sea_query::*; //query builder
 use chrono::{DateTime, Utc};
 
+//Dry violations on purpose, helps read and follow each specific query
+
 pub fn update_room_owner_query(new_owner:i32,room_id:i32)-> String{
     let query = Query::update()
         .table("room")
