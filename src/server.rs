@@ -4,8 +4,6 @@ use std::{net::SocketAddr, time::Duration, sync::{Arc, Mutex},collections::HashM
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{accept_async, tungstenite::Error,WebSocketStream};
 use tokio_tungstenite::tungstenite::{Message, Result};
-type PeerMap =  Arc<Mutex<HashMap<i32,
-SplitSink<WebSocketStream<tokio::net::TcpStream>, Message>>>>;
 use crate::State::state::ServerState;
 pub struct Server;
 
