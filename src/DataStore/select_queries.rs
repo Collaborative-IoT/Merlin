@@ -1,48 +1,48 @@
 
 //Dry violations on purpose, helps read and follow each specific query
-pub const select_all_rooms_query: &str = "
+pub const SELECT_ALL_ROOM_QUERY: &str = "
 SELECT * FROM room;
 ";
 
-pub const select_all_scheduled_rooms_query: &str = "
+pub const SELECT_ALL_SCHEDULED_ROOMS_QUERY: &str = "
 SELECT * FROM scheduled_room;
 ";
 
-pub const select_all_scheduled_room_attendance_for_room_query: &str= "
+pub const SELECT_ALL_SCHEDULED_ROOM_ATTENDANCE_FOR_ROOM_QUERY: &str= "
 SELECT * FROM scheduled_room_attendance 
 WHERE Id = $1;
 ";
 
-pub const select_all_attendances_for_user_query: &str= "
+pub const SELECT_ALL_ATTENDANCE_FOR_USER_QUERY: &str= "
 SELECT * FROM scheduled_room_attendance 
 WHERE userId = 1$;
 ";
 
-pub const select_all_followers_for_user_query: &str= "
+pub const SELECT_ALL_FOLLOWERS_FOR_USER_QUERY: &str= "
 SELECT * FROM follower
 WHERE userId = $1;
 ";
 
-pub const select_all_following_for_user_query: &str="
+pub const SELECT_ALL_FOLLOWING_FOR_USER_QUERY: &str="
 SELECT * FROM follower 
 WHERE followerId = $1;
 ";
 
-pub const select_all_blocked_for_user_query: &str = "
+pub const SELECT_ALL_BLOCKED_FOR_USER_QUERY: &str = "
 SELECT * FROM user_block
 WHERE ownerUserId = $1;
 ";
 
-pub const select_all_blockers_for_user_query: &str ="
+pub const SELECT_ALL_BLOCKERS_FOR_USER_QUERY: &str ="
 SELECT * FROM user_block
 WHERE blockedUserId = $1;
 ";
-pub const select_all_blocked_users_for_room_query: &str = "
+pub const SELECT_ALL_BLOCKED_USERS_FOR_ROOM_QUERY: &str = "
 SELECT * FROM room_block
 WHERE ownerRoomId = $1;
 ";
 
-pub const select_all_room_permissions_for_user: &str = "
+pub const SELECT_ALL_ROOM_PERMISSIONS_FOR_USER: &str = "
 SELECT * FROM room_permission
 WHERE userId = $1 and roomId = $2;
 ";

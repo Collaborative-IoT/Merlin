@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 
 //Dry violations on purpose, helps read and follow each specific query
-pub const insert_user_query: &str = "
+pub const INSERT_USER_QUERY: &str = "
 INSERT INTO user (
             displayName,
             avatarUrl,
@@ -21,12 +21,12 @@ INSERT INTO user (
             RETURNING Id;
 ";
 
-pub const insert_room_query: &str = "
+pub const INSERT_ROOM_QUERY: &str = "
 INSERT INTO room(ownerId,chatMode)
 VALUES($1,$2) RETURNING Id;
 ";
 
-pub const insert_room_permission_query: &str = "
+pub const INSERT_ROOM_PERMISSION_QUERY: &str = "
 INSERT INTO room_permission(
     userId,
     roomId,
@@ -36,22 +36,22 @@ INSERT INTO room_permission(
 VALUES($1,$2,$3,$4,$5);
 ";
 
-pub const insert_follower_query: &str = "
+pub const INSERT_FOLLOWER_QUERY: &str = "
 INSERT INTO follower(followerId,userId)
 VALUES($1,$2);
 ";
 
-pub const insert_user_block_query: &str = "
+pub const INSERT_USER_BLOCK_QUERY: &str = "
 INSERT INTO user_block(ownerUserId,blockedUserId)
 VALUES($1,$2);
 ";
 
-pub const insert_room_block_query: &str = "
+pub const INSERT_ROOM_BLOCK_QUERY: &str = "
 INSERT INTO room_block(ownerUserId,blockedUserId)
 VALUES($1,$2);
 ";
 
-pub const insert_scheduled_room_query: &str = "
+pub const INSERT_SCHEDULED_ROOM_QUERY: &str = "
 INSERT INTO scheduled_room( 
     roomName,
     numAttending,
@@ -59,7 +59,7 @@ INSERT INTO scheduled_room(
 VALUES($1,$2,$3) RETURNING Id;
 ";
 
-pub const insert_scheduled_attendance_query: &str = "
+pub const INSERT_SCHEDULED_ATTENDANCE_QUERY: &str = "
 INSERT INTO scheduled_room_attendance(userId,scheduledRoomId,isOwner)
 VALUES($1,$2,$3);
 ";
