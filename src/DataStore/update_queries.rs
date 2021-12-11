@@ -1,53 +1,37 @@
-use sea_query::*; //query builder
-use chrono::{DateTime, Utc};
-
 //Dry violations on purpose, helps read and follow each specific query
+pub const update_room_owner_query = "
+UPDATE room
+SET ownerId = $1;
+WHERE Id = $2;
+"
+pub const update_room_mod_status_query = "
+UPDATE room_permissions
+SET isMod = $1
+WHERE roomId = $2 AND userId = $3;
+"
 
-pub fn update_room_owner_query(new_owner:i32,room_id:i32)-> String{
-    let query = Query::update()
-        .table("room")
-        .values(vec![("ownerId",new_owner)])
-        .and_where(Expr::col("Id").eq(room_id))
-        .to_owned();
-    return query.to_string(PostgresQueryBuilder);
-}
-pub fn update_room_mod_status_query(user_id:i32, is_mod:bool)-> String{
-    let query = Query::update()
-        .table("room_permissions")
-        .values(vec![("isMod",is_mod)])
-        .and_where(Expr::col("userId").eq(user_id))
-        .to_owned();
-    return query.to_string(PostgresQueryBuilder);
-}
-pub fn update_user_avatar_query(user_id:i32,avatar_url:&str)-> String{
-    let query = Query::update()
-        .table("user")
-        .values(vec![("avatarUrl",avatar_url)])
-        .and_where(Expr::col("Id".to_owned()).eq(user_id))
-        .to_owned();
-    return query.to_string(PostgresQueryBuilder);
-}
-pub fn update_display_name_query(user_id:i32,new_name:&str)-> String{
-    let query = Query::update()
-        .table("user")
-        .values(vec![("displayName",new_name)])
-        .and_where(Expr::col("Id").eq(user_id))
-        .to_owned();
-    return query.to_string(PostgresQueryBuilder);
-}
-pub fn update_scheduled_room_query(num_attending:i32,scheduled_for:DateTime<Utc>, room_id:i32){
-    let query = Query::update()
-        .table("scheduled_room")
-        .values(vec![("numAttending",num_attending),("scheduledFor",scheduled_for)])
-        .and_where(Expr::col("Id").eq(room_id))
-        .to_owned();
-    return query.to_string(PostgresQueryBuilder);
-}
-pub fn ban_user_query(user_id:i32,reason:&str)->String{
-    let query = Query::update()
-        .table("user")
-        .values(vec![("banned",true),("bannedReason",reason)])
-        .and_where(Expr::col("Id").eq(user_id))
-        .to_owned();
-    return query.to_string(PostgresQueryBuilder);
-}
+pub const update_user_avatar_query = "
+UPDATE user
+SET avatarUrl = $1
+WHERE Id = $2;
+";
+
+pub const update_display_name_query = "
+UPDATE user
+SET displayName = $1
+WHERE Id = $2;
+";
+
+pub const update_scheduled_room_query = "
+UPDATE scheduled_room
+SET = numAttending = $1,
+      scheduledFor = $2
+WHERE Id = $3;   
+";
+
+pub const ban_user_query = "
+UPDATE user
+SET banned = $1,
+bannedReason = $2,
+WHERE Id = $3;
+";
