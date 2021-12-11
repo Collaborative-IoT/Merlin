@@ -23,7 +23,7 @@ pub fn update_user_avatar_query(user_id:i32,avatar_url:&str)-> String{
     let query = Query::update()
         .table("user")
         .values(vec![("avatarUrl",avatar_url)])
-        .and_where(Expr::col("Id").eq(user_id))
+        .and_where(Expr::col("Id".to_owned()).eq(user_id))
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }

@@ -38,7 +38,7 @@ pub fn delete_all_scheduled_room_attendance_query(room_id:i32)->String{
         .to_owned();
     return query.to_string(PostgresQueryBuilder);
 }
-pub fn delete_user_room_attendance_query(room_id,user_id)->String{
+pub fn delete_user_room_attendance_query(room_id:i32,user_id:i32)->String{
     let query = Query::delete()
         .from_table("scheduled_room_attendance")
         .and_where(Expr::col("scheduledRoomId").eq(room))

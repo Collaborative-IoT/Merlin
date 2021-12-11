@@ -10,6 +10,15 @@ pub mod State{
     pub mod state;
     pub mod state_types;
 }
+pub mod DataStore{
+    pub mod db_models;
+    pub mod delete_queries;
+    pub mod creation_queries;
+    pub mod insert_queries;
+    pub mod select_queries;
+    pub mod sql_execution_handler;
+    pub mod update_queries;
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
