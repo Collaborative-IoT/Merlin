@@ -15,5 +15,4 @@ tokio  =  { version = "1.0.0", default-features = true, features = ["io-std", "m
 url = "2.0.0"
 
 tokio-postgres = "0.7.0"
-sea-query = "^0"
 chrono = "0.4"
