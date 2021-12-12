@@ -1,4 +1,3 @@
-use tokio_postgres::Client;
 use crate::DataStore::db_models::{
     DBRoom,
     DBRoomPermissions,
@@ -9,7 +8,7 @@ use crate::DataStore::db_models::{
     DBScheduledRoom,
     DBScheduledRoomAttendance
 };
-use tokio_postgres::{Error};
+use tokio_postgres::{Client,Error,row::Row};
 use crate::DataStore::select_queries;
 use crate::DataStore::insert_queries;
 use crate::DataStore::delete_queries;
@@ -217,4 +216,67 @@ impl ExecutionHandler{
             let num_modified = self.client.execute(query,&[&banned,&banned_reason,&user_id]).await?;
             return Ok(num_modified);
     }
+
+    //select
+    pub async fn select_all_rooms(&mut self)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ALL_ROOM_QUERY;
+        let result:Vec<Row> = self.client.query(query,&[]).await?;
+        return Ok(result);
+    }
+
+    pub async fn select_all_scheduled_rooms(&mut self)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ALL_SCHEDULED_ROOMS_QUERY;
+        let result:Vec<Row> = self.client.query(query,&[]).await?;
+        return Ok(result);
+    }
+
+    pub async fn select_all_attendance_for_scheduled_room(&mut self, room_id:i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ALL_SCHEDULED_ROOM_ATTENDANCE_FOR_ROOM_QUERY;
+        let result:Vec<Row> = self.client.query(query,&[&room_id]).await?;
+        return Ok(result);
+    }
+
+    pub async fn select_all_room_attendance_for_user(&mut self,user_id:i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ALL_ATTENDANCE_FOR_USER_QUERY;
+        let result:Vec<Row> = self.client.query(query,&[&user_id]).await?;
+        return Ok(result);
+    }
+
+    pub async fn select_all_followers_for_user(&mut self, user_id:i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ALL_FOLLOWERS_FOR_USER_QUERY;
+        let result:Vec<Row> = self.client.query(query,&[&user_id]).await?;
+        return Ok(result);
+    }
+
+    pub async fn select_all_following_for_user(&mut self,user_id:i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ALL_FOLLOWING_FOR_USER_QUERY;
+        let result:Vec<Row> = self.client.query(query,&[&user_id]).await?;
+        return Ok(result);
+    }
+
+    pub async fn select_all_blocked_for_user(&mut self, user_id:i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ALL_BLOCKED_FOR_USER_QUERY;
+        let result:Vec<Row> = self.client.query(query,&[&user_id]).await?;
+        return Ok(result);
+    }
+
+    pub async fn select_all_blockers_for_user(&mut self, user_id:i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ALL_BLOCKERS_FOR_USER_QUERY;
+        let result:Vec<Row> = self.client.query(query,&[&user_id]).await?;
+        return Ok(result);
+    }
+
+    pub async fn select_all_blocked_users_for_room(&mut self,room_id:i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ALL_BLOCKED_USERS_FOR_ROOM_QUERY;
+        let result:Vec<Row> = self.client.query(query,&[&room_id]).await?;
+        return Ok(result);
+    }
+
+    //SELECTS permissions for one room for one user
+    pub async fn select_all_room_permissions_for_user(&mut self,user_id:i32,room_id:i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ALL_ROOM_PERMISSIONS_FOR_USER;
+        let result:Vec<Row> = self.client.query(query,&[&user_id,&room_id]).await?;
+        return Ok(result);
+    }
+
 }

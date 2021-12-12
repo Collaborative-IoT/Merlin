@@ -16,6 +16,7 @@ pub mod DataStore{
     pub mod select_queries;
     pub mod sql_execution_handler;
     pub mod update_queries;
+    pub mod tests;
 }
 
 #[tokio::main]
