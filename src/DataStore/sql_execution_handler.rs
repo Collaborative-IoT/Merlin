@@ -9,7 +9,7 @@ use crate::DataStore::db_models::{
     DBScheduledRoom,
     DBScheduledRoomAttendance
 };
-use tokio_postgres::{NoTls, Error};
+use tokio_postgres::{Error};
 use crate::DataStore::select_queries;
 use crate::DataStore::insert_queries;
 use crate::DataStore::delete_queries;
@@ -23,7 +23,7 @@ pub struct ExecutionHandler{
 }
 
 //Handles the main sql execution by making usage of the DB types.
-//dry violations on purpose, helps follow the data to the point of
+//DRY VIOLATIONS on purpose!, helps follow the data to the point of
 //execution.
 impl ExecutionHandler{
     pub fn new(client_val:Client)->Self{
@@ -34,6 +34,25 @@ impl ExecutionHandler{
         }
     }
 
+    //creation
+    pub async fn create_table_if_needed(&mut self,query:&str)-> Result<(),Error>{
+        self.client.query(query,&[]).await?;
+        return Ok(());
+    }
+
+    pub async fn create_all_tables_if_needed(&mut self)->Result<(),Error>{
+        self.create_table_if_needed(creation_queries::ROOM_TABLE_CREATION).await?;
+        self.create_table_if_needed(creation_queries::ROOM_PERMISSIONS_TABLE_CREATION).await?;
+        self.create_table_if_needed(creation_queries::FOLLOWER_TABLE_CREATION).await?;
+        self.create_table_if_needed(creation_queries::USER_TABLE_CREATION).await?;
+        self.create_table_if_needed(creation_queries::USER_BLOCK_TABLE_CREATION).await?;
+        self.create_table_if_needed(creation_queries::ROOM_BLOCK_CREATION).await?;
+        self.create_table_if_needed(creation_queries::SCHEDULED_ROOM_CREATION).await?;
+        self.create_table_if_needed(creation_queries::SHEDULED_ROOM_ATTENDANCE).await?;
+        return Ok(());
+    }
+
+    // insertion
     pub async fn insert_user(&mut self,user:DBUser)->Result<i32,Error>{
         let query = insert_queries::INSERT_USER_QUERY;
         let rows = self.client.query(query,&[
@@ -70,7 +89,7 @@ impl ExecutionHandler{
             &permissions.is_mod,
             &permissions.is_speaker,
             &permissions.asked_to_speak]).await?;
-        Ok(())
+        return Ok(());
     }
 
     pub async fn insert_follower(&mut self,follower:DBFollower)->Result<(),Error>{
@@ -78,7 +97,7 @@ impl ExecutionHandler{
         self.client.query(query,&[
             &follower.follower_id,
             &follower.user_id]).await?;
-        Ok(())
+        return Ok(());
     }
 
     pub async fn insert_user_block(&mut self, user_block:DBUserBlock)->Result<(),Error>{
@@ -86,7 +105,7 @@ impl ExecutionHandler{
         self.client.query(query,&[
             &user_block.owner_user_id,
             &user_block.blocked_user_id]).await?;
-        Ok(())
+        return Ok(());
     }
 
     pub async fn insert_room_block(&mut self, room_block:DBRoomBlock)->Result<(),Error>{
@@ -94,7 +113,7 @@ impl ExecutionHandler{
         self.client.query(query,&[
             &room_block.owner_room_id,
             &room_block.blocked_user_id]).await?;
-        Ok(())
+        return Ok(());
     }
 
     pub async fn insert_scheduled_room(&mut self, scheduled_room:DBScheduledRoom)->Result<i32,Error>{
@@ -114,6 +133,88 @@ impl ExecutionHandler{
             &scheduled_room_attendance.scheduled_room_id,
             &scheduled_room_attendance.is_owner
         ]).await?;
-        Ok(())
+        return Ok(());
+    }
+
+    //deletion
+    pub async fn delete_room(&mut self, room_id:String)->Result<u64,Error>{
+        let query = delete_queries::DELETE_ROOM_QUERY;
+        let num_modified = self.client.execute(query,&[&room_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn delete_all_room_permissions(&mut self, room_id:i32)->Result<u64,Error>{
+        let query = delete_queries::DELETE_ROOM_PERMISSIONS_QUERY;
+        let num_modified = self.client.execute(query,&[&room_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn delete_room_blocks(&mut self, room_id:i32)->Result<u64,Error>{
+        let query = delete_queries::DELETE_ROOM_BLOCKS_QUERY;
+        let num_modified =self.client.execute(query,&[&room_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn delete_scheduled_room(&mut self, room_id:i32)->Result<u64,Error>{
+        let query = delete_queries::DELETE_SCHEDULED_ROOM_QUERY;
+        let num_modified =self.client.execute(query,&[&room_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn delete_all_scheduled_room_attendance(&mut self, room_id:i32)->Result<u64,Error>{
+        let query = delete_queries::DELETE_ALL_SCHEDULED_ROOM_ATTENDANCE_QUERY;
+        let num_modified = self.client.execute(query,&[&room_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn delete_user_room_attendance(&mut self, user_id:i32,room_id:i32)->Result<u64,Error>{
+        let query = delete_queries::DELETE_USER_ROOM_ATTENDANCE_QUERY;
+        let num_modified = self.client.execute(query,&[&room_id,&user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    //update
+    pub async fn update_room_owner_query(&mut self, room_id:i32,new_owner_id:i32)->Result<u64,Error>{
+        let query = update_queries::UPDATE_ROOM_OWNER_QUERY;
+        let num_modified = self.client.execute(query,&[&new_owner_id,&room_id]).await?;
+        return Ok(num_modified);
+    }
+    //sets user to mod or not mod for a room
+    pub async fn update_room_mod_status(&mut self, room_id:i32,user_id:i32,is_mod:bool)->Result<u64,Error>{
+        let query = update_queries::UPDATE_ROOM_MOD_STATUS_QUERY;
+        let num_modified = self.client.execute(query,&[&is_mod,&room_id,&user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn update_user_avatar(&mut self, avatar_url:String, user_id:i32)->Result<u64,Error>{
+        let query = update_queries::UPDATE_USER_AVATAR_QUERY;
+        let num_modified = self.client.execute(query,&[&avatar_url,&user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn update_display_name(&mut self, display_name:String,user_id:i32)->Result<u64,Error>{
+        let query = update_queries::UPDATE_DISPLAY_NAME_QUERY;
+        let num_modified = self.client.execute(query,&[&display_name,&user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn update_scheduled_room(
+        &mut self, 
+        num_attending:i32,
+        scheduled_for:String,
+        room_id:i32)->Result<u64,Error>{
+            let query = update_queries::UPDATE_SCHEDULED_ROOM_QUERY;
+            let num_modified = self.client.execute(query,&[&num_attending,&scheduled_for,&room_id]).await?;
+            return Ok(num_modified);
+        }
+    
+    pub async fn update_ban_status_of_user(
+        &mut self, 
+        banned:bool,
+        banned_reason:String,
+        user_id:i32)->Result<u64,Error>{
+            let query = update_queries::BAN_USER_QUERY;
+            let num_modified = self.client.execute(query,&[&banned,&banned_reason,&user_id]).await?;
+            return Ok(num_modified);
     }
 }
