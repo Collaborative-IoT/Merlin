@@ -278,5 +278,4 @@ impl ExecutionHandler{
         let result:Vec<Row> = self.client.query(query,&[&user_id,&room_id]).await?;
         return Ok(result);
     }
-
 }
