@@ -6,7 +6,7 @@ use tokio_postgres::{Client,row::Row,NoTls,Error};
 pub async fn test(){
     let mut execution_handler = setup_execution_handler().await.unwrap();
     setup_tables(&mut execution_handler).await;
-    tests::test_insert_and_gather_user(execution_handler);
+    tests::user::test_insert_and_gather_user(execution_handler);
 }
 
 async fn setup_tables(execution_handler:&mut ExecutionHandler){
