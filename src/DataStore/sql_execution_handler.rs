@@ -136,74 +136,74 @@ impl ExecutionHandler{
     }
 
     //deletion
-    pub async fn delete_room(&mut self, room_id:String)->Result<u64,Error>{
+    pub async fn delete_room(&mut self, room_id:&i32)->Result<u64,Error>{
         let query = delete_queries::DELETE_ROOM_QUERY;
-        let num_modified = self.client.execute(query,&[&room_id]).await?;
+        let num_modified = self.client.execute(query,&[room_id]).await?;
         return Ok(num_modified);
     }
 
-    pub async fn delete_all_room_permissions(&mut self, room_id:i32)->Result<u64,Error>{
+    pub async fn delete_all_room_permissions(&mut self, room_id:&i32)->Result<u64,Error>{
         let query = delete_queries::DELETE_ROOM_PERMISSIONS_QUERY;
-        let num_modified = self.client.execute(query,&[&room_id]).await?;
+        let num_modified = self.client.execute(query,&[room_id]).await?;
         return Ok(num_modified);
     }
 
-    pub async fn delete_room_blocks(&mut self, room_id:i32)->Result<u64,Error>{
+    pub async fn delete_room_blocks(&mut self, room_id:&i32)->Result<u64,Error>{
         let query = delete_queries::DELETE_ROOM_BLOCKS_QUERY;
-        let num_modified =self.client.execute(query,&[&room_id]).await?;
+        let num_modified =self.client.execute(query,&[room_id]).await?;
         return Ok(num_modified);
     }
 
-    pub async fn delete_scheduled_room(&mut self, room_id:i32)->Result<u64,Error>{
+    pub async fn delete_scheduled_room(&mut self, room_id:&i32)->Result<u64,Error>{
         let query = delete_queries::DELETE_SCHEDULED_ROOM_QUERY;
-        let num_modified =self.client.execute(query,&[&room_id]).await?;
+        let num_modified =self.client.execute(query,&[room_id]).await?;
         return Ok(num_modified);
     }
 
-    pub async fn delete_all_scheduled_room_attendance(&mut self, room_id:i32)->Result<u64,Error>{
+    pub async fn delete_all_scheduled_room_attendance(&mut self, room_id:&i32)->Result<u64,Error>{
         let query = delete_queries::DELETE_ALL_SCHEDULED_ROOM_ATTENDANCE_QUERY;
-        let num_modified = self.client.execute(query,&[&room_id]).await?;
+        let num_modified = self.client.execute(query,&[room_id]).await?;
         return Ok(num_modified);
     }
 
-    pub async fn delete_user_room_attendance(&mut self, user_id:i32,room_id:i32)->Result<u64,Error>{
+    pub async fn delete_user_room_attendance(&mut self, user_id:&i32,room_id:&i32)->Result<u64,Error>{
         let query = delete_queries::DELETE_USER_ROOM_ATTENDANCE_QUERY;
-        let num_modified = self.client.execute(query,&[&room_id,&user_id]).await?;
+        let num_modified = self.client.execute(query,&[room_id,user_id]).await?;
         return Ok(num_modified);
     }
 
     //update
-    pub async fn update_room_owner_query(&mut self, room_id:i32,new_owner_id:i32)->Result<u64,Error>{
+    pub async fn update_room_owner_query(&mut self, room_id:&i32,new_owner_id:&i32)->Result<u64,Error>{
         let query = update_queries::UPDATE_ROOM_OWNER_QUERY;
-        let num_modified = self.client.execute(query,&[&new_owner_id,&room_id]).await?;
+        let num_modified = self.client.execute(query,&[&new_owner_id,room_id]).await?;
         return Ok(num_modified);
     }
     //sets user to mod or not mod for a room
-    pub async fn update_room_mod_status(&mut self, room_id:i32,user_id:i32,is_mod:bool)->Result<u64,Error>{
+    pub async fn update_room_mod_status(&mut self, room_id:&i32,user_id:&i32,is_mod:bool)->Result<u64,Error>{
         let query = update_queries::UPDATE_ROOM_MOD_STATUS_QUERY;
-        let num_modified = self.client.execute(query,&[&is_mod,&room_id,&user_id]).await?;
+        let num_modified = self.client.execute(query,&[&is_mod,room_id,user_id]).await?;
         return Ok(num_modified);
     }
 
-    pub async fn update_user_avatar(&mut self, avatar_url:String, user_id:i32)->Result<u64,Error>{
+    pub async fn update_user_avatar(&mut self, avatar_url:String, user_id:&i32)->Result<u64,Error>{
         let query = update_queries::UPDATE_USER_AVATAR_QUERY;
-        let num_modified = self.client.execute(query,&[&avatar_url,&user_id]).await?;
+        let num_modified = self.client.execute(query,&[&avatar_url,user_id]).await?;
         return Ok(num_modified);
     }
 
-    pub async fn update_display_name(&mut self, display_name:String,user_id:i32)->Result<u64,Error>{
+    pub async fn update_display_name(&mut self, display_name:String,user_id:&i32)->Result<u64,Error>{
         let query = update_queries::UPDATE_DISPLAY_NAME_QUERY;
-        let num_modified = self.client.execute(query,&[&display_name,&user_id]).await?;
+        let num_modified = self.client.execute(query,&[&display_name,user_id]).await?;
         return Ok(num_modified);
     }
 
     pub async fn update_scheduled_room(
         &mut self, 
-        num_attending:i32,
+        num_attending:&i32,
         scheduled_for:String,
-        room_id:i32)->Result<u64,Error>{
+        room_id:&i32)->Result<u64,Error>{
             let query = update_queries::UPDATE_SCHEDULED_ROOM_QUERY;
-            let num_modified = self.client.execute(query,&[&num_attending,&scheduled_for,&room_id]).await?;
+            let num_modified = self.client.execute(query,&[num_attending,&scheduled_for,room_id]).await?;
             return Ok(num_modified);
         }
     
@@ -211,9 +211,9 @@ impl ExecutionHandler{
         &mut self, 
         banned:bool,
         banned_reason:String,
-        user_id:i32)->Result<u64,Error>{
+        user_id:&i32)->Result<u64,Error>{
             let query = update_queries::BAN_USER_QUERY;
-            let num_modified = self.client.execute(query,&[&banned,&banned_reason,&user_id]).await?;
+            let num_modified = self.client.execute(query,&[&banned,&banned_reason,user_id]).await?;
             return Ok(num_modified);
     }
 
@@ -230,58 +230,58 @@ impl ExecutionHandler{
         return Ok(result);
     }
 
-    pub async fn select_all_attendance_for_scheduled_room(&mut self, room_id:i32)->Result<Vec<Row>,Error>{
+    pub async fn select_all_attendance_for_scheduled_room(&mut self, room_id:&i32)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_ALL_SCHEDULED_ROOM_ATTENDANCE_FOR_ROOM_QUERY;
-        let result:Vec<Row> = self.client.query(query,&[&room_id]).await?;
+        let result:Vec<Row> = self.client.query(query,&[room_id]).await?;
         return Ok(result);
     }
 
-    pub async fn select_all_room_attendance_for_user(&mut self,user_id:i32)->Result<Vec<Row>,Error>{
+    pub async fn select_all_room_attendance_for_user(&mut self,user_id:&i32)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_ALL_ATTENDANCE_FOR_USER_QUERY;
-        let result:Vec<Row> = self.client.query(query,&[&user_id]).await?;
+        let result:Vec<Row> = self.client.query(query,&[user_id]).await?;
         return Ok(result);
     }
 
-    pub async fn select_all_followers_for_user(&mut self, user_id:i32)->Result<Vec<Row>,Error>{
+    pub async fn select_all_followers_for_user(&mut self, user_id:&i32)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_ALL_FOLLOWERS_FOR_USER_QUERY;
-        let result:Vec<Row> = self.client.query(query,&[&user_id]).await?;
+        let result:Vec<Row> = self.client.query(query,&[user_id]).await?;
         return Ok(result);
     }
 
-    pub async fn select_all_following_for_user(&mut self,user_id:i32)->Result<Vec<Row>,Error>{
+    pub async fn select_all_following_for_user(&mut self,user_id:&i32)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_ALL_FOLLOWING_FOR_USER_QUERY;
-        let result:Vec<Row> = self.client.query(query,&[&user_id]).await?;
+        let result:Vec<Row> = self.client.query(query,&[user_id]).await?;
         return Ok(result);
     }
 
-    pub async fn select_all_blocked_for_user(&mut self, user_id:i32)->Result<Vec<Row>,Error>{
+    pub async fn select_all_blocked_for_user(&mut self, user_id:&i32)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_ALL_BLOCKED_FOR_USER_QUERY;
-        let result:Vec<Row> = self.client.query(query,&[&user_id]).await?;
+        let result:Vec<Row> = self.client.query(query,&[user_id]).await?;
         return Ok(result);
     }
 
-    pub async fn select_all_blockers_for_user(&mut self, user_id:i32)->Result<Vec<Row>,Error>{
+    pub async fn select_all_blockers_for_user(&mut self, user_id:&i32)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_ALL_BLOCKERS_FOR_USER_QUERY;
-        let result:Vec<Row> = self.client.query(query,&[&user_id]).await?;
+        let result:Vec<Row> = self.client.query(query,&[user_id]).await?;
         return Ok(result);
     }
 
-    pub async fn select_all_blocked_users_for_room(&mut self,room_id:i32)->Result<Vec<Row>,Error>{
+    pub async fn select_all_blocked_users_for_room(&mut self,room_id:&i32)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_ALL_BLOCKED_USERS_FOR_ROOM_QUERY;
-        let result:Vec<Row> = self.client.query(query,&[&room_id]).await?;
+        let result:Vec<Row> = self.client.query(query,&[room_id]).await?;
         return Ok(result);
     }
 
     //SELECTS permissions for one room for one user
-    pub async fn select_all_room_permissions_for_user(&mut self,user_id:i32,room_id:i32)->Result<Vec<Row>,Error>{
+    pub async fn select_all_room_permissions_for_user(&mut self,user_id:&i32,room_id:&i32)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_ALL_ROOM_PERMISSIONS_FOR_USER;
-        let result:Vec<Row> = self.client.query(query,&[&user_id,&room_id]).await?;
+        let result:Vec<Row> = self.client.query(query,&[user_id,room_id]).await?;
         return Ok(result);
     }
 
-    pub async fn select_user_by_id(&mut self, user_id:i32)->Result<Vec<Row>,Error>{
+    pub async fn select_user_by_id(&mut self, user_id:&i32)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_USER_BY_ID;
-        let result:Vec<Row> = self.client.query(query,&[&user_id]).await?;
+        let result:Vec<Row> = self.client.query(query,&[user_id]).await?;
         return Ok(result);
     }
 }

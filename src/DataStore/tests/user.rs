@@ -3,14 +3,17 @@ use chrono::{DateTime, Utc};
 use crate::DataStore::sql_execution_handler::ExecutionHandler;
 use tokio_postgres::{row::Row,Error};
 
-async fn test_insert_and_gather_user(execution_handler:&mut ExecutionHandler){
+async fn test_insert_and_gather_user(execution_handler:&mut ExecutionHandler)->i32{
+    println!("Testing inserting/updating user");
     let mock_user = gather_user_struct();
     let insert_row_result = execution_handler.insert_user(&mock_user).await;
     assert_eq!(insert_row_result.is_ok(),true);
-    let row_num:i32 = insert_row_result.unwrap();
+
+    //user id num
+    let user_id:i32 = insert_row_result.unwrap();
 
     //search for the row
-    let select_row_result = execution_handler.select_user_by_id(row_num).await;
+    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
     assert_eq!(select_row_result.is_ok(),true);
 
     //make sure the data is correct
@@ -18,6 +21,31 @@ async fn test_insert_and_gather_user(execution_handler:&mut ExecutionHandler){
     assert_eq!(selected_rows.len(),1);
     let target_row:&Row = &selected_rows[0];
     compare_user_to_db_user(&mock_user,target_row);
+    return user_id;
+}
+
+async fn test_updating_user_avatar(execution_handler:&mut ExecutionHandler, user_id:i32){
+    println!("Testing updating user avatar");
+    //get the user avatar url
+    //we know this user exist because of the test that run prior to this one
+    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows = select_row_result.unwrap();
+    //double check there is only one result
+    assert_eq!(selected_rows.len(),1);
+    let new_avatar_url = "test.com/new_test_url".to_string();
+    let avatar_url:&str = selected_rows[0].get(2);
+    assert_eq!(avatar_url,"test.com/avatar");
+
+    let result = execution_handler.update_user_avatar(new_avatar_url,&user_id).await;
+    let num_of_rows_updated = result.unwrap();
+    assert_eq!(num_of_rows_updated,1);
+
+    //check after update
+    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows_second = select_row_result_second.unwrap();
+
+    let after_update_avatar_url:&str = selected_rows_second[0].get(2);
+    assert_eq!(after_update_avatar_url,"test.com/new_test_url");
 }
 
 //asserts db results against the original user inserted
