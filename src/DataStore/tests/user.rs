@@ -8,14 +8,11 @@ pub async fn test_insert_and_gather_user(execution_handler:&mut ExecutionHandler
     let mock_user = gather_user_struct();
     let insert_row_result = execution_handler.insert_user(&mock_user).await;
     assert_eq!(insert_row_result.is_ok(),true);
-
     //user id num
     let user_id:i32 = insert_row_result.unwrap();
-
     //search for the row
     let select_row_result = execution_handler.select_user_by_id(&user_id).await;
     assert_eq!(select_row_result.is_ok(),true);
-
     //make sure the data is correct
     let selected_rows = select_row_result.unwrap();
     assert_eq!(selected_rows.len(),1);
@@ -35,7 +32,6 @@ pub async fn test_updating_user_avatar(execution_handler:&mut ExecutionHandler, 
     assert_eq!(avatar_url,"test.com/avatar");
     //perform update
     let result = execution_handler.update_user_avatar(new_avatar_url,&user_id).await;
-    assert_eq!(result.is_ok(),true);
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check after update
@@ -56,7 +52,6 @@ pub async fn test_updating_user_display_name(execution_handler:&mut ExecutionHan
     assert_eq!(display_name,"test1");
     //update 
     let result = execution_handler.update_display_name(new_display_name,&user_id).await;
-    assert_eq!(result.is_ok(),true);
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check after update
@@ -64,6 +59,45 @@ pub async fn test_updating_user_display_name(execution_handler:&mut ExecutionHan
     let selected_rows_second = select_row_result_second.unwrap();
     let after_update_display_name:&str = selected_rows_second[0].get(1);
     assert_eq!(after_update_display_name,"test_update_name");
+    return user_id;
+}
+
+pub async fn test_updating_user_bio(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
+    println!("Testing updating user bio");
+    //get the user bio
+    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows = select_row_result.unwrap();
+    let new_bio = "test bio 123".to_string();
+    let bio = selected_rows[0].get(11);
+    assert_eq!(bio,"test");
+    //update
+    let result = execution_handler.update_user_bio(bio,&user_id).await;
+    let num_of_rows_updated = result.unwrap();
+    assert_eq!(num_of_rows_updated,1);
+    //check_after_update
+    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows_second = select_row_result_second.unwrap();
+    let after_update_bio:&str = selected_rows_second[0].get(11);
+    assert_eq!(after_update_bio,"test bio 123");
+    return user_id;
+}
+
+pub async fn test_updating_last_online(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
+    println!("Testing updating last online");
+    //get the last online
+    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows = select_row_result.unwrap();
+    let new_last_online = Utc::now().to_string();
+    let last_online:&str = selected_rows[0].get(4);
+    //update
+    let result = execution_handler.update_last_online(new_last_online.clone(),&user_id);
+    let num_of_rows_update = result.unwrap();
+    assert_eq!(num_of_rows_updated,1);
+    //check after update
+    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows_second = select_row_result_second.unwrap();
+    let after_update_last_online:&str = selected_rows_second[0].get(4);
+    assert_eq!(after_update_last_online,new_last_online);
     return user_id;
 }
 
