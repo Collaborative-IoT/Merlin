@@ -24,7 +24,7 @@ pub async fn test_insert_and_gather_user(execution_handler:&mut ExecutionHandler
     return user_id;
 }
 
-pub async fn test_updating_user_avatar(execution_handler:&mut ExecutionHandler, user_id:i32){
+pub async fn test_updating_user_avatar(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
     println!("Testing updating user avatar");
     //get the user avatar url
     let select_row_result = execution_handler.select_user_by_id(&user_id).await;
@@ -46,7 +46,7 @@ pub async fn test_updating_user_avatar(execution_handler:&mut ExecutionHandler, 
     return user_id;
 }
 
-pub async fn test_updating_user_display_name(execution_handler:&mut ExecutionHandler, user_id:i32){
+pub async fn test_updating_user_display_name(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
     println!("Testing updating user display name");
     //get the user display name 
     let select_row_result = execution_handler.select_user_by_id(&user_id).await;

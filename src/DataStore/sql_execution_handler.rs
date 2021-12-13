@@ -217,6 +217,48 @@ impl ExecutionHandler{
             return Ok(num_modified);
     }
 
+    pub async fn update_user_bio(&mut self,bio:String,user_id:&i32)->Result<u64,Error>{
+        let query = update_queries::UPDATE_BIO_QUERY;
+        let num_modified = self.client.execute(query,&[&bio,&user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn update_github_access_token(&mut self,new_token:String,user_id:&i32)->Result<u64,Error>{
+        let query = update_queries::UPDATE_GITHUB_ACCESS_TOKEN_QUERY;
+        let num_modified = self.client.execute(query,&[&new_token,user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn update_discord_access_token(&mut self,new_token:String,user_id:&i32)->Result<u64,Error>{
+        let query = update_queries::UPDATE_DISCORD_ACCESS_TOKEN_QUERY;
+        let num_modified = self.client.execute(query,&[&new_token,user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn update_contributions(&mut self,new_contributions:&i32,user_id:&i32)->Result<u64,Error>{
+        let query = update_queries::UPDATE_CONTRIBUTIONS_QUERY;
+        let num_modified = self.client.execute(query,&[&new_contributions,user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn update_banner_url(&mut self, new_banner_url:&i32,user_id:&i32)->Result<u64,Error>{
+        let query = update_queries::UPDATE_BANNER_URL_QUERY;
+        let num_modified = self.client.execute(query,&[new_banner_url,user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn update_last_online(&mut self, new_last_online:String,user_id:&i32)->Result<u64,Error>{
+        let query = update_queries::UPDATE_LAST_ONLINE_QUERY;
+        let num_modified = self.client.execute(query,&[&new_last_online,user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn update_user_name(&mut self, new_user_name:String,user_id:&i32)->Result<u64,Error>{
+        let query = update_queries::UPDATE_USER_NAME_QUERY;
+        let num_modified = self.client.execute(query,&[&new_user_name,user_id]).await?;
+        return Ok(num_modified);
+    }
+
     //select
     pub async fn select_all_rooms(&mut self)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_ALL_ROOM_QUERY;
