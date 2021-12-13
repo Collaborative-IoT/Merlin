@@ -17,7 +17,7 @@ use tokio_postgres::{Client,row::Row,NoTls,Error};
 pub async fn test(){
     let mut execution_handler = setup_execution_handler().await.unwrap();
     setup_tables(&mut execution_handler).await;
-
+    test_insert_and_gather_user(execution_handler);
 }
 
 async fn setup_tables(execution_handler:&mut ExecutionHandler){
@@ -27,7 +27,7 @@ async fn setup_tables(execution_handler:&mut ExecutionHandler){
 
 async fn test_insert_and_gather_user(execution_handler:&mut ExecutionHandler){
     let mock_user:DBUser = gather_user_struct();
-    let insert_row_result = execution_handler.insert_user(mock_user).await;
+    let insert_row_result = execution_handler.insert_user(&mock_user).await;
     assert_eq!(insert_row_result.is_ok(),true);
     let inserted_rows = insert_row_result.unwrap();
     assert_eq!(inserted_rows.len(),1)
@@ -39,9 +39,28 @@ async fn test_insert_and_gather_user(execution_handler:&mut ExecutionHandler){
     let select_row_result = execution_handler.select_user_by_id(row_num).await?;
     assert_eq!(select_row_result.is_ok(),true);
 
-    //make sure the data is fine
+    //make sure the data is correct
     let selected_rows = select_row_result.unwrap();
-    assert_eq(selected_rows.len(),1)
+    assert_eq!(selected_rows.len(),1)
+    let target_row:Row = selected_rows[0];
+    compare_user_to_db_user(&mock_user,target_row);
+}
+
+//asserts db results against the original user inserted
+fn compare_user_to_db_user(user_one:&DBUser,row:Row){
+    assert_eq!(user_one.display_name,row.get(1));
+    assert_eq!(user_one.avatar_url,row.get(2));
+    assert_eq!(user_one.user_name,row.get(3));
+    assert_eq!(user_one.last_online,row.get(4));
+    assert_eq!(user_one.github_id,row.get(5));
+    assert_eq!(user_one.discord_id,row.get(6));
+    assert_eq!(user_one.github_access_token,row.get(7));
+    assert_eq!(user_one.discord_access_token,row.get(8));
+    assert_eq!(user_one.banned,row.get(9));
+    assert_eq!(user_one.banned_reason,row.get(10));
+    assert_eq!(user_one.bio,row.get(11));
+    assert_eq!(user_one.contributions,row.get(12));
+    assert_eq!(user_one.banner_url,row.get(13));
 }
 
 async fn setup_execution_handler()->Result<ExecutionHandler,Error>{ 

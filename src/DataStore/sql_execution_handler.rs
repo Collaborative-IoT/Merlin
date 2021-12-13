@@ -52,7 +52,7 @@ impl ExecutionHandler{
     }
 
     // insertion
-    pub async fn insert_user(&mut self,user:DBUser)->Result<i32,Error>{
+    pub async fn insert_user(&mut self,user:&DBUser)->Result<i32,Error>{
         let query = insert_queries::INSERT_USER_QUERY;
         let rows = self.client.query(query,&[
                 &user.display_name,
