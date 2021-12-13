@@ -91,7 +91,7 @@ pub async fn test_updating_last_online(execution_handler:&mut ExecutionHandler, 
     let last_online:&str = selected_rows[0].get(4);
     //update
     let result = execution_handler.update_last_online(new_last_online.clone(),&user_id);
-    let num_of_rows_update = result.unwrap();
+    let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check after update
     let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
@@ -99,6 +99,25 @@ pub async fn test_updating_last_online(execution_handler:&mut ExecutionHandler, 
     let after_update_last_online:&str = selected_rows_second[0].get(4);
     assert_eq!(after_update_last_online,new_last_online);
     return user_id;
+}
+
+pub async fn test_updating_github_access_token(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
+    println!("Test updating github access token");
+    //get the last access token
+    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows = select_row_result.unwrap();
+    let new_access_token = "-40kp2rm3ro".to_string();
+    let access_token = selected_rows[0].get(7);
+    assert_eq!(access_token,"23232");
+    //update
+    let result = execution_handler.update_github_access_token(new_access_token,&user_id);
+    let num_of_rows_updated = result.unwrap();
+    assert_eq!(num_of_rows_updated,1);
+    //check_after_update
+    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows_second = select_row_result_second.unwrap();
+    let access_token_after_update:&str = selected_rows_second[0].get(7);
+    assert_eq!(access_token_after_update,"23232");
 }
 
 //asserts db results against the original user inserted
