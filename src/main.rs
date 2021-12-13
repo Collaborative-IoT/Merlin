@@ -8,6 +8,7 @@ pub mod State{
     pub mod state;
     pub mod state_types;
 }
+
 pub mod DataStore{
     pub mod db_models;
     pub mod delete_queries;
@@ -16,7 +17,13 @@ pub mod DataStore{
     pub mod select_queries;
     pub mod sql_execution_handler;
     pub mod update_queries;
-    pub mod tests;
+    pub mod test;
+    pub mod tests{
+        mod blocks;
+        mod follower;
+        mod room;
+        mod user;
+    }
 }
 
 #[tokio::main]
