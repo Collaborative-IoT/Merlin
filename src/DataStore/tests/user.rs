@@ -4,6 +4,9 @@ use crate::DataStore::sql_execution_handler::ExecutionHandler;
 use tokio_postgres::{row::Row,Error};
 
 //dry violations help reduce the confusion and makes sure tests are clear.
+//massive generic functions would make things harder to follow in this 
+//scenario.
+
 pub async fn test_insert_and_gather_user(execution_handler:&mut ExecutionHandler)->i32{
     println!("Testing inserting/updating user");
     let mock_user = gather_user_struct();
