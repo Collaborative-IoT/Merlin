@@ -241,9 +241,9 @@ impl ExecutionHandler{
         return Ok(num_modified);
     }
 
-    pub async fn update_banner_url(&mut self, new_banner_url:&i32,user_id:&i32)->Result<u64,Error>{
+    pub async fn update_banner_url(&mut self, new_banner_url:String,user_id:&i32)->Result<u64,Error>{
         let query = update_queries::UPDATE_BANNER_URL_QUERY;
-        let num_modified = self.client.execute(query,&[new_banner_url,user_id]).await?;
+        let num_modified = self.client.execute(query,&[&new_banner_url,user_id]).await?;
         return Ok(num_modified);
     }
 

@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use crate::DataStore::sql_execution_handler::ExecutionHandler;
 use tokio_postgres::{row::Row,Error};
 
+//dry violations help reduce the confusion and makes sure tests are clear.
 pub async fn test_insert_and_gather_user(execution_handler:&mut ExecutionHandler)->i32{
     println!("Testing inserting/updating user");
     let mock_user = gather_user_struct();
@@ -39,6 +40,32 @@ pub async fn test_updating_user_avatar(execution_handler:&mut ExecutionHandler, 
     let selected_rows_second = select_row_result_second.unwrap();
     let after_update_avatar_url:&str = selected_rows_second[0].get(2);
     assert_eq!(after_update_avatar_url,"test.com/new_test_url");
+    return user_id;
+}
+
+pub async fn test_updating_ban_status_of_user(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
+    println!("Testing updating ban status of user");
+    //get the current ban_status
+    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows = select_row_result.unwrap();
+    //check
+    let new_banned = false;
+    let new_banned_reason = "no_reason".to_string();
+    let current_banned:bool = selected_rows[0].get(9);
+    let current_banned_reason:&str = selected_rows[0].get(10);
+    assert_eq!(current_banned, true);
+    assert_eq!(current_banned_reason,"ban evading");
+    //update
+    let result = execution_handler.update_ban_status_of_user(new_banned,new_banned_reason,&user_id).await;
+    let num_of_rows_updated = result.unwrap();
+    assert_eq!(num_of_rows_updated,1);
+    //check after update
+    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows_second = select_row_result_second.unwrap();
+    let after_update_current_banned:bool = selected_rows_second[0].get(9);
+    let after_update_banned_reason:&str = selected_rows_second[0].get(10);
+    assert_eq!(after_update_current_banned,false);
+    assert_eq!(after_update_banned_reason,"no_reason");
     return user_id;
 }
 
@@ -90,7 +117,7 @@ pub async fn test_updating_last_online(execution_handler:&mut ExecutionHandler, 
     let new_last_online = Utc::now().to_string();
     let last_online:&str = selected_rows[0].get(4);
     //update
-    let result = execution_handler.update_last_online(new_last_online.clone(),&user_id);
+    let result = execution_handler.update_last_online(new_last_online.clone(),&user_id).await;
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check after update
@@ -107,10 +134,10 @@ pub async fn test_updating_github_access_token(execution_handler:&mut ExecutionH
     let select_row_result = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows = select_row_result.unwrap();
     let new_access_token = "-40kp2rm3ro".to_string();
-    let access_token = selected_rows[0].get(7);
+    let access_token:&str = selected_rows[0].get(7);
     assert_eq!(access_token,"23232");
     //update
-    let result = execution_handler.update_github_access_token(new_access_token,&user_id);
+    let result = execution_handler.update_github_access_token(new_access_token,&user_id).await;
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check_after_update
@@ -118,6 +145,82 @@ pub async fn test_updating_github_access_token(execution_handler:&mut ExecutionH
     let selected_rows_second = select_row_result_second.unwrap();
     let access_token_after_update:&str = selected_rows_second[0].get(7);
     assert_eq!(access_token_after_update,"23232");
+    return user_id;
+}
+
+pub async fn test_updating_discord_access_token(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
+    println!("Test updating discord access token");
+    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows = select_row_result.unwrap();
+    let new_discord_access_token = "lkwefif".to_string();
+    let access_token:&str = selected_rows[0].get(8);
+    assert_eq!(access_token,"29320");
+    //update
+    let result = execution_handler.update_discord_access_token(new_discord_access_token,&user_id).await;
+    let num_of_rows_updated = result.unwrap();
+    assert_eq!(num_of_rows_updated,1);
+    //check after update
+    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows_second = select_row_result_second.unwrap();
+    let access_token_after_update:&str = selected_rows_second[0].get(8);
+    assert_eq!(access_token_after_update,"29320");
+    return user_id;
+}
+
+pub async fn test_update_contributions(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
+    println!("Test updating contributions");
+    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows = select_row_result.unwrap();
+    let new_contributions:i32 = 30;
+    let contributions:i32 = selected_rows[0].get(12);
+    assert_eq!(contributions,40);
+    //update 
+    let result = execution_handler.update_contributions(&new_contributions,&user_id).await;
+    let num_of_rows_updated = result.unwrap();
+    assert_eq!(num_of_rows_updated,1);
+    //check after update
+    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows_second = select_row_result_second.unwrap();
+    let contributions_after_update:i32 = selected_rows_second[0].get(12);
+    assert_eq!(contributions_after_update,new_contributions);
+    return user_id;
+}
+
+pub async fn test_update_banner_url(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
+    println!("Test update banner url");
+    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows = select_row_result.unwrap();
+    let new_banner_url = "test.com/test_banner_new".to_string();
+    let banner_url:&str = selected_rows[0].get(13);
+    assert_eq!(banner_url,"test.com/test_banner");
+    //update
+    let result = execution_handler.update_banner_url(new_banner_url,&user_id).await;
+    let num_of_rows_updated = result.unwrap();
+    //check after update
+    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows_second = select_row_result_second.unwrap();
+    let after_update_banner_url:&str = selected_rows_second[0].get(13);
+    assert_eq!(after_update_banner_url,"test.com/test_banner_new");
+    return user_id;
+}
+
+pub async fn test_update_user_name(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
+    println!("Test update banner url");
+    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows = select_row_result.unwrap();
+    let new_user_name = "new_user445".to_string();
+    let user_name:&str = selected_rows[0].get(3);
+    assert_eq!(user_name,"ultimate_tester");
+    //update
+    let result = execution_handler.update_user_name(new_user_name,&user_id).await;
+    let num_of_rows_updated = result.unwrap();
+    assert_eq!(num_of_rows_updated,1);
+    //check after
+    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows_second = select_row_result_second.unwrap();
+    let after_update_user_name:&str = selected_rows_second[0].get(3);
+    assert_eq!(after_update_user_name,"new_user445");
+    return user_id;
 }
 
 //asserts db results against the original user inserted
