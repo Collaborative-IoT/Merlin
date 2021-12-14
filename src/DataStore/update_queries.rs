@@ -75,6 +75,6 @@ WHERE Id = $2;
 pub const BAN_USER_QUERY: &str = "
 UPDATE users
 SET banned = $1,
-bannedReason = $2,
+bannedReason = $2
 WHERE Id = $3;
 ";

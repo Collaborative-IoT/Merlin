@@ -95,10 +95,10 @@ pub async fn test_updating_user_bio(execution_handler:&mut ExecutionHandler, use
     let select_row_result = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows = select_row_result.unwrap();
     let new_bio = "test bio 123".to_string();
-    let bio = selected_rows[0].get(11);
+    let bio:&str = selected_rows[0].get(11);
     assert_eq!(bio,"test");
     //update
-    let result = execution_handler.update_user_bio(bio,&user_id).await;
+    let result = execution_handler.update_user_bio(new_bio,&user_id).await;
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check_after_update
@@ -144,7 +144,7 @@ pub async fn test_updating_github_access_token(execution_handler:&mut ExecutionH
     let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows_second = select_row_result_second.unwrap();
     let access_token_after_update:&str = selected_rows_second[0].get(7);
-    assert_eq!(access_token_after_update,"23232");
+    assert_eq!(access_token_after_update, "-40kp2rm3ro");
     return user_id;
 }
 
@@ -163,7 +163,7 @@ pub async fn test_updating_discord_access_token(execution_handler:&mut Execution
     let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows_second = select_row_result_second.unwrap();
     let access_token_after_update:&str = selected_rows_second[0].get(8);
-    assert_eq!(access_token_after_update,"29320");
+    assert_eq!(access_token_after_update,"lkwefif");
     return user_id;
 }
 
