@@ -1,6 +1,6 @@
 //Dry violations on purpose, helps read and follow each specific query
 pub const INSERT_USER_QUERY: &str = "
-INSERT INTO user (
+INSERT INTO users (
             displayName,
             avatarUrl,
             userName,

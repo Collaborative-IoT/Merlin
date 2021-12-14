@@ -16,7 +16,7 @@ pub const ROOM_PERMISSIONS_TABLE_CREATION: &str = "
         roomId int NOT NULL,
         isMod BOOLEAN NOT NULL,
         isSpeaker BOOLEAN NOT NULL,
-        askedToSpeak BOOLEAN NOT NULL,
+        askedToSpeak BOOLEAN NOT NULL
     );
 ";
 pub const FOLLOWER_TABLE_CREATION: &str = "
@@ -27,7 +27,7 @@ pub const FOLLOWER_TABLE_CREATION: &str = "
     );
 ";
 pub const USER_TABLE_CREATION: &str = "
-    CREATE TABLE IF NOT EXISTS user(
+    CREATE TABLE IF NOT EXISTS users(
         Id SERIAL PRIMARY KEY,
         displayName VARCHAR(30),
         avatarUrl VARCHAR(255),
@@ -35,8 +35,8 @@ pub const USER_TABLE_CREATION: &str = "
         lastOnline VARCHAR(255),
         githubId VARCHAR(50),
         discordId VARCHAR(50),
-        githubAccessToken VARCHAR(250),
-        discordAccessToken VARCHAR(250),
+        githubAccessToken VARCHAR(255),
+        discordAccessToken VARCHAR(255),
         banned BOOLEAN NOT NULL,
         bannedReason VARCHAR(50),
         bio VARCHAR(255),
@@ -64,7 +64,7 @@ pub const SCHEDULED_ROOM_CREATION: &str = "
         Id SERIAL PRIMARY KEY,
         roomName int NOT NULL,
         numAttending int NOT NULL,
-        scheduledFor VARCHAR(255),
+        scheduledFor VARCHAR(255)
     );
 ";
 pub const SHEDULED_ROOM_ATTENDANCE: &str = "

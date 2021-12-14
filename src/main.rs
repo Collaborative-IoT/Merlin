@@ -19,10 +19,10 @@ pub mod DataStore{
     pub mod update_queries;
     pub mod test;
     pub mod tests{
-        mod blocks;
-        mod follower;
-        mod room;
-        mod user;
+        pub mod blocks;
+        pub mod follower;
+        pub mod room;
+        pub mod user;
     }
 }
 

@@ -8,6 +8,7 @@ use crate::DataStore::db_models::{
     DBScheduledRoom,
     DBScheduledRoomAttendance
 };
+
 use tokio_postgres::{Client,Error,row::Row};
 use crate::DataStore::select_queries;
 use crate::DataStore::insert_queries;

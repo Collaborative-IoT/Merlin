@@ -48,6 +48,6 @@ WHERE userId = $1 and roomId = $2;
 ";
 
 pub const SELECT_USER_BY_ID: &str = "
-SELECT * FROM user
+SELECT * FROM users
 WHERE userId = $1;
 ";
