@@ -62,7 +62,7 @@ pub const ROOM_BLOCK_CREATION: &str = "
 pub const SCHEDULED_ROOM_CREATION: &str = "
     CREATE TABLE IF NOT EXISTS scheduled_room(
         Id SERIAL PRIMARY KEY,
-        roomName int NOT NULL,
+        roomName VARCHAR(255) NOT NULL,
         numAttending int NOT NULL,
         scheduledFor VARCHAR(255)
     );

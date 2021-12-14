@@ -47,7 +47,7 @@ pub struct DBRoomBlock{
 }
 pub struct DBScheduledRoom{
     pub id:i32,
-    pub room_name:i32,
+    pub room_name:String,
     pub num_attending:i32,
     pub scheduled_for:String,
 }

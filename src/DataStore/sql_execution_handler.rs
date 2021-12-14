@@ -289,6 +289,18 @@ impl ExecutionHandler{
         return Ok(result);
     }
 
+    pub async fn select_room_by_id(&mut self, room_id:&i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ROOM_BY_ID;
+        let result:Vec<Row> = self.client.query(query,&[room_id]).await?;
+        return Ok(result);
+    }
+
+    pub async fn select_scheduled_room_by_id(&mut self, room_id:&i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_SCHEDULED_ROOM_BY_ID;
+        let result:Vec<Row> = self.client.query(query,&[room_id]).await?;
+        return Ok(result);
+    }
+
     pub async fn select_all_scheduled_rooms(&mut self)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_ALL_SCHEDULED_ROOMS_QUERY;
         let result:Vec<Row> = self.client.query(query,&[]).await?;

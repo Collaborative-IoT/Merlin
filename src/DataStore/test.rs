@@ -7,11 +7,12 @@ pub async fn test(){
     let mut execution_handler = setup_execution_handler().await.unwrap();
     setup_tables(&mut execution_handler).await;
     test_users(&mut execution_handler).await;
-    test_room().await;
+    test_room(&mut execution_handler).await;
 }
 
-async fn test_room(){
-
+async fn test_room(execution_handler:&mut ExecutionHandler){
+    let room_id = tests::room::test_room_insert_and_gather(execution_handler).await;
+    let sch_room_id = tests::room::test_scheduled_room_insert_and_gather(execution_handler).await;
 }
 
 async fn test_users(execution_handler: &mut ExecutionHandler){

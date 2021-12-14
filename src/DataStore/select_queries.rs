@@ -4,6 +4,16 @@ pub const SELECT_ALL_ROOM_QUERY: &str = "
 SELECT * FROM room;
 ";
 
+pub const SELECT_ROOM_BY_ID: &str = "
+SELECT * FROM room
+WHERE Id = $1;
+";
+
+pub const SELECT_SCHEDULED_ROOM_BY_ID: &str = "
+SELECT * FROM scheduled_room
+WHERE Id = $1;
+";
+
 pub const SELECT_ALL_SCHEDULED_ROOMS_QUERY: &str = "
 SELECT * FROM scheduled_room;
 ";
