@@ -74,14 +74,14 @@ impl ExecutionHandler{
         return Ok(user_id);
     }
 
-    pub async fn insert_room(&mut self,room:DBRoom)->Result<i32,Error>{
+    pub async fn insert_room(&mut self,room:&DBRoom)->Result<i32,Error>{
         let query = insert_queries::INSERT_ROOM_QUERY;
         let rows = self.client.query(query,&[&room.owner_id,&room.chat_mode]).await?;
         let room_id:i32 = rows[0].get(0);
         return Ok(room_id);
     }
 
-    pub async fn insert_room_permission(&mut self, permissions:DBRoomPermissions)->Result<(),Error>{
+    pub async fn insert_room_permission(&mut self, permissions:&DBRoomPermissions)->Result<(),Error>{
         let query = insert_queries::INSERT_ROOM_PERMISSION_QUERY;
         self.client.query(query,&[
             &permissions.user_id,
@@ -92,7 +92,7 @@ impl ExecutionHandler{
         return Ok(());
     }
 
-    pub async fn insert_follower(&mut self,follower:DBFollower)->Result<(),Error>{
+    pub async fn insert_follower(&mut self,follower:&DBFollower)->Result<(),Error>{
         let query = insert_queries::INSERT_FOLLOWER_QUERY;
         self.client.query(query,&[
             &follower.follower_id,
@@ -100,7 +100,7 @@ impl ExecutionHandler{
         return Ok(());
     }
 
-    pub async fn insert_user_block(&mut self, user_block:DBUserBlock)->Result<(),Error>{
+    pub async fn insert_user_block(&mut self, user_block:&DBUserBlock)->Result<(),Error>{
         let query = insert_queries::INSERT_USER_BLOCK_QUERY;
         self.client.query(query,&[
             &user_block.owner_user_id,
@@ -108,7 +108,7 @@ impl ExecutionHandler{
         return Ok(());
     }
 
-    pub async fn insert_room_block(&mut self, room_block:DBRoomBlock)->Result<(),Error>{
+    pub async fn insert_room_block(&mut self, room_block:&DBRoomBlock)->Result<(),Error>{
         let query = insert_queries::INSERT_ROOM_BLOCK_QUERY;
         self.client.query(query,&[
             &room_block.owner_room_id,
@@ -116,7 +116,7 @@ impl ExecutionHandler{
         return Ok(());
     }
 
-    pub async fn insert_scheduled_room(&mut self, scheduled_room:DBScheduledRoom)->Result<i32,Error>{
+    pub async fn insert_scheduled_room(&mut self, scheduled_room:&DBScheduledRoom)->Result<i32,Error>{
         let query = insert_queries::INSERT_SCHEDULED_ROOM_QUERY;
         let rows = self.client.query(query,&[
             &scheduled_room.room_name,
@@ -126,7 +126,7 @@ impl ExecutionHandler{
         return Ok(room_id);
     }
 
-    pub async fn insert_scheduled_room_attendance(&mut self, scheduled_room_attendance:DBScheduledRoomAttendance)->Result<(),Error>{
+    pub async fn insert_scheduled_room_attendance(&mut self, scheduled_room_attendance:&DBScheduledRoomAttendance)->Result<(),Error>{
         let query = insert_queries::INSERT_SCHEDULED_ATTENDANCE_QUERY;
         self.client.query(query,&[
             &scheduled_room_attendance.user_id,
@@ -195,7 +195,7 @@ impl ExecutionHandler{
         return Ok(num_modified);
     }
 
-    pub async fn update_room_owner_query(&mut self, room_id:&i32,new_owner_id:&i32)->Result<u64,Error>{
+    pub async fn update_room_owner(&mut self, room_id:&i32,new_owner_id:&i32)->Result<u64,Error>{
         let query = update_queries::UPDATE_ROOM_OWNER_QUERY;
         let num_modified = self.client.execute(query,&[&new_owner_id,room_id]).await?;
         return Ok(num_modified);
