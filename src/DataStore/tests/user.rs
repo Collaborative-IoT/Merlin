@@ -132,7 +132,7 @@ pub async fn test_updating_last_online(execution_handler:&mut ExecutionHandler, 
 }
 
 pub async fn test_updating_github_access_token(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
-    println!("Test updating github access token");
+    println!("Testing updating github access token");
     //get the last access token
     let select_row_result = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows = select_row_result.unwrap();
@@ -152,7 +152,7 @@ pub async fn test_updating_github_access_token(execution_handler:&mut ExecutionH
 }
 
 pub async fn test_updating_discord_access_token(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
-    println!("Test updating discord access token");
+    println!("Testing updating discord access token");
     let select_row_result = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows = select_row_result.unwrap();
     let new_discord_access_token = "lkwefif".to_string();
@@ -171,7 +171,7 @@ pub async fn test_updating_discord_access_token(execution_handler:&mut Execution
 }
 
 pub async fn test_update_contributions(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
-    println!("Test updating contributions");
+    println!("Testing updating contributions");
     let select_row_result = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows = select_row_result.unwrap();
     let new_contributions:i32 = 30;
@@ -190,7 +190,7 @@ pub async fn test_update_contributions(execution_handler:&mut ExecutionHandler, 
 }
 
 pub async fn test_update_banner_url(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
-    println!("Test update banner url");
+    println!("Testing update banner url");
     let select_row_result = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows = select_row_result.unwrap();
     let new_banner_url = "test.com/test_banner_new".to_string();
@@ -208,7 +208,7 @@ pub async fn test_update_banner_url(execution_handler:&mut ExecutionHandler, use
 }
 
 pub async fn test_update_user_name(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
-    println!("Test update banner url");
+    println!("Testing update banner url");
     let select_row_result = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows = select_row_result.unwrap();
     let new_user_name = "new_user445".to_string();
@@ -224,6 +224,32 @@ pub async fn test_update_user_name(execution_handler:&mut ExecutionHandler, user
     let after_update_user_name:&str = selected_rows_second[0].get(3);
     assert_eq!(after_update_user_name,"new_user445");
     return user_id;
+}
+
+pub async fn test_updating_entire_user(execution_handler:&mut ExecutionHandler){
+    println!("Testing updating entire user");
+    let initial_user:DBUser = gather_user_struct();
+    let insert_result = execution_handler.insert_user(&initial_user).await;
+    
+    //assume insertion works due to previous tests ran before this one
+    let user_id:i32 = insert_result.unwrap();
+    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
+    let selected_rows = select_row_result.unwrap();
+
+    //make sure the insertion worked right and the values are the same
+    compare_user_to_db_user(&initial_user,&selected_rows[0]);
+
+    //update the user
+    let mut different_user:DBUser = gather_different_user_struct();
+    different_user.id = user_id; // id has to match original row to update
+    let result = execution_handler.update_entire_user(&different_user).await;
+    let num_of_rows_updated = result.unwrap();
+    assert_eq!(num_of_rows_updated,1);
+
+    //make sure the user got updated
+    let select_row_result_second = execution_handler.select_user_by_id(&different_user.id).await;
+    let selected_rows_second = select_row_result_second.unwrap();
+    compare_user_to_db_user(&different_user,&selected_rows_second[0]);
 }
 
 //asserts db results against the original user inserted
@@ -273,6 +299,26 @@ fn gather_user_struct()->DBUser{
         bio:"test".to_string(),
         contributions:40,
         banner_url:"test.com/test_banner".to_string(),
+    };
+    return user;
+}
+
+fn gather_different_user_struct()->DBUser{
+    let user:DBUser = DBUser{
+        id:0,//doesn't matter in insertion
+        display_name:"test12".to_string(),
+        avatar_url:"test.com/avatar2".to_string(),
+        user_name:"ultimate_tester2".to_string(),
+        last_online:Utc::now().to_string(),
+        github_id:"12".to_string(),
+        discord_id:"22".to_string(),
+        github_access_token:"232322".to_string(),
+        discord_access_token:"293202".to_string(),
+        banned:true,
+        banned_reason:"ban evading2".to_string(),
+        bio:"test2".to_string(),
+        contributions:40,
+        banner_url:"test.com/test_banner2".to_string(),
     };
     return user;
 }

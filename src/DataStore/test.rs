@@ -17,6 +17,7 @@ pub async fn test(){
     tests::user::test_update_contributions(&mut execution_handler, user_id.clone()).await;
     tests::user::test_update_banner_url(&mut execution_handler, user_id.clone()).await;
     tests::user::test_update_user_name(&mut execution_handler, user_id.clone()).await;
+    tests::user::test_updating_entire_user(&mut execution_handler).await;
 }
 
 async fn setup_tables(execution_handler:&mut ExecutionHandler){

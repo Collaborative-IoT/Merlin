@@ -78,3 +78,21 @@ SET banned = $1,
 bannedReason = $2
 WHERE Id = $3;
 ";
+
+pub const UPDATE_ENTIRE_USER: &str = "
+UPDATE users
+SET displayName = $1,
+    avatarUrl = $2,
+    userName = $3,
+    lastOnline = $4,
+    githubId = $5,
+    discordId = $6,
+    githubAccessToken = $7,
+    discordAccessToken = $8,
+    banned = $9,
+    bannedReason = $10,
+    bio = $11,
+    contributions = $12,
+    bannerUrl = $13
+WHERE Id = $14;
+";

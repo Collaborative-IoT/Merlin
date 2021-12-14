@@ -174,11 +174,33 @@ impl ExecutionHandler{
     }
 
     //update
+    pub async fn update_entire_user(&mut self, user:&DBUser)->Result<u64,Error>{
+        let query = update_queries::UPDATE_ENTIRE_USER;
+        let num_modified = self.client.execute(query,
+            &[
+            &user.display_name,
+            &user.avatar_url,
+            &user.user_name,
+            &user.last_online,
+            &user.github_id,
+            &user.discord_id,
+            &user.github_access_token,
+            &user.discord_access_token,
+            &user.banned,
+            &user.banned_reason,
+            &user.bio,
+            &user.contributions,
+            &user.banner_url,
+            &user.id]).await?;
+        return Ok(num_modified);
+    }
+
     pub async fn update_room_owner_query(&mut self, room_id:&i32,new_owner_id:&i32)->Result<u64,Error>{
         let query = update_queries::UPDATE_ROOM_OWNER_QUERY;
         let num_modified = self.client.execute(query,&[&new_owner_id,room_id]).await?;
         return Ok(num_modified);
     }
+
     //sets user to mod or not mod for a room
     pub async fn update_room_mod_status(&mut self, room_id:&i32,user_id:&i32,is_mod:bool)->Result<u64,Error>{
         let query = update_queries::UPDATE_ROOM_MOD_STATUS_QUERY;
