@@ -35,18 +35,14 @@ pub async fn test_update_room_owner(execution_handler:&mut ExecutionHandler, roo
 
 pub async fn test_delete_room(execution_handler:&mut ExecutionHandler,room_id:i32){
     println!("testing deleting room");
-    //make sure it exists
-    let gather_room_result = execution_handler.select_room_by_id(&room_id).await;
-    let selected_rows = gather_room_result.unwrap();
-    assert_eq!(selected_rows.len(),1);
-    //remove
+    //we know it exist based on previous tests
     let delete_rows_result = execution_handler.delete_room(&room_id).await;
     let rows_affected = delete_rows_result.unwrap();
     assert_eq!(rows_affected,1);
     //check if they exist
-    let gather_room_result_second = execution_handler.select_room_by_id(&room_id).await;
-    let selected_rows_second = gather_room_result_second.unwrap();
-    assert_eq!(selected_rows_second,0);
+    let gather_room_result = execution_handler.select_room_by_id(&room_id).await;
+    let selected_rows = gather_room_result.unwrap();
+    assert_eq!(selected_rows.len(),0);
 }
 
 //#scheduled rooms
@@ -69,7 +65,7 @@ pub async fn test_scheduled_room_insert_and_gather(execution_handler:&mut Execut
 }
 
 pub async fn test_update_scheduled_room(execution_handler:&mut ExecutionHandler, room_id:i32)->i32{
-    println!("testing update scheduled room");
+    println!("testing updating scheduled room");
     //we know the previous num_attending was 99 and scheduled_for was `test_val`
     let new_num_attending:i32 = 392;
     let scheduled_for:&str = "for";
@@ -98,6 +94,26 @@ pub async fn test_inserting_scheduled_room_attendance(execution_handler:&mut Exe
     let is_owner:bool = selected_rows[0].get(3);
     assert_eq!(user_id,99);
     assert_eq!(is_owner,true);
+}
+
+pub async fn test_deleting_scheduled_room(execution_handler:&mut ExecutionHandler,room_id:i32){
+    println!("testing deleting scheduled room")
+    let delete_result = execution_handler.delete_scheduled_room(&room_id).await;
+    let rows_affected = delete_result.await;
+    assert_eq!(rows_affected,1);
+    let gather_room_result =  execution_handler.select_scheduled_room_by_id(&room_id).await;
+    let selected_rows = gather_room_result.unwrap();
+    assert_eq!(selected_rows.len(),0);
+}
+
+pub async fn test_deleting_scheduled_room_attendance(execution_handler:&mut ExecutionHandler){
+    println!("testing deleting scheduled room attendance");
+    let delete_result = execution_handler.delete_user_room_attendance(99,899).await;
+    let rows_affected = delete_result.unwrap();
+    assert_eq!(rows_affected,1);
+    let gather_rows_result = execution_handler.select_all_attendance_for_scheduled_room(899).await;
+    let selected_rows = gather_rows_result.unwrap();
+    assert_eq!(selected_rows.len(),0);
 }
 
 
