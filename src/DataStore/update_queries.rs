@@ -11,6 +11,14 @@ SET isMod = $1
 WHERE roomId = $2 AND userId = $3;
 ";
 
+pub const UPDATE_ENTIRE_ROOM_PERMISSIONS:&str = "
+UPDATE room_permissions
+SET isMod = $1,
+    isSpeaker = $2,
+    askedToSpeak = $3
+WHERE roomId = $4 AND userId = $5;
+";
+
 pub const UPDATE_USER_AVATAR_QUERY: &str = "
 UPDATE users
 SET avatarUrl = $1

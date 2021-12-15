@@ -126,13 +126,14 @@ impl ExecutionHandler{
         return Ok(room_id);
     }
 
-    pub async fn insert_scheduled_room_attendance(&mut self, scheduled_room_attendance:&DBScheduledRoomAttendance)->Result<(),Error>{
+    pub async fn insert_scheduled_room_attendance(&mut self, scheduled_room_attendance:&DBScheduledRoomAttendance)->Result<i32,Error>{
         let query = insert_queries::INSERT_SCHEDULED_ATTENDANCE_QUERY;
-        self.client.query(query,&[
+        let rows = self.client.query(query,&[
             &scheduled_room_attendance.user_id,
             &scheduled_room_attendance.scheduled_room_id,
             &scheduled_room_attendance.is_owner
         ]).await?;
+        let attendance_id:i32 = rows.
         return Ok(());
     }
 
@@ -198,6 +199,18 @@ impl ExecutionHandler{
     pub async fn update_room_owner(&mut self, room_id:&i32,new_owner_id:&i32)->Result<u64,Error>{
         let query = update_queries::UPDATE_ROOM_OWNER_QUERY;
         let num_modified = self.client.execute(query,&[&new_owner_id,room_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn update_entire_room_permissions(&mut self, room_permission:DBRoomPermissions)->Result<u64,Error>{
+        let query = update_result::UPDATE_ENTIRE_ROOM_PERMISSIONS;
+        let num_modified = self.client.execute(query,&[
+            &room_permission.is_mod,
+            &room_permission.is_speaker,
+            &room_permission.asked_to_speak,
+            &room_permission.room_id,
+            &room_permission.user_id
+        ]).await;
         return Ok(num_modified);
     }
 
