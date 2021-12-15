@@ -13,6 +13,19 @@ pub async fn test(){
 async fn test_room(execution_handler:&mut ExecutionHandler){
     let room_id = tests::room::test_room_insert_and_gather(execution_handler).await;
     let sch_room_id = tests::room::test_scheduled_room_insert_and_gather(execution_handler).await;
+    //live-non scheduled
+    tests::room::test_update_room_owner(execution_handler,room_id.clone()).await;
+    tests::room::test_delete_room(execution_handler,room_id.clone()).await;
+    //scheduled
+    tests::room::test_update_scheduled_room(execution_handler,sch_room_id.clone()).await;
+    tests::room::test_inserting_scheduled_room_attendance(execution_handler).await;
+    tests::room::test_deleting_scheduled_room(execution_handler,sch_room_id.clone()).await;
+    tests::room::test_deleting_scheduled_room_attendance(execution_handler).await;
+    tests::room::test_deleting_all_scheduled_room_attendance(execution_handler).await;
+    //permissions
+    tests::room::test_room_permission_insert_and_gather(execution_handler).await;
+    tests::room::test_update_room_permission_for_user(execution_handler).await;
+    tests::room::test_delete_room_permissions(execution_handler).await;
 }
 
 async fn test_users(execution_handler: &mut ExecutionHandler){
