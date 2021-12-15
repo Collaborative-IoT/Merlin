@@ -1,6 +1,8 @@
 use crate::DataStore::db_models::{DBRoom,DBScheduledRoom,DBScheduledRoomAttendance};
 use crate::DataStore::sql_execution_handler::ExecutionHandler;
 
+//#rooms
+
 pub async fn test_room_insert_and_gather(execution_handler:&mut ExecutionHandler)->i32{
     println!("testing room insert and gather");
     let new_room = gather_db_room();
@@ -30,6 +32,24 @@ pub async fn test_update_room_owner(execution_handler:&mut ExecutionHandler, roo
     assert_eq!(owner_id,10);
     return room_id;
 }
+
+pub async fn test_delete_room(execution_handler:&mut ExecutionHandler,room_id:i32){
+    println!("testing deleting room");
+    //make sure it exists
+    let gather_room_result = execution_handler.select_room_by_id(&room_id).await;
+    let selected_rows = gather_room_result.unwrap();
+    assert_eq!(selected_rows.len(),1);
+    //remove
+    let delete_rows_result = execution_handler.delete_room(&room_id).await;
+    let rows_affected = delete_rows_result.unwrap();
+    assert_eq!(rows_affected,1);
+    //check if they exist
+    let gather_room_result_second = execution_handler.select_room_by_id(&room_id).await;
+    let selected_rows_second = gather_room_result_second.unwrap();
+    assert_eq!(selected_rows_second,0);
+}
+
+//#scheduled rooms
 
 pub async fn test_scheduled_room_insert_and_gather(execution_handler:&mut ExecutionHandler)->i32{
     println!("testing scheduled room insert and gather");
@@ -79,6 +99,7 @@ pub async fn test_inserting_scheduled_room_attendance(execution_handler:&mut Exe
     assert_eq!(user_id,99);
     assert_eq!(is_owner,true);
 }
+
 
 fn gather_sch_db_room_attendance()->DBScheduledRoomAttendance{
     return DBScheduledRoomAttendance{
