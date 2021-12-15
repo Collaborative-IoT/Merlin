@@ -8,6 +8,12 @@ pub async fn test(){
     setup_tables(&mut execution_handler).await;
     test_users(&mut execution_handler).await;
     test_room(&mut execution_handler).await;
+    test_follower(&mut execution_handler).await;
+}
+
+async fn test_follower(execution_handler:&mut ExecutionHandler){
+    tests::follower::test_follower_insertion_and_gather(execution_handler).await;
+    tests::follower::test_gather_following(execution_handler).await;
 }
 
 async fn test_room(execution_handler:&mut ExecutionHandler){
