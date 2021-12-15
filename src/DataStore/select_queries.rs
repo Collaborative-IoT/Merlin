@@ -20,7 +20,7 @@ SELECT * FROM scheduled_room;
 
 pub const SELECT_ALL_SCHEDULED_ROOM_ATTENDANCE_FOR_ROOM_QUERY: &str= "
 SELECT * FROM scheduled_room_attendance 
-WHERE Id = $1;
+WHERE scheduledRoomId = $1;
 ";
 
 pub const SELECT_ALL_ATTENDANCE_FOR_USER_QUERY: &str= "

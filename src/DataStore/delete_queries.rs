@@ -18,16 +18,16 @@ WHERE ownerRoomId = $1;
 ";
 
 pub const DELETE_SCHEDULED_ROOM_QUERY: &str ="
-DELETE * FROM scheduled_room
+DELETE FROM scheduled_room
 WHERE Id = $1;
 ";
 
 pub const DELETE_ALL_SCHEDULED_ROOM_ATTENDANCE_QUERY: &str = "
 DELETE FROM scheduled_room_attendance
-WHERE Id = $1;
+WHERE scheduledRoomId = $1;
 ";
 
 pub const DELETE_USER_ROOM_ATTENDANCE_QUERY: &str = "
-DELETE * FROM scheduled_room_attendance
+DELETE FROM scheduled_room_attendance
 WHERE scheduledRoomId = $1 and userId = $2;
 ";

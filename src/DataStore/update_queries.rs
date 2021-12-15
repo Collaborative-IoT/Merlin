@@ -1,7 +1,7 @@
 //Dry violations on purpose, helps read and follow each specific query
 pub const UPDATE_ROOM_OWNER_QUERY: &str = "
 UPDATE room
-SET ownerId = $1;
+SET ownerId = $1
 WHERE Id = $2;
 ";
 
@@ -33,7 +33,7 @@ WHERE Id = $2;
 
 pub const UPDATE_SCHEDULED_ROOM_QUERY: &str = "
 UPDATE scheduled_room
-SET = numAttending = $1,
+SET numAttending = $1,
       scheduledFor = $2
 WHERE Id = $3;   
 ";

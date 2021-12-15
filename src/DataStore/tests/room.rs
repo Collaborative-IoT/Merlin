@@ -68,11 +68,11 @@ pub async fn test_update_scheduled_room(execution_handler:&mut ExecutionHandler,
     println!("testing updating scheduled room");
     //we know the previous num_attending was 99 and scheduled_for was `test_val`
     let new_num_attending:i32 = 392;
-    let scheduled_for:&str = "for";
+    let scheduled_for = "for".to_owned();
     //update
-    let update_result = execution_handler.update_scheduled_room(new_num_attending,scheduled_for,&room_id).await;
+    let update_result = execution_handler.update_scheduled_room(&new_num_attending,scheduled_for,&room_id).await;
     let num_updated = update_result.unwrap();
-    assert_eq!(392,num_attending);
+    assert_eq!(1,num_updated);
     //check updated data
     let gather_room_result = execution_handler.select_scheduled_room_by_id(&room_id).await;
     let selected_rows = gather_room_result.unwrap();
@@ -97,9 +97,9 @@ pub async fn test_inserting_scheduled_room_attendance(execution_handler:&mut Exe
 }
 
 pub async fn test_deleting_scheduled_room(execution_handler:&mut ExecutionHandler,room_id:i32){
-    println!("testing deleting scheduled room")
+    println!("testing deleting scheduled room");
     let delete_result = execution_handler.delete_scheduled_room(&room_id).await;
-    let rows_affected = delete_result.await;
+    let rows_affected = delete_result.unwrap();
     assert_eq!(rows_affected,1);
     let gather_room_result =  execution_handler.select_scheduled_room_by_id(&room_id).await;
     let selected_rows = gather_room_result.unwrap();
@@ -160,7 +160,7 @@ pub async fn test_delete_room_permissions(execution_handler:&mut ExecutionHandle
     //we already inserted a permission under this room_id in previous tests
     let target_room_id:i32 = 2000;
     let deletion_result = execution_handler.delete_all_room_permissions(&target_room_id).await;
-    let rows_affected = deletion_result.unwrap():
+    let rows_affected = deletion_result.unwrap();
     assert_eq!(rows_affected,1);
     //this user/room permission entry did exist at one point due to previous tests
     let target_user_id:i32 = 99;
@@ -168,19 +168,19 @@ pub async fn test_delete_room_permissions(execution_handler:&mut ExecutionHandle
         &target_room_id,
         &target_user_id).await;
     let selected_rows = gather_result.unwrap();
-    assert_eq(selected_rows.len(),0);
+    assert_eq!(selected_rows.len(),0);
 }
 
-pub async fn gather_and_assert_permission(execution_handler:&mut ExecutionHandler,new_permission:&DBRoomPermissions){
+pub async fn gather_and_assert_permission(execution_handler:&mut ExecutionHandler,new_permissions:&DBRoomPermissions){
     let gather_result = execution_handler.select_all_room_permissions_for_user(
-        new_permissions.user_id,
-        new_permissions.room_id).await;
+        &new_permissions.user_id,
+        &new_permissions.room_id).await;
     let selected_rows = gather_result.unwrap();
     let user_id:i32 = selected_rows[0].get(1);
     let room_id:i32 = selected_rows[0].get(2);
     let is_mod:bool = selected_rows[0].get(3);
     let is_speaker:bool = selected_rows[0].get(4);
-    let asked_to_speak = selected_rows[0].get(5);
+    let asked_to_speak:bool = selected_rows[0].get(5);
     assert_eq!(user_id,new_permissions.user_id);
     assert_eq!(room_id,new_permissions.room_id);
     assert_eq!(is_mod,new_permissions.is_mod);
