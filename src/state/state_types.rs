@@ -16,32 +16,25 @@ pub struct Board{
 pub struct User{
     avatar_url:String,
     display_name:String,
-    followers:HashSet<String>,
-    following:HashSet<String>,
-    blocked_users:HashSet<String>,
     user_name:String,
     last_online:DateTime<Utc>,
-    github_id:String,
-    discord_id:String,
-    github_access_token:String,
-    discord_access_token:String,
-    banned:bool,
-    banned_reason:String,
+    muted:bool,
+    deaf:bool,
+    ip:String,
     bio:String,
-    contributions:i32,
     banner_url:String
 }
 
 pub struct Room{
     room_id:String,
     owner_user_id:String,
-    speakers:HashSet<String>,
+    muted:HashSet<String>,
+    voice_server_id:String,
+    deaf:HashSet<String>,
     user_ids:HashSet<String>,
     public:bool,
-    blocked_users:HashSet<String>,
-    blocked_ips:HashSet<String>,
     chat_mode:String,
-    description:String
+    auto_speaker:bool,
 }
 
 //IoTServerConnectionId -> Permissions for the connection(represented as the board)

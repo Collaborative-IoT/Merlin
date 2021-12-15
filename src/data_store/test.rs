@@ -9,11 +9,22 @@ pub async fn test(){
     test_users(&mut execution_handler).await;
     test_room(&mut execution_handler).await;
     test_follower(&mut execution_handler).await;
+    test_blocks(&mut execution_handler).await;
+}
+
+
+async fn test_blocks(execution_handler:&mut ExecutionHandler){
+    tests::blocks::test_insert_and_gather_user_blocks(execution_handler).await;
+    tests::blocks::test_get_blockers_for_user(execution_handler).await;
+    tests::blocks::test_insert_and_gather_room_blocks(execution_handler).await;
+    tests::blocks::test_remove_user_block(execution_handler).await;
+    tests::blocks::test_remove_room_block(execution_handler).await;
 }
 
 async fn test_follower(execution_handler:&mut ExecutionHandler){
     tests::follower::test_follower_insertion_and_gather(execution_handler).await;
     tests::follower::test_gather_following(execution_handler).await;
+    tests::follower::test_delete_following(execution_handler).await;
 }
 
 async fn test_room(execution_handler:&mut ExecutionHandler){

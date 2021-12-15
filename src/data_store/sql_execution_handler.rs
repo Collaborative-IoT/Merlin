@@ -155,6 +155,18 @@ impl ExecutionHandler{
         return Ok(num_modified);
     }
 
+    pub async fn delete_room_block_for_user(&mut self, room_id:&i32 , user_id:&i32)->Result<u64,Error>{
+        let query = delete_queries::DELETE_ROOM_BLOCK_QUERY;
+        let num_modified = self.client.execute(query,&[room_id,user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn delete_block_for_user(&mut self, user_id:&i32, blocked_user_id:&i32)->Result<u64,Error>{
+        let query = delete_queries::DELETE_USER_BLOCK_QUERY;
+        let num_modified = self.client.execute(query,&[user_id,blocked_user_id]).await?;
+        return Ok(num_modified);
+    }
+
     pub async fn delete_scheduled_room(&mut self, room_id:&i32)->Result<u64,Error>{
         let query = delete_queries::DELETE_SCHEDULED_ROOM_QUERY;
         let num_modified =self.client.execute(query,&[room_id]).await?;
@@ -170,6 +182,12 @@ impl ExecutionHandler{
     pub async fn delete_user_room_attendance(&mut self, user_id:&i32,room_id:&i32)->Result<u64,Error>{
         let query = delete_queries::DELETE_USER_ROOM_ATTENDANCE_QUERY;
         let num_modified = self.client.execute(query,&[room_id,user_id]).await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn delete_follower_for_user(&mut self, follower_id:&i32, user_id:&i32)->Result<u64,Error>{
+        let query = delete_queries::DELETE_FOLLOWER_FOR_USER;
+        let num_modified = self.client.execute(query,&[follower_id,user_id]).await;
         return Ok(num_modified);
     }
 
