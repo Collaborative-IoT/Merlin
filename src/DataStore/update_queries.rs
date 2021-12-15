@@ -6,13 +6,13 @@ WHERE Id = $2;
 ";
 
 pub const UPDATE_ROOM_MOD_STATUS_QUERY: &str = "
-UPDATE room_permissions
+UPDATE room_permission
 SET isMod = $1
 WHERE roomId = $2 AND userId = $3;
 ";
 
 pub const UPDATE_ENTIRE_ROOM_PERMISSIONS:&str = "
-UPDATE room_permissions
+UPDATE room_permission
 SET isMod = $1,
     isSpeaker = $2,
     askedToSpeak = $3
