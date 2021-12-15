@@ -156,6 +156,21 @@ pub async fn test_update_room_permission_for_user(execution_handler:&mut Executi
     gather_and_assert_permission(execution_handler,&mock_obj).await;
 }
 
+pub async fn test_delete_room_permissions(execution_handler:&mut ExecutionHandler){
+    //we already inserted a permission under this room_id in previous tests
+    let target_room_id:i32 = 2000;
+    let deletion_result = execution_handler.delete_all_room_permissions(&target_room_id).await;
+    let rows_affected = deletion_result.unwrap():
+    assert_eq!(rows_affected,1);
+    //this user/room permission entry did exist at one point due to previous tests
+    let target_user_id:i32 = 99;
+    let gather_result = execution_handler.select_all_room_permissions_for_user(
+        &target_room_id,
+        &target_user_id).await;
+    let selected_rows = gather_result.unwrap();
+    assert_eq(selected_rows.len(),0);
+}
+
 pub async fn gather_and_assert_permission(execution_handler:&mut ExecutionHandler,new_permission:&DBRoomPermissions){
     let gather_result = execution_handler.select_all_room_permissions_for_user(
         new_permissions.user_id,
