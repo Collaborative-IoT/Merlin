@@ -4,7 +4,7 @@ use std::{time::Duration, sync::{Arc, Mutex}};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{accept_async, tungstenite::Error,WebSocketStream};
 use tokio_tungstenite::tungstenite::{Message, Result};
-use crate::State::state::ServerState;
+use crate::state::state::ServerState;
 pub struct Server;
 
 impl Server{
