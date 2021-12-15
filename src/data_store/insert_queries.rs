@@ -45,7 +45,7 @@ VALUES($1,$2);
 ";
 
 pub const INSERT_ROOM_BLOCK_QUERY: &str = "
-INSERT INTO room_block(ownerUserId,blockedUserId)
+INSERT INTO room_block(ownerRoomId,blockedUserId)
 VALUES($1,$2);
 ";
 

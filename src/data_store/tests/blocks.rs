@@ -26,21 +26,18 @@ pub async fn test_get_blockers_for_user(execution_handler:&mut ExecutionHandler)
 pub async fn test_insert_and_gather_room_blocks(execution_handler:&mut ExecutionHandler){
     println!("testing inserting room block");
     let room_block:DBRoomBlock = gather_room_block();
-    execution_handler.insert_room_block(&room_block).await;
+    execution_handler.insert_room_block(&room_block).await.unwrap();
     let gather_result = execution_handler.select_all_blocked_users_for_room(&room_block.owner_room_id).await;
     let selected_rows = gather_result.unwrap();
-    assert_eq!(selected_rows.len(),0);
+    assert_eq!(selected_rows.len(),1);
     let owner_room_id:i32 = selected_rows[0].get(1);
-    let blocked_user_id:i32 = selected_rows[0].get(1);
+    let blocked_user_id:i32 = selected_rows[0].get(2);
     assert_eq!(owner_room_id,room_block.owner_room_id);
     assert_eq!(blocked_user_id,room_block.blocked_user_id);
 }
 
 pub async fn test_remove_user_block(execution_handler:&mut ExecutionHandler){
     println!("testing remove user block");
-    //insert extra one to make sure
-    let mut room_block:DBRoomBlock = gather_room_block();
-    execution_handler.insert_room_block(&room_block).await;
     let target_user:i32 = 22;
     let target_blocked_user:i32 = 33;
     let remove_result = execution_handler.delete_block_for_user(&target_user,&target_blocked_user).await;

@@ -187,7 +187,7 @@ impl ExecutionHandler{
 
     pub async fn delete_follower_for_user(&mut self, follower_id:&i32, user_id:&i32)->Result<u64,Error>{
         let query = delete_queries::DELETE_FOLLOWER_FOR_USER;
-        let num_modified = self.client.execute(query,&[follower_id,user_id]).await;
+        let num_modified = self.client.execute(query,&[follower_id,user_id]).await?;
         return Ok(num_modified);
     }
 
