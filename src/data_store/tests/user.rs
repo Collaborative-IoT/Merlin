@@ -35,14 +35,11 @@ pub async fn test_updating_user_avatar(execution_handler:&mut ExecutionHandler, 
     let avatar_url:&str = selected_rows[0].get(2);
     assert_eq!(avatar_url,"test.com/avatar");
     //perform update
-    let result = execution_handler.update_user_avatar(new_avatar_url,&user_id).await;
+    let result = execution_handler.update_user_avatar(new_avatar_url.to_owned(),&user_id).await;
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check after update
-    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
-    let selected_rows_second = select_row_result_second.unwrap();
-    let after_update_avatar_url:&str = selected_rows_second[0].get(2);
-    assert_eq!(after_update_avatar_url,"test.com/new_test_url");
+    test_user_column_after_update(2 as usize, new_avatar_url,&user_id,execution_handler).await;
     return user_id;
 }
 
@@ -81,14 +78,11 @@ pub async fn test_updating_user_display_name(execution_handler:&mut ExecutionHan
     let display_name:&str = selected_rows[0].get(1);
     assert_eq!(display_name,"test1");
     //update 
-    let result = execution_handler.update_display_name(new_display_name,&user_id).await;
+    let result = execution_handler.update_display_name(new_display_name.to_owned(),&user_id).await;
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check after update
-    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
-    let selected_rows_second = select_row_result_second.unwrap();
-    let after_update_display_name:&str = selected_rows_second[0].get(1);
-    assert_eq!(after_update_display_name,"test_update_name");
+    test_user_column_after_update(1 as usize, new_display_name,&user_id,execution_handler).await;
     return user_id;
 }
 
@@ -101,14 +95,11 @@ pub async fn test_updating_user_bio(execution_handler:&mut ExecutionHandler, use
     let bio:&str = selected_rows[0].get(11);
     assert_eq!(bio,"test");
     //update
-    let result = execution_handler.update_user_bio(new_bio,&user_id).await;
+    let result = execution_handler.update_user_bio(new_bio.to_owned(),&user_id).await;
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check_after_update
-    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
-    let selected_rows_second = select_row_result_second.unwrap();
-    let after_update_bio:&str = selected_rows_second[0].get(11);
-    assert_eq!(after_update_bio,"test bio 123");
+    test_user_column_after_update(11 as usize, new_bio.to_owned(),&user_id,execution_handler).await;
     return user_id;
 }
 
@@ -124,10 +115,7 @@ pub async fn test_updating_last_online(execution_handler:&mut ExecutionHandler, 
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check after update
-    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
-    let selected_rows_second = select_row_result_second.unwrap();
-    let after_update_last_online:&str = selected_rows_second[0].get(4);
-    assert_eq!(after_update_last_online,new_last_online);
+    test_user_column_after_update(4 as usize, new_last_online.to_owned(),&user_id,execution_handler).await;
     return user_id;
 }
 
@@ -144,10 +132,7 @@ pub async fn test_updating_github_access_token(execution_handler:&mut ExecutionH
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check_after_update
-    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
-    let selected_rows_second = select_row_result_second.unwrap();
-    let access_token_after_update:&str = selected_rows_second[0].get(7);
-    assert_eq!(access_token_after_update, "-40kp2rm3ro");
+    test_user_column_after_update(7 as usize,"-40kp2rm3ro".to_owned(),&user_id,execution_handler).await;
     return user_id;
 }
 
@@ -163,10 +148,7 @@ pub async fn test_updating_discord_access_token(execution_handler:&mut Execution
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check after update
-    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
-    let selected_rows_second = select_row_result_second.unwrap();
-    let access_token_after_update:&str = selected_rows_second[0].get(8);
-    assert_eq!(access_token_after_update,"lkwefif");
+    test_user_column_after_update(8 as usize, "lkwefif".to_owned(),&user_id,execution_handler).await;
     return user_id;
 }
 
@@ -182,14 +164,11 @@ pub async fn test_update_contributions(execution_handler:&mut ExecutionHandler, 
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check after update
-    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
-    let selected_rows_second = select_row_result_second.unwrap();
-    let contributions_after_update:i32 = selected_rows_second[0].get(12);
-    assert_eq!(contributions_after_update,new_contributions);
+    test_user_column_after_update(12 as usize,new_contributions.to_owned(),&user_id,execution_handler).await;
     return user_id;
 }
 
-pub async fn test_update_banner_url(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
+pub async fn test_update_banner_url(execution_handler:&mut ExecutionHandler,user_id:i32)->i32{
     println!("Testing update banner url");
     let select_row_result = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows = select_row_result.unwrap();
@@ -202,8 +181,7 @@ pub async fn test_update_banner_url(execution_handler:&mut ExecutionHandler, use
     //check after update
     let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows_second = select_row_result_second.unwrap();
-    let after_update_banner_url:&str = selected_rows_second[0].get(13);
-    assert_eq!(after_update_banner_url,"test.com/test_banner_new");
+    test_user_column_after_update(13 as usize, "test.com/test_banner_new".to_owned(), &user_id,execution_handler).await;
     return user_id;
 }
 
@@ -219,10 +197,7 @@ pub async fn test_update_user_name(execution_handler:&mut ExecutionHandler, user
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check after
-    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
-    let selected_rows_second = select_row_result_second.unwrap();
-    let after_update_user_name:&str = selected_rows_second[0].get(3);
-    assert_eq!(after_update_user_name,"new_user445");
+    test_user_column_after_update(3 as usize,"new_user445".to_owned(),&user_id,execution_handler).await;
     return user_id;
 }
 
@@ -250,6 +225,18 @@ pub async fn test_updating_entire_user(execution_handler:&mut ExecutionHandler){
     let select_row_result_second = execution_handler.select_user_by_id(&different_user.id).await;
     let selected_rows_second = select_row_result_second.unwrap();
     compare_user_to_db_user(&different_user,&selected_rows_second[0]);
+}
+
+async fn test_user_column_after_update<T:std::fmt::Debug + std::cmp::PartialEq + for<'a> tokio_postgres::types::FromSql<'a>>(
+    col_num:usize,
+    value_expected:T,
+    user_id:&i32,
+    execution_handler:&mut ExecutionHandler){
+        //test gathered column by the col num and checks against what is expected
+        let select_row_result = execution_handler.select_user_by_id(user_id).await;
+        let selected_rows:Vec<Row> = select_row_result.unwrap();
+        let after_update_val:T = selected_rows[0].get(col_num);
+        assert_eq!(after_update_val,value_expected);
 }
 
 //asserts db results against the original user inserted
