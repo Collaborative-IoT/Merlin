@@ -1,0 +1,3 @@
+/*
+Handles all functionality that has to be carried out by communication.
+*/
