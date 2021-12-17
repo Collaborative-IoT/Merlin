@@ -82,6 +82,11 @@ pub struct RoomSettingsEditOrCreation{
     description:String,
 }
 
+pub struct ScheduledRoomUpdate{
+    room_id:i32,
+    details:RoomSettingsEditOrCreation
+}
+
 pub struct RoomUpdate{
     name: String,
     privacy: String,
