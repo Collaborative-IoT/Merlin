@@ -19,10 +19,10 @@ pub struct ServerState{
 impl ServerState{
     pub fn new()-> Self{
         Self{
-            iot_server_connections:IoTServerConnections::new(Mutex::new(HashMap::new())),
-            peer_map:PeerMap::new(Mutex::new(HashMap::new())),
-            active_users:ActiveUsers::new(Mutex::new(HashMap::new())),
-            rooms:ActiveRooms::new(Mutex::new(HashMap::new())),
+            iot_server_connections:IoTServerConnections::new(),
+            peer_map:PeerMap::new(),
+            active_users:ActiveUsers::new(),
+            rooms:ActiveRooms::new(),
         }
     }
 

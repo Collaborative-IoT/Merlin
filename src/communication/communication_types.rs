@@ -1,11 +1,9 @@
-
 /*
 All of the types that will come from or go with a specific request/response.
 All requests/responses will start as a BasicRequest/BasicResponse, the true data
 of the request/response(if there is any) will be the 'request_containing_data/response_containing_data'
 in json serialization.
 */
-
 
 //Gathering from client
 pub struct BasicRequest{
@@ -115,6 +113,7 @@ pub struct ScheduledRoomGather{
 pub struct User{
     you_are_following:bool,
     username:String,
+    they_blocked_me:bool,
     online: bool,
     num_following:i32,
     num_followers:i32,
