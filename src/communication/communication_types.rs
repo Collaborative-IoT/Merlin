@@ -30,13 +30,6 @@ pub struct GetUserProfile{
     user_id:i32
 }
 
-//requests with no containing data, the server knows
-//credentials needed for these requests.
-pub struct GetBlockedFromRoomUsers;
-pub struct GetMyFollowing;
-pub struct GetTopPublicRooms;
-pub struct GetCurrentRoomUsers;
-
 //basic types 
 pub struct Room{
     details:RoomDetails,
@@ -63,11 +56,55 @@ pub struct RoomPermissions{
     is_mod:bool
 }
 
+pub struct MessageToken{
+    type_of_token:String,
+    value:String
+}
+
 pub struct UserPreview{
     user_id:i32,
     display_name:String,
     num_followers:i32,
     avatar_url:String
+}
+
+pub struct UserProfileEdit{
+    display_name:String,
+    username:String,
+    bio:String,
+    avatar_url:String,
+    banner_url:String
+}
+
+pub struct RoomSettingsEditOrCreation{
+    name:String,
+    privacy:String,
+    description:String,
+}
+
+pub struct RoomUpdate{
+    name: String,
+    privacy: String,
+    chat_throttle: i32,
+    description: String,
+    auto_speaker: bool
+}
+
+pub struct GenericOnlyBool{
+    value:bool
+}
+
+pub struct GenericOnlyUserId{
+    user_id:i32
+}
+
+pub struct Mute{
+    muted:bool
+}
+
+pub struct ScheduledRoomGather{
+    range:String,
+    user_id:i32
 }
 
 pub struct User{
@@ -105,16 +142,21 @@ pub struct BaseUser{
     contributions: i32,
 }
 
+pub struct MessageBroadcastRequestDetails{
+    tokens:Vec<MessageToken>,
+    whispered_to:Vec<String>
+}
+
 pub struct Message{
-    id: UUID;
-    userId: UUID;
-    avatarUrl: UUID;
-    color: string;
-    displayName: string;
-    tokens: MessageToken[];
-    username: string;
-    deleted?: boolean;
-    deleterId?: UUID;
-    sentAt: string;
-    isWhisper?: boolean;
+    id: String//uuid
+    user_id: i32
+    avatar_url:String
+    color: String,
+    display_name:String,
+    tokens: Vec<MessageToken>,
+    username: String,
+    deleted:bool,
+    deleter_id:String
+    sent_at:String,
+    is_whisper:bool
 }

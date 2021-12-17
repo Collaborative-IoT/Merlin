@@ -35,7 +35,7 @@ pub async fn test_updating_user_avatar(execution_handler:&mut ExecutionHandler, 
     let avatar_url:&str = selected_rows[0].get(2);
     assert_eq!(avatar_url,"test.com/avatar");
     //perform update
-    let result = execution_handler.update_user_avatar(new_avatar_url.to_owned()&user_id).await;
+    let result = execution_handler.update_user_avatar(new_avatar_url.to_owned(),&user_id).await;
     let num_of_rows_updated = result.unwrap();
     assert_eq!(num_of_rows_updated,1);
     //check after update
