@@ -26,6 +26,13 @@ pub mod data_store{
     }
 }
 
+pub mod communication{
+    pub mod communication_handler;
+    pub mod communication_router;
+    pub mod communication_types;
+    pub mod db_to_json;
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     

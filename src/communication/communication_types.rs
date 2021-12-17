@@ -13,7 +13,7 @@ pub struct BasicRequest{
     request_containing_data:String
 }
 
-pub BasicResponse{
+pub struct BasicResponse{
     response_op_code:String,
     response_containing_data:String
 }
@@ -127,7 +127,7 @@ pub struct User{
     current_room:Room,
     bio:String,
     avatar_url:String,
-    banner_url String,
+    banner_url: String,
     whisper_privacy_setting:String,
     i_blocked_them:bool
 }
@@ -140,7 +140,7 @@ pub struct BaseUser{
     bio: String,
     display_name: String,
     avatar_url: String,
-    banner_url: String
+    banner_url: String,
     num_following: i32,
     num_followers: i32,
     current_room: Room,
@@ -153,15 +153,15 @@ pub struct MessageBroadcastRequestDetails{
 }
 
 pub struct Message{
-    id: String//uuid
-    user_id: i32
-    avatar_url:String
+    id: String,//uuid
+    user_id: i32,
+    avatar_url:String,
     color: String,
     display_name:String,
     tokens: Vec<MessageToken>,
     username: String,
     deleted:bool,
-    deleter_id:String
+    deleter_id:String,
     sent_at:String,
     is_whisper:bool
 }
