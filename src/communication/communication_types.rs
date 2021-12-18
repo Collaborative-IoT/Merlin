@@ -113,8 +113,7 @@ pub struct ScheduledRoomGather{
 pub struct User{
     you_are_following:bool,
     username:String,
-    they_blocked_me:bool,
-    online: bool,
+    they_blocked_you:bool,
     num_following:i32,
     num_followers:i32,
     last_online:String,
@@ -122,12 +121,9 @@ pub struct User{
     follows_you:bool,
     contributions:i32,
     display_name:String,
-    current_room_id:i32,
-    current_room:Room,
     bio:String,
     avatar_url:String,
     banner_url: String,
-    whisper_privacy_setting:String,
     i_blocked_them:bool
 }
 
