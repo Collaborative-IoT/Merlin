@@ -1,5 +1,4 @@
 mod server;
-use server::Server;
 extern crate chrono;
 use std::{env, io::Error};
 use std::sync::{Mutex,Arc};
@@ -30,10 +29,10 @@ pub mod communication{
     pub mod communication_handler;
     pub mod communication_router;
     pub mod communication_types;
-    pub mod db_to_json;
+    pub mod data_fetcher;
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn main() {
     
 }
