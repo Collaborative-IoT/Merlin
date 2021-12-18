@@ -48,7 +48,7 @@ pub type PeerMap =  HashMap<String,
     SplitSink<WebSocketStream<tokio::net::TcpStream>, Message>>;
 
 //current connected and authed users
-pub type ActiveUsers = HashMap<String,User>;
+pub type ActiveUsers = HashMap<i32,User>;
 
 //room collection
-pub type ActiveRooms = HashMap<String,Room>;
+pub type ActiveRooms = HashMap<i32,Room>;

@@ -1,18 +1,11 @@
-use futures_util::{SinkExt, StreamExt,stream::SplitSink};
-use log::*;
-use std::{net::SocketAddr, time::Duration, sync::{Arc, Mutex},collections::{HashMap,HashSet}};
-use tokio::net::{TcpListener, TcpStream};
-use tokio_tungstenite::{accept_async, tungstenite::Error,WebSocketStream};
-use tokio_tungstenite::tungstenite::{Message, Result};
-
-
+use std::{collections::{HashMap,HashSet}};
 use crate::state::state_types::{IoTServerConnections,PeerMap,User,ActiveUsers,ActiveRooms};
 
 pub struct ServerState{
     pub iot_server_connections : IoTServerConnections,
     pub peer_map : PeerMap,
     pub rooms: ActiveRooms,
-    pub active_users:ActiveUsers
+    pub active_users:ActiveUsers,
 }
 
 //Holds all server memory state
@@ -22,7 +15,7 @@ impl ServerState{
             iot_server_connections:IoTServerConnections::new(),
             peer_map:PeerMap::new(),
             active_users:ActiveUsers::new(),
-            rooms:ActiveRooms::new(),
+            rooms:ActiveRooms::new()
         }
     }
 
@@ -32,7 +25,6 @@ impl ServerState{
             return true;
         }
         else{
-            warn!("Attempt to add remove a key that doesn't exist `{}`",key);
             return false;
         }
     }
@@ -43,7 +35,6 @@ impl ServerState{
             return true;
         }
         else{
-            warn!("There was an attempt to add a key that exists `{}`",key);
             return false;
         }
     }
@@ -54,7 +45,6 @@ impl ServerState{
             return true;
         }
         else{
-            warn!("There was an attempt to remove a key that doesn't exist");
             return false;
         }
     }
@@ -65,7 +55,6 @@ impl ServerState{
             return true;
         }
         else{
-            warn!("There was an attempt to add a key that exists");
             return false;
         }
     }

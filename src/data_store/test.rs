@@ -1,6 +1,5 @@
-use chrono::{DateTime, Utc};
 use crate::data_store::{sql_execution_handler::ExecutionHandler,tests};
-use tokio_postgres::{Client,row::Row,NoTls,Error};
+use tokio_postgres::{NoTls,Error};
 
 #[tokio::test]
 pub async fn test(){
@@ -69,7 +68,7 @@ async fn setup_execution_handler()->Result<ExecutionHandler,Error>{
     let (client, connection) = tokio_postgres::connect("host=localhost user=postgres port=5432 password=password", NoTls).await?;
     tokio::spawn(async move {
         if let Err(e) = connection.await {
-            eprintln!("connection error: {}", e);
+            println!("connection error: {}", e);
         }
     });
     let mut handler = ExecutionHandler::new(client);
