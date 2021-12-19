@@ -18,6 +18,9 @@ pub async fn get_users(
     execution_handler:&mut ExecutionHandler
     ){
         let user_ids:Vec<i32> = server_state.active_users.keys().cloned().collect();
+        let blocked_user_ids = get_blocked_user_ids_for_user(execution_handler, &requester_user_id).await.1;
+        let following_user_ids = get_following_user_ids_for_user(execution_handler, &requester_user_id).await.1;
+        
 }
 
 /*
@@ -32,25 +35,23 @@ pub async fn gather_and_construct_users_for_user(
     execution_handler:&mut ExecutionHandler,
     requesting_user_id:&i32,
     user_ids_requesting_user_blocked:HashSet<i32>,
+    user_ids_requesting_user_follows:HashSet<i32>,
     users:Vec<i32>)->(bool,Vec<User>){
         let mut error_encountered = false;
         let mut constructed_users:Vec<User> = Vec::new();
-        let mut blocked_user_ids = get_blocked_user_ids_for_user(execution_handler, requesting_user_id).await.1;
-        let mut following_user_ids = get_following_user_ids_for_user(execution_handler, requesting_user_id).await.1;
         for user in users{
             let user_gather_result = execution_handler.select_user_by_id(&user).await;
             //only gather user is db selection was successful
             if user_gather_result.is_ok(){
                 let selected_rows = user_gather_result.unwrap();
-                //make sure we get a result
+                //use user data to construct user
                 if selected_rows.len() == 1{                  
                     let user_result = get_meta_data_for_user_and_construct(
                         execution_handler, 
                         &selected_rows[0], 
-                        blocked_user_ids.contains(&user),
-                        following_user_ids.contains(&user), 
-                        requesting_user_id, 
-                        &mut constructed_users).await;
+                        user_ids_requesting_user_blocked.contains(&user),
+                        user_ids_requesting_user_follows.contains(&user), 
+                        requesting_user_id).await;
                     check_user_result_and_handle_error(user_result,&mut constructed_users,&mut error_encountered);
                 }
             }
@@ -69,8 +70,7 @@ async fn get_meta_data_for_user_and_construct(
     user_row:&Row,
     blocked_by_requesting_user:bool,
     followed_by_requesting_user:bool,
-    requesting_user_id:&i32,
-    constructed_users_state:&mut Vec<User>)->(bool,User){
+    requesting_user_id:&i32)->(bool,User){
         let user_id:i32 = user_row.get(0);
         //get blocked and followed users for this user.
         let blocked_result:(bool,HashSet<i32>) = get_blocked_user_ids_for_user(execution_handler, &user_id).await;
