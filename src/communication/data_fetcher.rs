@@ -32,7 +32,7 @@ pub async fn get_following_user_ids_for_user(
     execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
     let future_for_execution = execution_handler.select_all_following_for_user(user_id);
     let mut encountered_error = false;
-    let following_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution);
+    let following_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
     return following_users_result;
 }
 
@@ -40,7 +40,7 @@ pub async fn get_followers_user_ids_for_user(
     execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
     let future_for_execution = execution_handler.select_all_followers_for_user(user_id);
     let mut encountered_error = false;
-    let followers_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution);
+    let followers_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
     return followers_users_result;
 }
 
@@ -56,22 +56,31 @@ pub async fn gather_and_construct_users_for_user(
     execution_handler:&mut ExecutionHandler,
     requesting_user_id:&i32,
     user_ids_requesting_user_blocked:HashSet<i32>,
-    users:Vec<i32>){
-        let constructed_users:Vec<User> = Vec::new();
-        //go through every user and construct
+    users:Vec<i32>)->(bool,Vec<User>){
+        let mut error_encountered = false;
+        let mut constructed_users:Vec<User> = Vec::new();
+        let mut blocked_user_ids = get_blocked_user_ids_for_user(execution_handler, requesting_user_id).await.1;
+        let mut following_user_ids = get_following_user_ids_for_user(execution_handler, requesting_user_id).await.1;
         for user in users{
             let user_gather_result = execution_handler.select_user_by_id(&user).await;
-            //gather was successful
+            //only gather user is db selection was successful
             if user_gather_result.is_ok(){
                 let selected_rows = user_gather_result.unwrap();
                 //make sure we get a result
-                if selected_rows.len() == 1{
-
+                if selected_rows.len() == 1{                  
+                    let user_result = get_meta_data_for_user_and_construct(
+                        execution_handler, 
+                        &selected_rows[0], 
+                        blocked_user_ids.contains(&user),
+                        following_user_ids.contains(&user), 
+                        requesting_user_id, 
+                        &mut constructed_users).await;
+                    check_user_result_and_handle_error(user_result,&mut constructed_users,&mut error_encountered);
                 }
             }
         }
+        return (error_encountered,constructed_users);
     }
-
 
 /*
 Gathers all of the blockers,followers, for this specific user,
@@ -81,7 +90,7 @@ for the fields "follows_you" and "they_blocked_you".
 */
 pub async fn get_meta_data_for_user_and_construct(
     execution_handler:&mut ExecutionHandler,
-    user_row:Row,
+    user_row:&Row,
     blocked_by_requesting_user:bool,
     followed_by_requesting_user:bool,
     requesting_user_id:&i32,
@@ -91,7 +100,7 @@ pub async fn get_meta_data_for_user_and_construct(
         let blocked_result:(bool,HashSet<i32>) = get_blocked_user_ids_for_user(execution_handler, &user_id).await;
         let following_result:(bool,HashSet<i32>) = get_following_user_ids_for_user(execution_handler, &user_id).await; 
         let followers_result:(bool,HashSet<i32>) = get_followers_user_ids_for_user(execution_handler, &user_id).await;
-        let num_followers:i32 = followers_result.1.len().into();
+        let num_followers:i32 = followers_result.1.len() as i32;
         let user = construct_user(
             blocked_by_requesting_user, 
             followed_by_requesting_user, 
@@ -113,26 +122,47 @@ pub fn construct_user(
     followed_by_requesting_user:bool,
     following:HashSet<i32>,
     blocked:HashSet<i32>,
-    user_row:Row,
+    user_row:&Row,
     requesting_user_id:&i32,
     num_followers:i32)->User{
+        let username:String = user_row.get(3);
+        let num_following:i32 = following.len() as i32;
+        let last_online:String = user_row.get(4);
+        let user_id:i32 = user_row.get(0);
+        let contributions:i32 = user_row.get(12);
+        let display_name:String = user_row.get(1);
+        let bio:String = user_row.get(11);
+        let avatar_url:String = user_row.get(2);
+        let banner_url:String = user_row.get(13);
+
         return User{
             you_are_following:followed_by_requesting_user,
-            username: user_row.get(3) as String,
+            username:username,
             they_blocked_you:blocked.contains(requesting_user_id),
-            num_following:following.len() as i32,
+            num_following:num_following,
             num_followers:num_followers,
-            last_online:user_row.get(4) as String,
-            user_id:user_row.get(0) as i32,
+            last_online:last_online,
+            user_id:user_id,
             follows_you:following.contains(requesting_user_id),
-            contributions:user_row.get(12) as i32,
-            display_name:user_row.get(1) as String,
-            bio:user_row.get(11) as String,
-            avatar_url:user_row.get(2) as String,
-            banner_url:user_row.get(13) as String,
+            contributions:contributions,
+            display_name:display_name,
+            bio:bio,
+            avatar_url:avatar_url,
+            banner_url:banner_url,
             i_blocked_them:blocked_by_requesting_user
         };
     }
+
+pub fn check_user_result_and_handle_error(
+    user_result:(bool,User),
+    constructed_users_state:&mut Vec<User>,
+    error_encountered:&mut bool){
+        //mark encountered error for user reporting
+        if user_result.0 == true{
+            *error_encountered = true;
+        }
+        constructed_users_state.push(user_result.1);
+}
 
 /*
 1.executes future to get rows(the method passed in the `select_future` parameter)
@@ -169,5 +199,3 @@ pub async fn get_single_column_of_all_rows_by_id<
             }
             return (encountered_error, data_set);
 }
-
-pub async fn get_block

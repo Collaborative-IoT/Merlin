@@ -111,20 +111,20 @@ pub struct ScheduledRoomGather{
 }
 
 pub struct User{
-    you_are_following:bool,
-    username:String,
-    they_blocked_you:bool,
-    num_following:i32,
-    num_followers:i32,
-    last_online:String,
-    user_id:i32,
-    follows_you:bool,
-    contributions:i32,
-    display_name:String,
-    bio:String,
-    avatar_url:String,
-    banner_url: String,
-    i_blocked_them:bool
+    pub you_are_following:bool,
+    pub username:String,
+    pub they_blocked_you:bool,
+    pub num_following:i32,
+    pub num_followers:i32,
+    pub last_online:String,
+    pub user_id:i32,
+    pub follows_you:bool,
+    pub contributions:i32,
+    pub display_name:String,
+    pub bio:String,
+    pub avatar_url:String,
+    pub banner_url: String,
+    pub i_blocked_them:bool
 }
 
 pub struct BaseUser{
