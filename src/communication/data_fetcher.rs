@@ -132,7 +132,6 @@ fn construct_user(
 async fn get_blocked_user_ids_for_user(
     execution_handler:&mut ExecutionHandler, user_id:&i32)->(bool,HashSet<i32>){
     let future_for_execution = execution_handler.select_all_blocked_for_user(user_id);
-    let mut encountered_error = false;
     let blocked_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2,future_for_execution).await;
     return blocked_users_result;
 }
@@ -140,7 +139,6 @@ async fn get_blocked_user_ids_for_user(
 async fn get_following_user_ids_for_user(
     execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
     let future_for_execution = execution_handler.select_all_following_for_user(user_id);
-    let mut encountered_error = false;
     let following_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
     return following_users_result;
 }
@@ -148,7 +146,6 @@ async fn get_following_user_ids_for_user(
 async fn get_followers_user_ids_for_user(
     execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
     let future_for_execution = execution_handler.select_all_followers_for_user(user_id);
-    let mut encountered_error = false;
     let followers_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
     return followers_users_result;
 }
