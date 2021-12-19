@@ -16,10 +16,16 @@ pub async fn get_users(
     requester_user_id:i32,
     server_state:ServerState,
     execution_handler:&mut ExecutionHandler
-    ){
-        let user_ids:Vec<i32> = server_state.active_users.keys().cloned().collect();
+    )->(bool,Vec<User>){
+        let user_ids:Vec<i32> = server_state.active_users.keys().cloned().filter(|x| x != &requester_user_id).collect();
         let blocked_user_ids = get_blocked_user_ids_for_user(execution_handler, &requester_user_id).await.1;
         let following_user_ids = get_following_user_ids_for_user(execution_handler, &requester_user_id).await.1;
+        return gather_and_construct_users_for_user(
+            execution_handler, 
+            &requester_user_id, 
+            blocked_user_ids, 
+            following_user_ids, 
+            user_ids).await;
         
 }
 
