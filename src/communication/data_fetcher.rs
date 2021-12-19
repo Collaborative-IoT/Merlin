@@ -142,9 +142,30 @@ fn construct_user(
         };
     }
 
-async fn get_room_permissions_for_users(room_id:&i32)->HashMap<i32,RoomPermissions>{
-    let map: HashMap<i32,RoomPermissions> = HashMap::new();
-    return map;
+async fn get_room_permissions_for_users(
+    room_id:&i32,
+    execution_handler:&mut ExecutionHandler)->(bool,HashMap<i32,RoomPermissions>){
+    let mut permissions: HashMap<i32,RoomPermissions> = HashMap::new();
+    let gather_result = execution_handler.select_all_room_permissions_for_room(room_id).await;
+    if gather_result.is_ok(){
+        let selected_rows = gather_result.unwrap();
+        for row in selected_rows{
+            let user_id:i32 = row.get(1);
+            let is_mod:bool = row.get(3);
+            let is_speaker:bool = row.get(4);
+            let asked_to_speak:bool = row.get(5);
+            let user_permission = RoomPermissions{
+                is_mod:is_mod,
+                is_speaker:is_speaker,
+                asked_to_speak:asked_to_speak
+            };
+            permissions.insert(user_id,user_permission);
+        }
+        return (false,permissions);
+    }
+    else{
+        return (true,permissions);
+    }
 }
 
 async fn get_user_previews_for_room(){

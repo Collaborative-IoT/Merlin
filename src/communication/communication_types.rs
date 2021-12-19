@@ -49,9 +49,9 @@ pub struct RoomDetails{
 }
 
 pub struct RoomPermissions{
-    asked_to_speak:bool,
-    is_speaker:bool,
-    is_mod:bool
+    pub asked_to_speak:bool,
+    pub is_speaker:bool,
+    pub is_mod:bool
 }
 
 pub struct MessageToken{
