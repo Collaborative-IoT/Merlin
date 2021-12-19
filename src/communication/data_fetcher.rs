@@ -116,33 +116,22 @@ pub fn construct_user(
     user_row:Row,
     requesting_user_id:&i32,
     num_followers:i32)->User{
-        let username:String = user_row.get(3);
-        let num_following:i32 = following.len().into();
-        let last_online:String = user_row.get(4);
-        let user_id:i32 = user_row.get(0);
-        let contributions:i32 = user_row.get(12);
-        let display_name:String = user_row.get(1);
-        let bio:String = user_row.get(11);
-        let avatar_url:String = user_row.get(2);
-        let banner_url:String = user_row.get(13);
-
         return User{
             you_are_following:followed_by_requesting_user,
-            username:username,
+            username: user_row.get(3) as String,
             they_blocked_you:blocked.contains(requesting_user_id),
-            num_following:num_following,
+            num_following:following.len() as i32,
             num_followers:num_followers,
-            last_online:last_online,
-            user_id:user_id,
+            last_online:user_row.get(4) as String,
+            user_id:user_row.get(0) as i32,
             follows_you:following.contains(requesting_user_id),
-            contributions:contributions,
-            display_name:display_name,
-            bio:bio,
-            avatar_url:avatar_url,
-            banner_url:banner_url,
+            contributions:user_row.get(12) as i32,
+            display_name:user_row.get(1) as String,
+            bio:user_row.get(11) as String,
+            avatar_url:user_row.get(2) as String,
+            banner_url:user_row.get(13) as String,
             i_blocked_them:blocked_by_requesting_user
         };
-        let follows_you:bool = following.contains(requesting_user_id);
     }
 
 /*
