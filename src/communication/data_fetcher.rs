@@ -20,30 +20,6 @@ pub async fn get_users(
         let user_ids:Vec<i32> = server_state.active_users.keys().cloned().collect();
 }
 
-pub async fn get_blocked_user_ids_for_user(
-    execution_handler:&mut ExecutionHandler, user_id:&i32)->(bool,HashSet<i32>){
-    let future_for_execution = execution_handler.select_all_blocked_for_user(user_id);
-    let mut encountered_error = false;
-    let blocked_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2,future_for_execution).await;
-    return blocked_users_result;
-}
-
-pub async fn get_following_user_ids_for_user(
-    execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
-    let future_for_execution = execution_handler.select_all_following_for_user(user_id);
-    let mut encountered_error = false;
-    let following_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
-    return following_users_result;
-}
-
-pub async fn get_followers_user_ids_for_user(
-    execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
-    let future_for_execution = execution_handler.select_all_followers_for_user(user_id);
-    let mut encountered_error = false;
-    let followers_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
-    return followers_users_result;
-}
-
 /*
 Constructs a User struct for each user id passed in,
 filling in the data in relation to the requesting user.
@@ -88,7 +64,7 @@ determines if this user blocked/followed the requesting user
 for the fields "follows_you" and "they_blocked_you".
 
 */
-pub async fn get_meta_data_for_user_and_construct(
+async fn get_meta_data_for_user_and_construct(
     execution_handler:&mut ExecutionHandler,
     user_row:&Row,
     blocked_by_requesting_user:bool,
@@ -117,7 +93,7 @@ pub async fn get_meta_data_for_user_and_construct(
         }
     }   
 
-pub fn construct_user(
+fn construct_user(
     blocked_by_requesting_user:bool,
     followed_by_requesting_user:bool,
     following:HashSet<i32>,
@@ -153,7 +129,31 @@ pub fn construct_user(
         };
     }
 
-pub fn check_user_result_and_handle_error(
+async fn get_blocked_user_ids_for_user(
+    execution_handler:&mut ExecutionHandler, user_id:&i32)->(bool,HashSet<i32>){
+    let future_for_execution = execution_handler.select_all_blocked_for_user(user_id);
+    let mut encountered_error = false;
+    let blocked_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2,future_for_execution).await;
+    return blocked_users_result;
+}
+
+async fn get_following_user_ids_for_user(
+    execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
+    let future_for_execution = execution_handler.select_all_following_for_user(user_id);
+    let mut encountered_error = false;
+    let following_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
+    return following_users_result;
+}
+
+async fn get_followers_user_ids_for_user(
+    execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
+    let future_for_execution = execution_handler.select_all_followers_for_user(user_id);
+    let mut encountered_error = false;
+    let followers_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
+    return followers_users_result;
+}
+
+fn check_user_result_and_handle_error(
     user_result:(bool,User),
     constructed_users_state:&mut Vec<User>,
     error_encountered:&mut bool){
@@ -163,6 +163,7 @@ pub fn check_user_result_and_handle_error(
         }
         constructed_users_state.push(user_result.1);
 }
+
 
 /*
 1.executes future to get rows(the method passed in the `select_future` parameter)
