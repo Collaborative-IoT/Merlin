@@ -12,7 +12,13 @@ use crate::state::state::ServerState;
 use std::hash::Hash;
 use std::collections::HashSet;
 
-pub async fn get_users(
+/*
+Gathers user structs in direct relation
+to the requester, including relationship specific
+data like if the requester is blocked by
+each user etc.
+*/
+pub async fn get_users_for_user(
     requester_user_id:i32,
     server_state:ServerState,
     execution_handler:&mut ExecutionHandler
@@ -26,8 +32,8 @@ pub async fn get_users(
             blocked_user_ids, 
             following_user_ids, 
             user_ids).await;
-        
 }
+
 
 /*
 Constructs a User struct for each user id passed in,
@@ -154,6 +160,13 @@ async fn get_follower_user_ids_for_user(
     let future_for_execution = execution_handler.select_all_followers_for_user(user_id);
     let followers_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
     return followers_users_result;
+}
+
+async fn get_blocked_user_ids_for_room(
+    execution_handler:&mut ExecutionHandler,room_id:&i32)->(bool,HashSet<i32>){
+    let future_for_execution = execution_handler.select_all_blocked_users_for_room(room_id);
+    let blocked_users_result:(bool,HashSet<i32>)= get_single_column_of_all_rows_by_id(2, future_for_execution).await;
+    return blocked_users_result;
 }
 
 fn check_user_result_and_handle_error(
