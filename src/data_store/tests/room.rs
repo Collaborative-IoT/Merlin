@@ -1,5 +1,6 @@
 use crate::data_store::db_models::{DBRoom,DBScheduledRoom,DBScheduledRoomAttendance,DBRoomPermissions};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
+use tokio_postgres::{row::Row,Error};
 
 //#rooms
 
@@ -138,7 +139,13 @@ pub async fn test_deleting_all_scheduled_room_attendance(execution_handler:&mut 
 pub async fn test_room_permission_insert_and_gather(execution_handler:&mut ExecutionHandler){
     let new_permissions:DBRoomPermissions = gather_permissions();
     execution_handler.insert_room_permission(&new_permissions).await;
-    gather_and_assert_permission(execution_handler,&new_permissions).await;
+    let gather_result = execution_handler.select_all_room_permissions_for_user(
+        &new_permissions.user_id,
+        &new_permissions.room_id).await;
+    assert_permissions(execution_handler,&new_permissions,gather_result);
+
+    let gather_all_result = execution_handler.select_all_room_permissions_for_room(&new_permissions.room_id).await;
+    assert_permissions(execution_handler, &new_permissions, gather_all_result);
 }
 
 pub async fn test_update_room_permission_for_user(execution_handler:&mut ExecutionHandler){
@@ -153,7 +160,10 @@ pub async fn test_update_room_permission_for_user(execution_handler:&mut Executi
     let update_result = execution_handler.update_entire_room_permissions(&mock_obj).await;
     let num_modified = update_result.unwrap();
     assert_eq!(num_modified,1);
-    gather_and_assert_permission(execution_handler,&mock_obj).await;
+    let gather_result = execution_handler.select_all_room_permissions_for_user(
+        &mock_obj.user_id,
+        &mock_obj.room_id).await;
+    assert_permissions(execution_handler,&mock_obj,gather_result);
 }
 
 pub async fn test_delete_room_permissions(execution_handler:&mut ExecutionHandler){
@@ -171,11 +181,13 @@ pub async fn test_delete_room_permissions(execution_handler:&mut ExecutionHandle
     assert_eq!(selected_rows.len(),0);
 }
 
-pub async fn gather_and_assert_permission(execution_handler:&mut ExecutionHandler,new_permissions:&DBRoomPermissions){
-    let gather_result = execution_handler.select_all_room_permissions_for_user(
-        &new_permissions.user_id,
-        &new_permissions.room_id).await;
+fn assert_permissions(
+    execution_handler:&mut ExecutionHandler,
+    new_permissions:&DBRoomPermissions,
+    gather_result:Result<Vec<Row>,Error>){
+        
     let selected_rows = gather_result.unwrap();
+    assert_eq!(selected_rows.len(),1);
     let user_id:i32 = selected_rows[0].get(1);
     let room_id:i32 = selected_rows[0].get(2);
     let is_mod:bool = selected_rows[0].get(3);
@@ -185,7 +197,7 @@ pub async fn gather_and_assert_permission(execution_handler:&mut ExecutionHandle
     assert_eq!(room_id,new_permissions.room_id);
     assert_eq!(is_mod,new_permissions.is_mod);
     assert_eq!(is_speaker,new_permissions.is_speaker);
-    assert_eq!(is_speaker,new_permissions.asked_to_speak);
+    assert_eq!(asked_to_speak,new_permissions.asked_to_speak);
 }
 
 fn gather_permissions()->DBRoomPermissions{

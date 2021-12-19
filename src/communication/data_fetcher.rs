@@ -5,12 +5,13 @@ by fetching and converts rows to correct response types.
 use futures_util::Future;
 use tokio_postgres::{row::Row,Error};
 use crate::communication::communication_types::{
-    User
+    User,
+    RoomPermissions
 };
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::state::state::ServerState;
 use std::hash::Hash;
-use std::collections::HashSet;
+use std::collections::{HashSet,HashMap};
 
 /*
 Gathers user structs in direct relation
@@ -141,6 +142,15 @@ fn construct_user(
         };
     }
 
+async fn get_room_permissions_for_users(room_id:&i32)->HashMap<i32,RoomPermissions>{
+    let map: HashMap<i32,RoomPermissions> = HashMap::new();
+    return map;
+}
+
+async fn get_user_previews_for_room(){
+    
+}
+
 async fn get_blocked_user_ids_for_user(
     execution_handler:&mut ExecutionHandler, user_id:&i32)->(bool,HashSet<i32>){
     let future_for_execution = execution_handler.select_all_blocked_for_user(user_id);
@@ -179,7 +189,6 @@ fn check_user_result_and_handle_error(
         }
         constructed_users_state.push(user_result.1);
 }
-
 
 /*
 1.executes future to get rows(the method passed in the `select_future` parameter)

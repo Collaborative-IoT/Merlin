@@ -386,6 +386,12 @@ impl ExecutionHandler{
         return Ok(result);
     }
 
+    pub async fn select_all_room_permissions_for_room(&mut self, room_id:&i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_ALL_PERMISSIONS_FOR_ROOM;
+        let result:Vec<Row> = self.client.query(query, &[room_id]).await?;
+        return Ok(result);
+    }
+
     pub async fn select_user_by_id(&mut self, user_id:&i32)->Result<Vec<Row>,Error>{
         let query = select_queries::SELECT_USER_BY_ID;
         let result:Vec<Row> = self.client.query(query,&[user_id]).await?;
