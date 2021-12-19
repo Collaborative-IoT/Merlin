@@ -66,3 +66,8 @@ pub const SELECT_ALL_PERMISSIONS_FOR_ROOM: &str = "
 SELECT * FROM room_permission
 WHERE roomId = $1;
 ";
+
+pub const SELECT_USER_PREVIEW_FOR_USER: &str = "
+SELECT Id, displayName, avatarUrl FROM users
+WHERE Id = $1;
+";

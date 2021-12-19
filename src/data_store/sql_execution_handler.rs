@@ -397,4 +397,10 @@ impl ExecutionHandler{
         let result:Vec<Row> = self.client.query(query,&[user_id]).await?;
         return Ok(result);
     }
+
+    pub async fn select_user_preview_by_id(&mut self, user_id:&i32)->Result<Vec<Row>,Error>{
+        let query = select_queries::SELECT_USER_PREVIEW_FOR_USER;
+        let result:Vec<Row> = self.client.query(query, &[user_id]).await?;
+        return Ok(result);
+    }
 }
