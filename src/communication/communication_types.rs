@@ -129,7 +129,6 @@ pub struct User{
 
 pub struct BaseUser{
     username: String,
-    online: bool,
     last_online: String,
     user_id: i32,
     bio: String,

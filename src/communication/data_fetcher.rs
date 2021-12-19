@@ -21,23 +21,27 @@ pub async fn get_users(
 }
 
 pub async fn get_blocked_user_ids_for_user(
-    execution_handler:&mut ExecutionHandler, 
-    user_id:&i32)->(bool,HashSet<i32>){
-    //construct
+    execution_handler:&mut ExecutionHandler, user_id:&i32)->(bool,HashSet<i32>){
     let future_for_execution = execution_handler.select_all_blocked_for_user(user_id);
     let mut encountered_error = false;
-    //get who this current user blocked
     let blocked_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2,future_for_execution).await;
     return blocked_users_result;
 }
 
 pub async fn get_following_user_ids_for_user(
-    execution_handler:&mut ExecutionHandler,
-    user_id:&i32)->(bool,HashSet<i32>){
+    execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
     let future_for_execution = execution_handler.select_all_following_for_user(user_id);
     let mut encountered_error = false;
     let following_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution);
     return following_users_result;
+}
+
+pub async fn get_followers_user_ids_for_user(
+    execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
+    let future_for_execution = execution_handler.select_all_followers_for_user(user_id);
+    let mut encountered_error = false;
+    let followers_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution);
+    return followers_users_result;
 }
 
 /*
@@ -81,30 +85,62 @@ pub async fn get_meta_data_for_user_and_construct(
     blocked_by_requesting_user:bool,
     followed_by_requesting_user:bool,
     requesting_user_id:&i32,
-    constructed_users_state:&mut Vec<User>){
+    constructed_users_state:&mut Vec<User>)->(bool,User){
         let user_id:i32 = user_row.get(0);
         //get blocked and followed users for this user.
-        let blocked_result = get_blocked_user_ids_for_user(execution_handler, &user_id).await;
-        let following_result = get_following_user_ids_for_user(execution_handler, &user_id).await; 
-
+        let blocked_result:(bool,HashSet<i32>) = get_blocked_user_ids_for_user(execution_handler, &user_id).await;
+        let following_result:(bool,HashSet<i32>) = get_following_user_ids_for_user(execution_handler, &user_id).await; 
+        let followers_result:(bool,HashSet<i32>) = get_followers_user_ids_for_user(execution_handler, &user_id).await;
+        let num_followers:i32 = followers_result.1.len().into();
+        let user = construct_user(
+            blocked_by_requesting_user, 
+            followed_by_requesting_user, 
+            following_result.1, 
+            blocked_result.1, 
+            user_row, 
+            requesting_user_id,
+            num_followers);
+        if blocked_result.0 == true || following_result.0 == true{
+            return (true,user);
+        }
+        else{
+            return (false,user);
+        }
     }   
 
-pub async fn construct_user(
+pub fn construct_user(
     blocked_by_requesting_user:bool,
     followed_by_requesting_user:bool,
     following:HashSet<i32>,
     blocked:HashSet<i32>,
     user_row:Row,
-    requesting_user_id:&i32)->User{
+    requesting_user_id:&i32,
+    num_followers:i32)->User{
         let username:String = user_row.get(3);
         let num_following:i32 = following.len().into();
+        let last_online:String = user_row.get(4);
+        let user_id:i32 = user_row.get(0);
+        let contributions:i32 = user_row.get(12);
+        let display_name:String = user_row.get(1);
+        let bio:String = user_row.get(11);
+        let avatar_url:String = user_row.get(2);
+        let banner_url:String = user_row.get(13);
 
         return User{
             you_are_following:followed_by_requesting_user,
             username:username,
             they_blocked_you:blocked.contains(requesting_user_id),
-
-
+            num_following:num_following,
+            num_followers:num_followers,
+            last_online:last_online,
+            user_id:user_id,
+            follows_you:following.contains(requesting_user_id),
+            contributions:contributions,
+            display_name:display_name,
+            bio:bio,
+            avatar_url:avatar_url,
+            banner_url:banner_url,
+            i_blocked_them:blocked_by_requesting_user
         };
         let follows_you:bool = following.contains(requesting_user_id);
     }
