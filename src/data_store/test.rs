@@ -11,7 +11,6 @@ pub async fn test(){
     test_blocks(&mut execution_handler).await;
 }
 
-
 async fn test_blocks(execution_handler:&mut ExecutionHandler){
     tests::blocks::test_insert_and_gather_user_blocks(execution_handler).await;
     tests::blocks::test_get_blockers_for_user(execution_handler).await;

@@ -6,7 +6,8 @@ use futures_util::Future;
 use tokio_postgres::{row::Row,Error};
 use crate::communication::communication_types::{
     User,
-    RoomPermissions
+    RoomPermissions,
+    UserPreview
 };
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::state::state::ServerState;
@@ -34,7 +35,6 @@ pub async fn get_users_for_user(
             following_user_ids, 
             user_ids).await;
 }
-
 
 /*
 Constructs a User struct for each user id passed in,
@@ -106,6 +106,84 @@ async fn get_meta_data_for_user_and_construct(
         }
     }   
 
+async fn get_room_permissions_for_users(
+    room_id:&i32,
+    execution_handler:&mut ExecutionHandler)->(bool,HashMap<i32,RoomPermissions>){
+    let mut permissions: HashMap<i32,RoomPermissions> = HashMap::new();
+    let gather_result = execution_handler.select_all_room_permissions_for_room(room_id).await;
+    if gather_result.is_ok(){
+        let selected_rows = gather_result.unwrap();
+        for row in selected_rows{
+            let user_id:i32 = row.get(1);
+            let is_mod:bool = row.get(3);
+            let is_speaker:bool = row.get(4);
+            let asked_to_speak:bool = row.get(5);
+            let user_permission = RoomPermissions{
+                is_mod:is_mod,
+                is_speaker:is_speaker,
+                asked_to_speak:asked_to_speak
+            };
+            permissions.insert(user_id,user_permission);
+        }
+        return (false,permissions);
+    }
+    else{
+        return (true,permissions);
+    }
+}
+
+async fn get_user_previews_for_users(
+    user_ids:Vec<i32>,
+    execution_handler:&mut ExecutionHandler)->(bool,HashMap<i32,UserPreview>){
+        let mut user_previews: HashMap<i32,UserPreview> = HashMap::new();
+        let mut encountered_error:bool = false;
+        for user_id in user_ids{
+            let gather_result = execution_handler.select_user_preview_by_id(&user_id).await;
+            if gather_result.is_ok(){
+                let selected_rows = gather_result.unwrap();
+                let display_name:String = selected_rows[0].get(2);
+                let avatar_url:String = selected_rows[0].get(1);
+                let user_preview = UserPreview{
+                    display_name:display_name,
+                    avatar_url:avatar_url
+                };
+                user_previews.insert(user_id,user_preview);
+            }
+            else{
+                encountered_error = true;
+            }
+        }
+        return (encountered_error,user_previews);
+}
+
+async fn get_blocked_user_ids_for_user(
+    execution_handler:&mut ExecutionHandler, user_id:&i32)->(bool,HashSet<i32>){
+    let future_for_execution = execution_handler.select_all_blocked_for_user(user_id);
+    let blocked_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2,future_for_execution).await;
+    return blocked_users_result;
+}
+
+async fn get_following_user_ids_for_user(
+    execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
+    let future_for_execution = execution_handler.select_all_following_for_user(user_id);
+    let following_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
+    return following_users_result;
+}
+
+async fn get_follower_user_ids_for_user(
+    execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
+    let future_for_execution = execution_handler.select_all_followers_for_user(user_id);
+    let followers_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
+    return followers_users_result;
+}
+
+async fn get_blocked_user_ids_for_room(
+    execution_handler:&mut ExecutionHandler,room_id:&i32)->(bool,HashSet<i32>){
+    let future_for_execution = execution_handler.select_all_blocked_users_for_room(room_id);
+    let blocked_users_result:(bool,HashSet<i32>)= get_single_column_of_all_rows_by_id(2, future_for_execution).await;
+    return blocked_users_result;
+}
+
 fn construct_user(
     blocked_by_requesting_user:bool,
     followed_by_requesting_user:bool,
@@ -141,64 +219,6 @@ fn construct_user(
             i_blocked_them:blocked_by_requesting_user
         };
     }
-
-async fn get_room_permissions_for_users(
-    room_id:&i32,
-    execution_handler:&mut ExecutionHandler)->(bool,HashMap<i32,RoomPermissions>){
-    let mut permissions: HashMap<i32,RoomPermissions> = HashMap::new();
-    let gather_result = execution_handler.select_all_room_permissions_for_room(room_id).await;
-    if gather_result.is_ok(){
-        let selected_rows = gather_result.unwrap();
-        for row in selected_rows{
-            let user_id:i32 = row.get(1);
-            let is_mod:bool = row.get(3);
-            let is_speaker:bool = row.get(4);
-            let asked_to_speak:bool = row.get(5);
-            let user_permission = RoomPermissions{
-                is_mod:is_mod,
-                is_speaker:is_speaker,
-                asked_to_speak:asked_to_speak
-            };
-            permissions.insert(user_id,user_permission);
-        }
-        return (false,permissions);
-    }
-    else{
-        return (true,permissions);
-    }
-}
-
-async fn get_user_previews_for_room(){
-    
-}
-
-async fn get_blocked_user_ids_for_user(
-    execution_handler:&mut ExecutionHandler, user_id:&i32)->(bool,HashSet<i32>){
-    let future_for_execution = execution_handler.select_all_blocked_for_user(user_id);
-    let blocked_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2,future_for_execution).await;
-    return blocked_users_result;
-}
-
-async fn get_following_user_ids_for_user(
-    execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
-    let future_for_execution = execution_handler.select_all_following_for_user(user_id);
-    let following_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
-    return following_users_result;
-}
-
-async fn get_follower_user_ids_for_user(
-    execution_handler:&mut ExecutionHandler,user_id:&i32)->(bool,HashSet<i32>){
-    let future_for_execution = execution_handler.select_all_followers_for_user(user_id);
-    let followers_users_result:(bool,HashSet<i32>) = get_single_column_of_all_rows_by_id(2, future_for_execution).await;
-    return followers_users_result;
-}
-
-async fn get_blocked_user_ids_for_room(
-    execution_handler:&mut ExecutionHandler,room_id:&i32)->(bool,HashSet<i32>){
-    let future_for_execution = execution_handler.select_all_blocked_users_for_room(room_id);
-    let blocked_users_result:(bool,HashSet<i32>)= get_single_column_of_all_rows_by_id(2, future_for_execution).await;
-    return blocked_users_result;
-}
 
 fn check_user_result_and_handle_error(
     user_result:(bool,User),

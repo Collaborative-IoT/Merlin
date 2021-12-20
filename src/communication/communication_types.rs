@@ -60,10 +60,8 @@ pub struct MessageToken{
 }
 
 pub struct UserPreview{
-    user_id:i32,
-    display_name:String,
-    num_followers:i32,
-    avatar_url:String
+    pub display_name:String,
+    pub avatar_url:String
 }
 
 pub struct UserProfileEdit{
