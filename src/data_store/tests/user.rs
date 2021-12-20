@@ -25,6 +25,17 @@ pub async fn test_insert_and_gather_user(execution_handler:&mut ExecutionHandler
     return user_id;
 }
 
+pub async fn test_gathering_user_preview(execution_handler:&mut ExecutionHandler,user_id:i32)->i32{
+    let select_user_preview_result = execution_handler.select_user_preview_by_id(&user_id).await;
+    let selected_rows = select_user_preview_result.unwrap();
+    assert_eq!(selected_rows.len(),1);
+    let display_name:&str = selected_rows[0].get(1);
+    let avatar_url:&str = selected_rows[0].get(2);
+    assert_eq!(avatar_url,"test.com/avatar");
+    assert_eq!(display_name,"test1");
+    return user_id;
+}
+
 pub async fn test_updating_user_avatar(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
     println!("Testing updating user avatar");
     //get the user avatar url
