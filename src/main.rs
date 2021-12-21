@@ -33,6 +33,7 @@ pub mod communication {
     pub mod communication_router;
     pub mod communication_types;
     pub mod data_fetcher;
+    pub mod data_capturer;
 }
 
 #[tokio::main]
