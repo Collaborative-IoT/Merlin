@@ -1,7 +1,7 @@
 use crate::data_store::db_models::DBUser;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
-use chrono::{Utc};
-use tokio_postgres::{row::Row};
+use chrono::Utc;
+use tokio_postgres::row::Row;
 
 //dry violations help reduce the confusion and makes sure tests are clear.
 //massive generic functions would make things harder to follow in this

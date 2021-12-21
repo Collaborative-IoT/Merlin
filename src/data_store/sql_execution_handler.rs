@@ -8,6 +8,7 @@ use crate::data_store::delete_queries;
 use crate::data_store::insert_queries;
 use crate::data_store::select_queries;
 use crate::data_store::update_queries;
+use tokio_postgres::GenericClient;
 use tokio_postgres::{row::Row, Client, Error};
 
 pub struct ExecutionHandler {
@@ -584,6 +585,46 @@ impl ExecutionHandler {
     ) -> Result<Vec<Row>, Error> {
         let query: &str = select_queries::SELECT_USER_BY_CREATION_IDENTIFIERS;
         let result: Vec<Row> = self.client.query(query, &[&github_id, &discord_id]).await?;
+        return Ok(result);
+    }
+
+    pub async fn select_single_follow(
+        &mut self,
+        follower_id: &i32,
+        user_id: &i32,
+    ) -> Result<Vec<Row>, Error> {
+        let query: &str = select_queries::SELECT_SINGLE_FOLLOWING_FOR_USER_QUERY;
+        let result: Vec<Row> = self.client.query(query, &[follower_id, user_id]).await?;
+        return Ok(result);
+    }
+
+    pub async fn select_single_room_attendance(
+        &mut self,
+        user_id: &i32,
+        room_id: &i32,
+    ) -> Result<Vec<Row>, Error> {
+        let query: &str = select_queries::SELECT_SINGLE_ROOM_ATTENDANCE_FOR_USER_QUERY;
+        let result: Vec<Row> = self.client.query(query, &[user_id, room_id]).await?;
+        return Ok(result);
+    }
+    //owner of the block = owner_id
+    pub async fn select_single_user_block(
+        &mut self,
+        owner_id: &i32,
+        blocked_id: &i32,
+    ) -> Result<Vec<Row>, Error> {
+        let query: &str = select_queries::SELECT_SINGLE_USER_BLOCK_FOR_USER_QUERY;
+        let result: Vec<Row> = self.client.query(query, &[owner_id, blocked_id]).await?;
+        return Ok(result);
+    }
+    //owner of the block = owner_id
+    pub async fn select_single_room_block(
+        &mut self,
+        owner_id: &i32,
+        blocked_id: &i32,
+    ) -> Result<Vec<Row>, Error> {
+        let query: &str = select_queries::SELECT_SINGLE_ROOM_BLOCK_FOR_USER_QUERY;
+        let result: Vec<Row> = self.client.query(query, &[owner_id, blocked_id]).await?;
         return Ok(result);
     }
 }
