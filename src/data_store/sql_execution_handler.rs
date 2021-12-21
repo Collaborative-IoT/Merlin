@@ -167,8 +167,7 @@ impl ExecutionHandler {
         scheduled_room_attendance: &DBScheduledRoomAttendance,
     ) -> Result<(), Error> {
         let query = insert_queries::INSERT_SCHEDULED_ATTENDANCE_QUERY;
-        let rows = self
-            .client
+        self.client
             .query(
                 query,
                 &[
