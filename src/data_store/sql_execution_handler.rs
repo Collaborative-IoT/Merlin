@@ -8,7 +8,6 @@ use crate::data_store::delete_queries;
 use crate::data_store::insert_queries;
 use crate::data_store::select_queries;
 use crate::data_store::update_queries;
-use tokio_postgres::GenericClient;
 use tokio_postgres::{row::Row, Client, Error};
 
 pub struct ExecutionHandler {
