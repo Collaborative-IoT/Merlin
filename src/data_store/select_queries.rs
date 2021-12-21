@@ -37,6 +37,26 @@ SELECT * FROM follower
 WHERE followerId = $1;
 ";
 
+pub const SELECT_SINGLE_FOLLOWING_FOR_USER_QUERY: &str = "
+SELECT * FROM follower
+WHERE followerId = $1 AND userId = $2;
+";
+
+pub const SELECT_SINGLE_ROOM_ATTENDANCE_FOR_USER_QUERY: &str = "
+SELECT * FROM scheduled_room_attendance 
+WHERE userId = $1 AND scheduledRoomId = $2;
+";
+
+pub const SELECT_SINGLE_USER_BLOCK_FOR_USER_QUERY: &str = "
+SELECT * FROM user_block
+WHERE ownerUserId = $1 AND blockedUserId = $2;
+";
+
+pub const SELECT_SINGLE_ROOM_BLOCK_FOR_USER_QUERY: &str = "
+SELECT * FROM room_block 
+WHERE ownerRoomId = $1 AND ownerRoomId = $2;
+";
+
 pub const SELECT_ALL_BLOCKED_FOR_USER_QUERY: &str = "
 SELECT * FROM user_block
 WHERE ownerUserId = $1;
