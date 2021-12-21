@@ -104,7 +104,7 @@ pub async fn test_update_scheduled_room(
 pub async fn test_inserting_scheduled_room_attendance(execution_handler: &mut ExecutionHandler) {
     println!("testing inserting scheduled room attendance");
     let new_sch_room_attendance: DBScheduledRoomAttendance = gather_sch_db_room_attendance();
-    let insert_row_result = execution_handler
+    execution_handler
         .insert_scheduled_room_attendance(&new_sch_room_attendance)
         .await;
     let gather_rows_result = execution_handler
@@ -116,6 +116,15 @@ pub async fn test_inserting_scheduled_room_attendance(execution_handler: &mut Ex
     let is_owner: bool = selected_rows[0].get(3);
     assert_eq!(user_id, 99);
     assert_eq!(is_owner, true);
+}
+
+pub async fn test_gathering_single_attendance(execution_handler: &mut ExecutionHandler){
+    println!("testing gathering single attendance");
+    let user_id:i32 = 99;
+    let room_id:i32 = 899;
+    let gather_result = execution_handler.select_single_room_attendance(&user_id,&room_id).await;
+    let selected_rows = gather_result.unwrap();
+    assert_eq!(selected_rows.len(),1);
 }
 
 pub async fn test_deleting_scheduled_room(execution_handler: &mut ExecutionHandler, room_id: i32) {

@@ -31,6 +31,14 @@ pub async fn test_gather_following(execution_handler: &mut ExecutionHandler) {
     assert_eq!(user_id, 34);
 }
 
+pub async fn test_gather_single_follow(execution_handler: &mut ExecutionHandler){
+    let follower:i32 = 22;
+    let user:i32 = 34;
+    let gather_result = execution_handler.select_single_follow(&follower, &user).await;
+    let selected_rows = gather_result.unwrap();
+    assert_eq!(selected_rows.len(),1);
+}
+
 pub async fn test_delete_following(execution_handler: &mut ExecutionHandler) {
     let target_follower: i32 = 22;
     let target_user: i32 = 34;

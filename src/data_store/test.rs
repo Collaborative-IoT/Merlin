@@ -24,6 +24,7 @@ async fn test_blocks(execution_handler: &mut ExecutionHandler) {
 async fn test_follower(execution_handler: &mut ExecutionHandler) {
     tests::follower::test_follower_insertion_and_gather(execution_handler).await;
     tests::follower::test_gather_following(execution_handler).await;
+    tests::follower::test_gather_single_follow(execution_handler).await;
     tests::follower::test_delete_following(execution_handler).await;
 }
 
@@ -36,6 +37,7 @@ async fn test_room(execution_handler: &mut ExecutionHandler) {
     //scheduled
     tests::room::test_update_scheduled_room(execution_handler, sch_room_id.clone()).await;
     tests::room::test_inserting_scheduled_room_attendance(execution_handler).await;
+    tests::room::test_gathering_single_attendance(execution_handler).await;
     tests::room::test_deleting_scheduled_room(execution_handler, sch_room_id.clone()).await;
     tests::room::test_deleting_scheduled_room_attendance(execution_handler).await;
     tests::room::test_deleting_all_scheduled_room_attendance(execution_handler).await;
