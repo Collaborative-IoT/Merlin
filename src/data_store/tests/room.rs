@@ -106,7 +106,7 @@ pub async fn test_inserting_scheduled_room_attendance(execution_handler: &mut Ex
     let new_sch_room_attendance: DBScheduledRoomAttendance = gather_sch_db_room_attendance();
     execution_handler
         .insert_scheduled_room_attendance(&new_sch_room_attendance)
-        .await;
+        .await.unwrap();
     let gather_rows_result = execution_handler
         .select_all_attendance_for_scheduled_room(&new_sch_room_attendance.scheduled_room_id)
         .await;
@@ -160,10 +160,10 @@ pub async fn test_deleting_all_scheduled_room_attendance(execution_handler: &mut
     //insert two of the same attendances
     execution_handler
         .insert_scheduled_room_attendance(&new_sch_room_attendance)
-        .await;
+        .await.unwrap();
     execution_handler
         .insert_scheduled_room_attendance(&new_sch_room_attendance)
-        .await;
+        .await.unwrap();
     //delete
     let delete_result = execution_handler
         .delete_all_scheduled_room_attendance(&new_sch_room_attendance.scheduled_room_id)
@@ -184,16 +184,16 @@ pub async fn test_room_permission_insert_and_gather(execution_handler: &mut Exec
     let new_permissions: DBRoomPermissions = gather_permissions();
     execution_handler
         .insert_room_permission(&new_permissions)
-        .await;
+        .await.unwrap();
     let gather_result = execution_handler
         .select_all_room_permissions_for_user(&new_permissions.user_id, &new_permissions.room_id)
         .await;
-    assert_permissions(execution_handler, &new_permissions, gather_result);
+    assert_permissions( &new_permissions, gather_result);
 
     let gather_all_result = execution_handler
         .select_all_room_permissions_for_room(&new_permissions.room_id)
         .await;
-    assert_permissions(execution_handler, &new_permissions, gather_all_result);
+    assert_permissions( &new_permissions, gather_all_result);
 }
 
 pub async fn test_update_room_permission_for_user(execution_handler: &mut ExecutionHandler) {
@@ -213,7 +213,7 @@ pub async fn test_update_room_permission_for_user(execution_handler: &mut Execut
     let gather_result = execution_handler
         .select_all_room_permissions_for_user(&mock_obj.user_id, &mock_obj.room_id)
         .await;
-    assert_permissions(execution_handler, &mock_obj, gather_result);
+    assert_permissions( &mock_obj, gather_result);
 }
 
 pub async fn test_delete_room_permissions(execution_handler: &mut ExecutionHandler) {
@@ -234,7 +234,6 @@ pub async fn test_delete_room_permissions(execution_handler: &mut ExecutionHandl
 }
 
 fn assert_permissions(
-    execution_handler: &mut ExecutionHandler,
     new_permissions: &DBRoomPermissions,
     gather_result: Result<Vec<Row>, Error>,
 ) {
