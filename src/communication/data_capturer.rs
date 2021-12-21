@@ -1,3 +1,9 @@
+/*
+Handles all captures and handles duplicate logic for
+invalid requests like a user trying to follow
+the same user twice etc.
+*/
+
 use crate::data_store::db_models::{
     DBFollower, DBRoom, DBRoomBlock, DBScheduledRoom, DBScheduledRoomAttendance, DBUser,
     DBUserBlock,
