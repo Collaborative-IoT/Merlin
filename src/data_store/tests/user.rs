@@ -150,11 +150,7 @@ pub async fn test_updating_last_online(
     user_id: i32,
 ) -> i32 {
     println!("Testing updating last online");
-    //get the last online
-    let select_row_result = execution_handler.select_user_by_id(&user_id).await;
-    let selected_rows = select_row_result.unwrap();
     let new_last_online = Utc::now().to_string();
-    let last_online: &str = selected_rows[0].get(4);
     //update
     let result = execution_handler
         .update_last_online(new_last_online.clone(), &user_id)
@@ -262,13 +258,10 @@ pub async fn test_update_banner_url(execution_handler: &mut ExecutionHandler, us
     let banner_url: &str = selected_rows[0].get(13);
     assert_eq!(banner_url, "test.com/test_banner");
     //update
-    let result = execution_handler
+    execution_handler
         .update_banner_url(new_banner_url, &user_id)
         .await;
-    let num_of_rows_updated = result.unwrap();
     //check after update
-    let select_row_result_second = execution_handler.select_user_by_id(&user_id).await;
-    let selected_rows_second = select_row_result_second.unwrap();
     test_user_column_after_update(
         13 as usize,
         "test.com/test_banner_new".to_owned(),
