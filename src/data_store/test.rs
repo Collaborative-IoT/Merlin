@@ -13,8 +13,10 @@ pub async fn test() {
 
 async fn test_blocks(execution_handler: &mut ExecutionHandler) {
     tests::blocks::test_insert_and_gather_user_blocks(execution_handler).await;
+    tests::blocks::test_single_user_block_gather(execution_handler).await;
     tests::blocks::test_get_blockers_for_user(execution_handler).await;
     tests::blocks::test_insert_and_gather_room_blocks(execution_handler).await;
+    tests::blocks::test_single_room_block_gather(execution_handler).await;
     tests::blocks::test_remove_user_block(execution_handler).await;
     tests::blocks::test_remove_room_block(execution_handler).await;
 }

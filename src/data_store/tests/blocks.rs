@@ -16,6 +16,15 @@ pub async fn test_insert_and_gather_user_blocks(execution_handler: &mut Executio
     assert_eq!(blocked_user_id, user_block.blocked_user_id);
 }
 
+pub async fn test_single_user_block_gather(execution_handler: &mut ExecutionHandler){
+    println!("testing single user block");
+    let owner:i32 = 22;
+    let blocked:i32 = 33;
+    let gather_result = execution_handler.select_single_user_block(&owner,&blocked).await;
+    let selected_rows = gather_result.unwrap();
+    assert_eq!(selected_rows.len(),1);
+}
+
 pub async fn test_get_blockers_for_user(execution_handler: &mut ExecutionHandler) {
     println!("testing getting user blockers");
     let user_id: i32 = 33;
@@ -43,6 +52,15 @@ pub async fn test_insert_and_gather_room_blocks(execution_handler: &mut Executio
     let blocked_user_id: i32 = selected_rows[0].get(2);
     assert_eq!(owner_room_id, room_block.owner_room_id);
     assert_eq!(blocked_user_id, room_block.blocked_user_id);
+}
+
+pub async fn test_single_room_block_gather(execution_handler: &mut ExecutionHandler){
+    println!("testing single user block");
+    let owner:i32 = 22;
+    let blocked:i32 = 33;
+    let gather_result = execution_handler.select_single_room_block(&owner,&blocked).await;
+    let selected_rows = gather_result.unwrap();
+    assert_eq!(selected_rows.len(),1);
 }
 
 pub async fn test_remove_user_block(execution_handler: &mut ExecutionHandler) {
