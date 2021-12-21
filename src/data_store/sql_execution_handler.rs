@@ -403,4 +403,11 @@ impl ExecutionHandler{
         let result:Vec<Row> = self.client.query(query, &[user_id]).await?;
         return Ok(result);
     }
+
+    pub async fn select_user_by_discord_or_github_id(&mut self,discord_id:&str, github_id:&str)->Result<Vec<Row>,Error>{
+        let query:&str = select_queries::SELECT_USER_BY_CREATION_IDENTIFIERS;
+        let result:Vec<Row> = self.client.query(query, &[&github_id.to_owned(),&discord_id.to_owned()]).await?;
+        return Ok(result);
+    }
+
 }

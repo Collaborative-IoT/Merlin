@@ -71,3 +71,10 @@ pub const SELECT_USER_PREVIEW_FOR_USER: &str = "
 SELECT Id, displayName, avatarUrl FROM users
 WHERE Id = $1;
 ";
+
+//no account can have both a github and discord id,
+//the one that doesn't exist is -1
+pub const SELECT_USER_BY_CREATION_IDENTIFIERS: &str = "
+SELECT * FROM users
+    WHERE githubId = $1 AND discordId = $2;
+";

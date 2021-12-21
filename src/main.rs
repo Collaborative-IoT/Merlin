@@ -1,5 +1,7 @@
 mod server;
 extern crate chrono;
+extern crate pretty_env_logger;
+#[macro_use] extern crate log;
 use std::{env, io::Error};
 use std::sync::{Mutex,Arc};
 use tokio::net::{TcpListener};
@@ -34,5 +36,15 @@ pub mod communication{
 
 #[tokio::main]
 async fn main() {
-    
+    pretty_env_logger::init();
+    print_start();
+    //trace!("a trace example");
+    //debug!("deboogging");
+ 
+    //warn!("o_O");
+    //error!("boom");
+}
+
+fn print_start(){
+    info!("Started....");
 }

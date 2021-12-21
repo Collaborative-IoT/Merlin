@@ -36,6 +36,14 @@ pub async fn test_gathering_user_preview(execution_handler:&mut ExecutionHandler
     return user_id;
 }
 
+pub async fn test_gathering_user_by_github_discord_id(execution_handler:&mut ExecutionHandler){
+    let discord_id= "2";
+    let github_id = "1";
+    let select_user_result = execution_handler.select_user_by_discord_or_github_id(discord_id, github_id).await;
+    let rows = select_user_result.unwrap();
+    assert_eq!(rows.len(),1);
+}
+
 pub async fn test_updating_user_avatar(execution_handler:&mut ExecutionHandler, user_id:i32)->i32{
     println!("Testing updating user avatar");
     //get the user avatar url

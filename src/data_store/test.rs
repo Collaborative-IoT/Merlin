@@ -45,6 +45,7 @@ async fn test_room(execution_handler:&mut ExecutionHandler){
 
 async fn test_users(execution_handler: &mut ExecutionHandler){
     let user_id = tests::user::test_insert_and_gather_user(execution_handler).await;   
+    tests::user::test_gathering_user_by_github_discord_id(execution_handler).await;
     tests::user::test_gathering_user_preview(execution_handler,user_id.clone()).await;
     tests::user::test_updating_user_avatar(execution_handler, user_id.clone()).await;
     tests::user::test_updating_ban_status_of_user(execution_handler, user_id.clone()).await;
