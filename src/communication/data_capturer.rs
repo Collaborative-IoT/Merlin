@@ -1,5 +1,6 @@
 use crate::data_store::db_models::{
-    DBFollower, DBRoom, DBScheduledRoom, DBScheduledRoomAttendance, DBUser,
+    DBFollower, DBRoom, DBRoomBlock, DBScheduledRoom, DBScheduledRoomAttendance, DBUser,
+    DBUserBlock,
 };
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use futures_util::Future;
@@ -48,43 +49,80 @@ pub async fn capture_new_scheduled_room_attendance(
     execution_handler: &mut ExecutionHandler,
     attendance: &DBScheduledRoomAttendance,
 ) -> CaptureResult {
-    let select_future = execution_handler.select_single_room_attendance(&attendance.user_id, &attendance.scheduled_room_id);
+    let select_future = execution_handler
+        .select_single_room_attendance(&attendance.user_id, &attendance.scheduled_room_id);
     let will_be_duplicate = insert_will_be_duplicate(select_future).await;
-    let insert_future =
-        execution_handler.insert_scheduled_room_attendance(attendance);
+    let insert_future = execution_handler.insert_scheduled_room_attendance(attendance);
     return ensure_no_duplicates_exist_and_capture(
-        will_be_duplicate, 
-        insert_future, 
-        "You already declared you are attending this room!".to_owned()).await;
+        will_be_duplicate,
+        insert_future,
+        "You already declared you are attending this room!".to_owned(),
+    )
+    .await;
 }
-
 
 pub async fn capture_new_follower(
     execution_handler: &mut ExecutionHandler,
     follower: &DBFollower,
 ) -> CaptureResult {
-    let select_future = execution_handler.select_single_follow(&follower.follower_id, &follower.user_id);
+    let select_future =
+        execution_handler.select_single_follow(&follower.follower_id, &follower.user_id);
     let will_be_duplicate = insert_will_be_duplicate(select_future).await;
     let insert_future = execution_handler.insert_follower(follower);
     return ensure_no_duplicates_exist_and_capture(
         will_be_duplicate,
         insert_future,
-         "You are already following this user!".to_owned()).await;
+        "You are already following this user!".to_owned(),
+    )
+    .await;
+}
+
+pub async fn capture_new_user_block(
+    execution_handler: &mut ExecutionHandler,
+    user_block: &DBUserBlock,
+) -> CaptureResult {
+    let select_future = execution_handler
+        .select_single_user_block(&user_block.owner_user_id, &user_block.blocked_user_id);
+    let will_be_duplicate = insert_will_be_duplicate(select_future).await;
+    let insert_future = execution_handler.insert_user_block(user_block);
+    return ensure_no_duplicates_exist_and_capture(
+        will_be_duplicate,
+        insert_future,
+        "This user is already blocked!".to_owned(),
+    )
+    .await;
+}
+
+pub async fn capture_new_room_block(
+    execution_handler: &mut ExecutionHandler,
+    room_block: &DBRoomBlock,
+) -> CaptureResult {
+    let select_future = execution_handler
+        .select_single_room_block(&room_block.owner_room_id, &room_block.blocked_user_id);
+    let will_be_duplicate = insert_will_be_duplicate(select_future).await;
+    let insert_future = execution_handler.insert_room_block(room_block);
+    return ensure_no_duplicates_exist_and_capture(
+        will_be_duplicate,
+        insert_future,
+        "This user is already blocked for this room!".to_owned(),
+    )
+    .await;
 }
 
 //only executes insert future if the insertion
 //won't be a duplicate.
 pub async fn ensure_no_duplicates_exist_and_capture(
-    will_be_duplicate:bool,
+    will_be_duplicate: bool,
     insert_future: impl Future<Output = Result<(), Error>>,
-    error_message:String)-> CaptureResult{
-        if will_be_duplicate{
-            return CaptureResult{
-                desc:error_message,
-                encountered_error:true
-            };
-        }
-        return handle_basic_insert_with_no_returning(insert_future).await;
+    error_message: String,
+) -> CaptureResult {
+    if will_be_duplicate {
+        return CaptureResult {
+            desc: error_message,
+            encountered_error: true,
+        };
+    }
+    return handle_basic_insert_with_no_returning(insert_future).await;
 }
 
 //handles logic for room capture
