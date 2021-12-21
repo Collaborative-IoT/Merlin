@@ -1,4 +1,3 @@
-
 //Dry violations on purpose, helps read and follow each specific query
 pub const SELECT_ALL_ROOM_QUERY: &str = "
 SELECT * FROM room;
@@ -18,22 +17,22 @@ pub const SELECT_ALL_SCHEDULED_ROOMS_QUERY: &str = "
 SELECT * FROM scheduled_room;
 ";
 
-pub const SELECT_ALL_SCHEDULED_ROOM_ATTENDANCE_FOR_ROOM_QUERY: &str= "
+pub const SELECT_ALL_SCHEDULED_ROOM_ATTENDANCE_FOR_ROOM_QUERY: &str = "
 SELECT * FROM scheduled_room_attendance 
 WHERE scheduledRoomId = $1;
 ";
 
-pub const SELECT_ALL_ATTENDANCE_FOR_USER_QUERY: &str= "
+pub const SELECT_ALL_ATTENDANCE_FOR_USER_QUERY: &str = "
 SELECT * FROM scheduled_room_attendance 
 WHERE userId = 1$;
 ";
 
-pub const SELECT_ALL_FOLLOWERS_FOR_USER_QUERY: &str= "
+pub const SELECT_ALL_FOLLOWERS_FOR_USER_QUERY: &str = "
 SELECT * FROM follower
 WHERE userId = $1;
 ";
 
-pub const SELECT_ALL_FOLLOWING_FOR_USER_QUERY: &str="
+pub const SELECT_ALL_FOLLOWING_FOR_USER_QUERY: &str = "
 SELECT * FROM follower 
 WHERE followerId = $1;
 ";
@@ -43,7 +42,7 @@ SELECT * FROM user_block
 WHERE ownerUserId = $1;
 ";
 
-pub const SELECT_ALL_BLOCKERS_FOR_USER_QUERY: &str ="
+pub const SELECT_ALL_BLOCKERS_FOR_USER_QUERY: &str = "
 SELECT * FROM user_block
 WHERE blockedUserId = $1;
 ";

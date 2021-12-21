@@ -1,4 +1,3 @@
-
 //Dry violations on purpose, helps read and follow each specific query
 
 pub const DELETE_ROOM_QUERY: &str = "
@@ -6,7 +5,7 @@ DELETE FROM room
 WHERE Id = $1;
 ";
 
-pub const DELETE_ROOM_PERMISSIONS_QUERY: &str="
+pub const DELETE_ROOM_PERMISSIONS_QUERY: &str = "
 DELETE FROM room_permission
 WHERE roomId = $1;
 ";
@@ -27,7 +26,7 @@ DELETE FROM user_block
 WHERE ownerUserId = $1 and blockedUserId = $2;
 ";
 
-pub const DELETE_SCHEDULED_ROOM_QUERY: &str ="
+pub const DELETE_SCHEDULED_ROOM_QUERY: &str = "
 DELETE FROM scheduled_room
 WHERE Id = $1;
 ";
