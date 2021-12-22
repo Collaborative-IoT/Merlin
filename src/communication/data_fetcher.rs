@@ -18,15 +18,9 @@ each user etc.
 */
 pub async fn get_users_for_user(
     requester_user_id: i32,
-    server_state: ServerState,
+    user_ids: Vec<i32>,
     execution_handler: &mut ExecutionHandler,
 ) -> (bool, Vec<User>) {
-    let user_ids: Vec<i32> = server_state
-        .active_users
-        .keys()
-        .cloned()
-        .filter(|x| x != &requester_user_id)
-        .collect();
     let blocked_user_ids = get_blocked_user_ids_for_user(execution_handler, &requester_user_id)
         .await
         .1;

@@ -80,6 +80,6 @@ async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
             println!("connection error: {}", e);
         }
     });
-    let mut handler = ExecutionHandler::new(client);
+    let handler = ExecutionHandler::new(client);
     return Ok(handler);
 }
