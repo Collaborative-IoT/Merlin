@@ -124,7 +124,7 @@ async fn get_meta_data_for_user_and_construct(
     }
 }
 
-async fn get_room_permissions_for_users(
+pub async fn get_room_permissions_for_users(
     room_id: &i32,
     execution_handler: &mut ExecutionHandler,
 ) -> (bool, HashMap<i32, RoomPermissions>) {
@@ -152,7 +152,7 @@ async fn get_room_permissions_for_users(
     }
 }
 
-async fn get_user_previews_for_users(
+pub async fn get_user_previews_for_users(
     user_ids: Vec<i32>,
     execution_handler: &mut ExecutionHandler,
 ) -> (bool, HashMap<i32, UserPreview>) {
@@ -176,7 +176,7 @@ async fn get_user_previews_for_users(
     return (encountered_error, user_previews);
 }
 
-async fn get_blocked_user_ids_for_user(
+pub async fn get_blocked_user_ids_for_user(
     execution_handler: &mut ExecutionHandler,
     user_id: &i32,
 ) -> (bool, HashSet<i32>) {
@@ -186,7 +186,7 @@ async fn get_blocked_user_ids_for_user(
     return blocked_users_result;
 }
 
-async fn get_following_user_ids_for_user(
+pub async fn get_following_user_ids_for_user(
     execution_handler: &mut ExecutionHandler,
     user_id: &i32,
 ) -> (bool, HashSet<i32>) {
@@ -196,7 +196,7 @@ async fn get_following_user_ids_for_user(
     return following_users_result;
 }
 
-async fn get_follower_user_ids_for_user(
+pub async fn get_follower_user_ids_for_user(
     execution_handler: &mut ExecutionHandler,
     user_id: &i32,
 ) -> (bool, HashSet<i32>) {
@@ -206,7 +206,7 @@ async fn get_follower_user_ids_for_user(
     return followers_users_result;
 }
 
-async fn get_blocked_user_ids_for_room(
+pub async fn get_blocked_user_ids_for_room(
     execution_handler: &mut ExecutionHandler,
     room_id: &i32,
 ) -> (bool, HashSet<i32>) {

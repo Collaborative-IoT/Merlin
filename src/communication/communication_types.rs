@@ -126,17 +126,17 @@ pub struct User {
 }
 
 pub struct BaseUser {
-    username: String,
-    last_online: String,
-    user_id: i32,
-    bio: String,
-    display_name: String,
-    avatar_url: String,
-    banner_url: String,
-    num_following: i32,
-    num_followers: i32,
-    current_room: Room,
-    contributions: i32,
+    pub username: String,
+    pub last_online: String,
+    pub user_id: i32,
+    pub bio: String,
+    pub display_name: String,
+    pub avatar_url: String,
+    pub banner_url: String,
+    pub num_following: i32,
+    pub num_followers: i32,
+    pub current_room: Room,
+    pub contributions: i32,
 }
 
 pub struct MessageBroadcastRequestDetails {
