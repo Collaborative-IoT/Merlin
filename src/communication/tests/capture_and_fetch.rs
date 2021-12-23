@@ -41,7 +41,7 @@ pub async fn test_follow_capture_and_gather(
         data_capturer::capture_new_follower(execution_handler, &new_follow).await;
     assert_eq!(follow_capture_result.encountered_error, false);
     assert_eq!(follow_capture_result.desc, "Action Successful");
-    
+
     //gather the following user
     //as the user who is being followed to test
     //if the user struct is being filled out correctly
@@ -77,6 +77,12 @@ pub async fn test_user_block_capture_and_gather(
         data_capturer::capture_new_user_block(execution_handler, &user_block).await;
     assert_eq!(capture_result.encountered_error, false);
     assert_eq!(capture_result.desc, "Action Successful");
+    
+    //test against duplicates
+    let second_capture_result: CaptureResult =
+    data_capturer::capture_new_user_block(execution_handler, &user_block).await;
+    assert_eq!(second_capture_result.encountered_error, true);
+    assert_eq!(second_capture_result.desc, "Issue with execution");
 
     //check user struct gather properties
     //to make sure the user struct is being
@@ -93,20 +99,6 @@ pub async fn test_user_block_capture_and_gather(
     assert_eq!(users_gather_result.1[0].i_blocked_them, true);
 }
 
-pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
-    let (client, connection) = tokio_postgres::connect(
-        "host=localhost user=postgres port=5432 password=password",
-        NoTls,
-    )
-    .await?;
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            println!("connection error: {}", e);
-        }
-    });
-    let handler = ExecutionHandler::new(client);
-    return Ok(handler);
-}
 
 fn compare_user_and_db_user(communication_user: &User, db_user: &DBUser) {
     assert_eq!(db_user.display_name, communication_user.display_name);
@@ -164,4 +156,19 @@ fn generate_different_user_struct() -> DBUser {
         banner_url: "test.doijeoocom/test_banner2".to_string(),
     };
     return user;
+}
+
+pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
+    let (client, connection) = tokio_postgres::connect(
+        "host=localhost user=postgres port=5432 password=password",
+        NoTls,
+    )
+    .await?;
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            println!("connection error: {}", e);
+        }
+    });
+    let handler = ExecutionHandler::new(client);
+    return Ok(handler);
 }
