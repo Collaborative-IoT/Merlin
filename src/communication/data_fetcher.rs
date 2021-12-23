@@ -4,7 +4,6 @@ by fetching and converts rows to correct response types.
 */
 use crate::communication::communication_types::{RoomPermissions, User, UserPreview};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
-use crate::state::state::ServerState;
 use futures_util::Future;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;

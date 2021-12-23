@@ -9,6 +9,7 @@ use crate::data_store::db_models::{
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use chrono::Utc;
 use tokio_postgres::{Error, NoTls};
+use std::collections::{HashSet};
 
 pub async fn test_capture_user(execution_handler: &mut ExecutionHandler) -> (i32, i32) {
     println!("testing capture user and gather");
@@ -119,8 +120,33 @@ pub async fn test_room_capture_and_gather(execution_handler: &mut ExecutionHandl
     return room_id;
 }
 
-pub fn test_room_block_and_gather(execution_handler: &mut ExecutionHandler){
-
+pub async fn test_room_block_and_gather(execution_handler: &mut ExecutionHandler,room_id:&i32){
+    let room_block:DBRoomBlock = DBRoomBlock{
+        id:-1,
+        owner_room_id: room_id.clone(),
+        blocked_user_id: -333
+    };
+    let second_room_block:DBRoomBlock = DBRoomBlock{
+        id:-1,
+        owner_room_id: room_id.clone(),
+        blocked_user_id: -444
+    };
+    let first_capture_result:CaptureResult = data_capturer::capture_new_room_block(execution_handler, &room_block).await;
+    let second_capture_result:CaptureResult = data_capturer::capture_new_room_block(execution_handler, &second_room_block).await;
+    assert_eq!(first_capture_result.encountered_error, false);
+    assert_eq!(first_capture_result.desc, "Action Successful");
+    assert_eq!(second_capture_result.encountered_error, false);
+    assert_eq!(second_capture_result.desc, "Action Successful");
+    //test against duplicates
+    let duplicate_capture_result:CaptureResult = data_capturer::capture_new_room_block(execution_handler, &room_block).await;
+    assert_eq!(duplicate_capture_result.encountered_error, true);
+    assert_eq!(duplicate_capture_result.desc, "Issue with execution");
+    //test gathering new captured
+    let fetch_result:(bool,HashSet<i32>)= data_fetcher::get_blocked_user_ids_for_room(execution_handler,room_id).await;
+    let user_ids = fetch_result.1;
+    assert_eq!(fetch_result.0, false);
+    assert_eq!(user_ids.contains(&room_block.blocked_user_id),true);
+    assert_eq!(user_ids.contains(&second_room_block.blocked_user_id),true);
 }
 
 fn compare_user_and_db_user(communication_user: &User, db_user: &DBUser) {
