@@ -29,26 +29,30 @@ pub async fn test_capture_user_and_gather(execution_handler: &mut ExecutionHandl
 
 pub async fn test_follow_capture_and_gather(
     execution_handler: &mut ExecutionHandler,
-    user_ids: (i32, i32),
-) -> (i32, i32) {
+    user_ids: (&i32, &i32),
+) {
     println!("testing follow and capture gather");
     let new_follow: DBFollower = DBFollower {
         id: -1,
-        follower_id: user_ids.1,
-        user_id: user_ids.0,
+        follower_id: user_ids.1.clone(),
+        user_id: user_ids.0.clone(),
     };
     let follow_capture_result: CaptureResult =
         data_capturer::capture_new_follower(execution_handler, &new_follow).await;
     assert_eq!(follow_capture_result.encountered_error, false);
     assert_eq!(follow_capture_result.desc, "Action Successful");
+    
     //gather the following user
     //as the user who is being followed to test
     //if the user struct is being filled out correctly
     //since the user struct contains fields like "follows_you"
     let mock_user_ids_to_gather: Vec<i32> = vec![user_ids.1.clone()];
-    let users_gather_result: (bool, Vec<User>) =
-        data_fetcher::get_users_for_user(user_ids.0, mock_user_ids_to_gather, execution_handler)
-            .await;
+    let users_gather_result: (bool, Vec<User>) = data_fetcher::get_users_for_user(
+        user_ids.0.clone(),
+        mock_user_ids_to_gather,
+        execution_handler,
+    )
+    .await;
     assert_eq!(users_gather_result.0, false);
     assert_eq!(users_gather_result.1.len(), 1);
     //we captured this exact user with its values in previous tests
@@ -57,7 +61,36 @@ pub async fn test_follow_capture_and_gather(
     assert_eq!(users_gather_result.1[0].follows_you, true);
     assert_eq!(users_gather_result.1[0].i_blocked_them, false);
     assert_eq!(users_gather_result.1[0].you_are_following, false);
-    return (user_ids);
+}
+
+pub async fn test_user_block_capture_and_gather(
+    execution_handler: &mut ExecutionHandler,
+    user_ids: (&i32, &i32),
+) {
+    println!("testing user block capture and gather");
+    let user_block: DBUserBlock = DBUserBlock {
+        id: -1 as i32,
+        owner_user_id: user_ids.0.to_owned(),
+        blocked_user_id: user_ids.1.to_owned(),
+    };
+    let capture_result: CaptureResult =
+        data_capturer::capture_new_user_block(execution_handler, &user_block).await;
+    assert_eq!(capture_result.encountered_error, false);
+    assert_eq!(capture_result.desc, "Action Successful");
+
+    //check user struct gather properties
+    //to make sure the user struct is being
+    //filled out properly, since the second user should
+    //be blocked from the POV of the first user
+    let mock_user_ids_to_gather: Vec<i32> = vec![user_ids.1.clone()];
+    let users_gather_result: (bool, Vec<User>) = data_fetcher::get_users_for_user(
+        user_ids.0.clone(),
+        mock_user_ids_to_gather,
+        execution_handler,
+    )
+    .await;
+    assert_eq!(users_gather_result.1.len(), 1);
+    assert_eq!(users_gather_result.1[0].i_blocked_them, true);
 }
 
 pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
