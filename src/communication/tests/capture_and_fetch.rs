@@ -35,11 +35,7 @@ pub async fn test_follow_capture_and_gather(
     user_ids: (&i32, &i32),
 ) {
     println!("testing follow and capture gather");
-    let new_follow: DBFollower = DBFollower {
-        id: -1,
-        follower_id: user_ids.1.clone(),
-        user_id: user_ids.0.clone(),
-    };
+    let new_follow: DBFollower = generate_db_follower(&user_ids);
     let follow_capture_result: CaptureResult =
         data_capturer::capture_new_follower(execution_handler, &new_follow).await;
     assert_eq!(follow_capture_result.encountered_error, false);
@@ -65,17 +61,13 @@ pub async fn test_follow_capture_and_gather(
     assert_eq!(users_gather_result.1[0].i_blocked_them, false);
     assert_eq!(users_gather_result.1[0].you_are_following, false);
 }
-
+//TODO: shorten function, too large
 pub async fn test_user_block_capture_and_gather(
     execution_handler: &mut ExecutionHandler,
     user_ids: (&i32, &i32),
 ) {
     println!("testing user block capture and gather");
-    let user_block: DBUserBlock = DBUserBlock {
-        id: -1 as i32,
-        owner_user_id: user_ids.0.to_owned(),
-        blocked_user_id: user_ids.1.to_owned(),
-    };
+    let user_block: DBUserBlock = generate_user_block(&user_ids);
     let capture_result: CaptureResult =
         data_capturer::capture_new_user_block(execution_handler, &user_block).await;
     assert_eq!(capture_result.encountered_error, false);
@@ -103,11 +95,7 @@ pub async fn test_user_block_capture_and_gather(
 }
 
 pub async fn test_room_capture_and_gather(execution_handler: &mut ExecutionHandler) -> i32 {
-    let mock_room: DBRoom = DBRoom {
-        id: -1,
-        owner_id: -222, //we only need the id for the further tests
-        chat_mode: "fast".to_owned(),
-    };
+    let mock_room: DBRoom = generate_room();
     let room_id: i32 = data_capturer::capture_new_room(execution_handler, &mock_room).await;
     assert!(room_id != -1);
 
@@ -121,17 +109,12 @@ pub async fn test_room_capture_and_gather(execution_handler: &mut ExecutionHandl
     return room_id;
 }
 
+//TODO: shorten function, too large
 pub async fn test_room_block_and_gather(execution_handler: &mut ExecutionHandler, room_id: &i32) {
-    let room_block: DBRoomBlock = DBRoomBlock {
-        id: -1,
-        owner_room_id: room_id.clone(),
-        blocked_user_id: -333,
-    };
-    let second_room_block: DBRoomBlock = DBRoomBlock {
-        id: -1,
-        owner_room_id: room_id.clone(),
-        blocked_user_id: -444,
-    };
+    let room_block: DBRoomBlock = generate_room_block(room_id);
+    let second_room_block: DBRoomBlock = generate_different_room_block(room_id);
+
+    //insert room blocks
     let first_capture_result: CaptureResult =
         data_capturer::capture_new_room_block(execution_handler, &room_block).await;
     let second_capture_result: CaptureResult =
@@ -153,6 +136,8 @@ pub async fn test_room_block_and_gather(execution_handler: &mut ExecutionHandler
     assert_eq!(user_ids.contains(&room_block.blocked_user_id), true);
     assert_eq!(user_ids.contains(&second_room_block.blocked_user_id), true);
 }
+
+pub async fn test_user_block_removal(execution_handler: &mut ExecutionHandler) {}
 
 fn compare_user_and_db_user(communication_user: &User, db_user: &DBUser) {
     assert_eq!(db_user.display_name, communication_user.display_name);
@@ -210,6 +195,45 @@ fn generate_different_user_struct() -> DBUser {
         banner_url: "test.doijeoocom/test_banner2".to_string(),
     };
     return user;
+}
+
+fn generate_room_block(room_id: &i32) -> DBRoomBlock {
+    return DBRoomBlock {
+        id: -1,
+        owner_room_id: room_id.clone(),
+        blocked_user_id: -333,
+    };
+}
+fn generate_different_room_block(room_id: &i32) -> DBRoomBlock {
+    return DBRoomBlock {
+        id: -1,
+        owner_room_id: room_id.clone(),
+        blocked_user_id: -444,
+    };
+}
+
+fn generate_user_block(user_ids: &(&i32, &i32)) -> DBUserBlock {
+    return DBUserBlock {
+        id: -1 as i32,
+        owner_user_id: user_ids.0.to_owned(),
+        blocked_user_id: user_ids.1.to_owned(),
+    };
+}
+
+fn generate_db_follower(user_ids: &(&i32, &i32)) -> DBFollower {
+    return DBFollower {
+        id: -1,
+        follower_id: user_ids.1.clone(),
+        user_id: user_ids.0.clone(),
+    };
+}
+
+fn generate_room() -> DBRoom {
+    return DBRoom {
+        id: -1,
+        owner_id: -222, //we only need the id for the further tests
+        chat_mode: "fast".to_owned(),
+    };
 }
 
 pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
