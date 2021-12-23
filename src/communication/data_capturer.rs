@@ -202,7 +202,7 @@ async fn handle_removal_capture(
 
 //only executes insert future if the insertion
 //won't be a duplicate.
-pub async fn ensure_no_duplicates_exist_and_capture(
+async fn ensure_no_duplicates_exist_and_capture(
     will_be_duplicate: bool,
     insert_future: impl Future<Output = Result<(), Error>>,
     error_message: String,
