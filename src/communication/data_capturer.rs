@@ -117,60 +117,88 @@ pub async fn capture_new_room_block(
 
 pub async fn capture_user_block_removal(
     execution_handler: &mut ExecutionHandler,
-    owner_id:&i32,
-    blocked_id:&i32
-)->CaptureResult{
-    let deletion_result = execution_handler.delete_block_for_user(owner_id, blocked_id).await;
+    owner_id: &i32,
+    blocked_id: &i32,
+) -> CaptureResult {
+    let deletion_result = execution_handler
+        .delete_block_for_user(owner_id, blocked_id)
+        .await;
     return handle_removal_capture(
-         "User block successfully removed".to_owned(),
-          "Unexpected error removing user block".to_owned(), 
-          1 as u64, 
-          deletion_result).await;
+        "User block successfully removed".to_owned(),
+        "Unexpected error removing user block".to_owned(),
+        1,
+        deletion_result,
+    )
+    .await;
 }
 
 pub async fn capture_room_block_removal(
     execution_handler: &mut ExecutionHandler,
-    owner_id:&i32,
-    blocked_id:&i32
-)-> CaptureResult{
-    let deletion_result = execution_handler.delete_room_block_for_user(owner_id, blocked_id).await;
+    owner_id: &i32,
+    blocked_id: &i32,
+) -> CaptureResult {
+    let deletion_result = execution_handler
+        .delete_room_block_for_user(owner_id, blocked_id)
+        .await;
     return handle_removal_capture(
-        "Room block successfully removed".to_owned(), 
-        "Unexpected error removing room block".to_owned(), 
-        1, deletion_result).await;
+        "Room block successfully removed".to_owned(),
+        "Unexpected error removing room block".to_owned(),
+        1,
+        deletion_result,
+    )
+    .await;
 }
 
 pub async fn capture_follower_removal(
     execution_handler: &mut ExecutionHandler,
-    follower_id:&i32,
-    user_id:&i32
-)-> CaptureResult{
-    let deletion_result = execution_handler.delete_follower_for_user(follower_id, user_id).await;
+    follower_id: &i32,
+    user_id: &i32,
+) -> CaptureResult {
+    let deletion_result = execution_handler
+        .delete_follower_for_user(follower_id, user_id)
+        .await;
     return handle_removal_capture(
-        "Sucessfully unfollowed user".to_owned(), 
-    "Unexpected error unfollowing user".to_owned(), 
-    1, deletion_result).await;
+        "Sucessfully unfollowed user".to_owned(),
+        "Unexpected error unfollowing user".to_owned(),
+        1,
+        deletion_result,
+    )
+    .await;
+}
+
+pub async fn capture_room_removal(
+    execution_handler: &mut ExecutionHandler,
+    room_id: &i32,
+) -> CaptureResult {
+    let deletion_result = execution_handler.delete_room(room_id).await;
+    return handle_removal_capture(
+        "Room Removed".to_owned(),
+        "Unexpected error removing room".to_owned(),
+        1,
+        deletion_result,
+    )
+    .await;
 }
 
 //makes sure a x amount of row were successfully deleted
 async fn handle_removal_capture(
-    success_msg:String,
-    error_msg:String,
-    expected_amount:u64,
-    result:Result<u64, Error>)->CaptureResult{
-        if result.is_ok() && result.unwrap() == expected_amount{
-            return CaptureResult{
-                desc:success_msg,
-                encountered_error:false
-            }
-        }
-        else{
-            return CaptureResult{
-                desc:error_msg,
-                encountered_error:true
-            }
-        }
+    success_msg: String,
+    error_msg: String,
+    expected_amount: u64,
+    result: Result<u64, Error>,
+) -> CaptureResult {
+    if result.is_ok() && result.unwrap() == expected_amount {
+        return CaptureResult {
+            desc: success_msg,
+            encountered_error: false,
+        };
+    } else {
+        return CaptureResult {
+            desc: error_msg,
+            encountered_error: true,
+        };
     }
+}
 
 //only executes insert future if the insertion
 //won't be a duplicate.

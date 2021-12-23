@@ -211,23 +211,22 @@ pub async fn get_blocked_user_ids_for_room(
 
 pub async fn get_room_owner_and_settings(
     execution_handler: &mut ExecutionHandler,
-    room_id:&i32)->(bool,i32,String){
-        let gather_result = execution_handler.select_room_by_id(room_id).await;
-        if gather_result.is_ok(){
-            let selected_rows = gather_result.unwrap();
-            if selected_rows.len() == 1{
-                let owner_id:i32 = selected_rows[0].get(1);
-                let chat_mode:String = selected_rows[0].get(2);
-                return (false, owner_id, chat_mode);
-            }
-            else{
-                return (true, -1 as i32, "".to_owned());
-            }
+    room_id: &i32,
+) -> (bool, i32, String) {
+    let gather_result = execution_handler.select_room_by_id(room_id).await;
+    if gather_result.is_ok() {
+        let selected_rows = gather_result.unwrap();
+        if selected_rows.len() == 1 {
+            let owner_id: i32 = selected_rows[0].get(1);
+            let chat_mode: String = selected_rows[0].get(2);
+            return (false, owner_id, chat_mode);
+        } else {
+            return (true, -1 as i32, "".to_owned());
         }
-        else{
-            return (true, -2 as i32, "".to_owned());
-        }
+    } else {
+        return (true, -2 as i32, "".to_owned());
     }
+}
 
 fn construct_user(
     blocked_by_requesting_user: bool,

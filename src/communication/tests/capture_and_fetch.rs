@@ -8,8 +8,8 @@ use crate::data_store::db_models::{
 };
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use chrono::Utc;
+use std::collections::HashSet;
 use tokio_postgres::{Error, NoTls};
-use std::collections::{HashSet};
 
 pub async fn test_capture_user(execution_handler: &mut ExecutionHandler) -> (i32, i32) {
     println!("testing capture user and gather");
@@ -23,7 +23,7 @@ pub async fn test_capture_user(execution_handler: &mut ExecutionHandler) -> (i32
     let second_capture_user_id: i32 =
         data_capturer::capture_new_user(execution_handler, &new_user).await;
     assert_eq!(second_capture_user_id, -1); // should be -1 due to the duplication
-    //insert second user that should succeed
+                                            //insert second user that should succeed
     let second_real_capture_user_id: i32 =
         data_capturer::capture_new_user(execution_handler, &new_second_user).await;
     assert!(second_real_capture_user_id != -1);
@@ -83,7 +83,7 @@ pub async fn test_user_block_capture_and_gather(
 
     //test against duplicates
     let second_capture_result: CaptureResult =
-    data_capturer::capture_new_user_block(execution_handler, &user_block).await;
+        data_capturer::capture_new_user_block(execution_handler, &user_block).await;
     assert_eq!(second_capture_result.encountered_error, true);
     assert_eq!(second_capture_result.desc, "Issue with execution");
 
@@ -102,51 +102,56 @@ pub async fn test_user_block_capture_and_gather(
     assert_eq!(users_gather_result.1[0].i_blocked_them, true);
 }
 
-pub async fn test_room_capture_and_gather(execution_handler: &mut ExecutionHandler)->i32{
-    let mock_room:DBRoom = DBRoom{
-        id:-1,
-        owner_id:-222,//we only need the id for the further tests
-        chat_mode:"fast".to_owned()
+pub async fn test_room_capture_and_gather(execution_handler: &mut ExecutionHandler) -> i32 {
+    let mock_room: DBRoom = DBRoom {
+        id: -1,
+        owner_id: -222, //we only need the id for the further tests
+        chat_mode: "fast".to_owned(),
     };
-    let room_id:i32 = data_capturer::capture_new_room(execution_handler, &mock_room).await;
+    let room_id: i32 = data_capturer::capture_new_room(execution_handler, &mock_room).await;
     assert!(room_id != -1);
 
-    let gather_results :(bool,i32,String) = data_fetcher::get_room_owner_and_settings(execution_handler, &room_id).await;
+    let gather_results: (bool, i32, String) =
+        data_fetcher::get_room_owner_and_settings(execution_handler, &room_id).await;
     //no error
-    assert_eq!(gather_results.0,false);
+    assert_eq!(gather_results.0, false);
     //correct owner id and chatmode
     assert_eq!(gather_results.1, -222);
     assert_eq!(gather_results.2, "fast");
     return room_id;
 }
 
-pub async fn test_room_block_and_gather(execution_handler: &mut ExecutionHandler,room_id:&i32){
-    let room_block:DBRoomBlock = DBRoomBlock{
-        id:-1,
+pub async fn test_room_block_and_gather(execution_handler: &mut ExecutionHandler, room_id: &i32) {
+    let room_block: DBRoomBlock = DBRoomBlock {
+        id: -1,
         owner_room_id: room_id.clone(),
-        blocked_user_id: -333
+        blocked_user_id: -333,
     };
-    let second_room_block:DBRoomBlock = DBRoomBlock{
-        id:-1,
+    let second_room_block: DBRoomBlock = DBRoomBlock {
+        id: -1,
         owner_room_id: room_id.clone(),
-        blocked_user_id: -444
+        blocked_user_id: -444,
     };
-    let first_capture_result:CaptureResult = data_capturer::capture_new_room_block(execution_handler, &room_block).await;
-    let second_capture_result:CaptureResult = data_capturer::capture_new_room_block(execution_handler, &second_room_block).await;
+    let first_capture_result: CaptureResult =
+        data_capturer::capture_new_room_block(execution_handler, &room_block).await;
+    let second_capture_result: CaptureResult =
+        data_capturer::capture_new_room_block(execution_handler, &second_room_block).await;
     assert_eq!(first_capture_result.encountered_error, false);
     assert_eq!(first_capture_result.desc, "Action Successful");
     assert_eq!(second_capture_result.encountered_error, false);
     assert_eq!(second_capture_result.desc, "Action Successful");
     //test against duplicates
-    let duplicate_capture_result:CaptureResult = data_capturer::capture_new_room_block(execution_handler, &room_block).await;
+    let duplicate_capture_result: CaptureResult =
+        data_capturer::capture_new_room_block(execution_handler, &room_block).await;
     assert_eq!(duplicate_capture_result.encountered_error, true);
     assert_eq!(duplicate_capture_result.desc, "Issue with execution");
     //test gathering new captured
-    let fetch_result:(bool,HashSet<i32>)= data_fetcher::get_blocked_user_ids_for_room(execution_handler,room_id).await;
+    let fetch_result: (bool, HashSet<i32>) =
+        data_fetcher::get_blocked_user_ids_for_room(execution_handler, room_id).await;
     let user_ids = fetch_result.1;
     assert_eq!(fetch_result.0, false);
-    assert_eq!(user_ids.contains(&room_block.blocked_user_id),true);
-    assert_eq!(user_ids.contains(&second_room_block.blocked_user_id),true);
+    assert_eq!(user_ids.contains(&room_block.blocked_user_id), true);
+    assert_eq!(user_ids.contains(&second_room_block.blocked_user_id), true);
 }
 
 fn compare_user_and_db_user(communication_user: &User, db_user: &DBUser) {

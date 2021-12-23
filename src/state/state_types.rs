@@ -35,7 +35,7 @@ pub struct Room {
     deaf: HashSet<String>,
     user_ids: HashSet<String>,
     public: bool,
-    auto_speaker: bool
+    auto_speaker: bool,
 }
 
 //IoTServerConnectionId -> Permissions for the connection(represented as the board)
