@@ -157,8 +157,9 @@ pub async fn test_user_block_removal(execution_handler: &mut ExecutionHandler, u
     assert_eq!(result.desc, "User block successfully removed");
 }
 
-pub async fn test_room_block_removal(execution_handler: &mut ExecutionHandler, user_id:&i32, room_id: &i32){
-    let result:CaptureResult = data_capturer::capture_room_block_removal(execution_handler, room_id, user_id).await;
+pub async fn test_room_block_removal(execution_handler: &mut ExecutionHandler, room_id: &i32){
+    let user_id:i32 = -333;
+    let result:CaptureResult = data_capturer::capture_room_block_removal(execution_handler, room_id, &user_id).await;
     assert_eq!(result.encountered_error, false);
     assert_eq!(result.desc, "Room block successfully removed");
 }
@@ -177,14 +178,6 @@ fn compare_user_and_db_user(communication_user: &User, db_user: &DBUser) {
     assert_eq!(db_user.bio, communication_user.bio);
     assert_eq!(db_user.user_name, communication_user.username);
     assert_eq!(db_user.contributions, communication_user.contributions);
-}
-
-async fn generate_room_struct() -> DBRoom {
-    return DBRoom {
-        id: -1, //doesn't matter in insertion
-        owner_id: 33,
-        chat_mode: "slow".to_owned(),
-    };
 }
 
 fn generate_user_struct() -> DBUser {
