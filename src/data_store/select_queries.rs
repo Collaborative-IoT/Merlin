@@ -24,7 +24,7 @@ WHERE scheduledRoomId = $1;
 
 pub const SELECT_ALL_OWNED_SCHEDULED_ROOMS_FOR_USER: &str = "
 SELECT * FROM scheduled_room_attendance
-WHERE scheduledRoomId = $1 AND isOwner = true;
+WHERE userId = $1 AND isOwner = true;
 ";
 
 pub const SELECT_ALL_ATTENDANCE_FOR_USER_QUERY: &str = "
