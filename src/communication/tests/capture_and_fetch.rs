@@ -3,7 +3,7 @@ use crate::communication::data_capturer;
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::data_fetcher;
 use crate::data_store::db_models::{
-    DBFollower, DBRoom, DBRoomBlock, DBScheduledRoom, DBScheduledRoomAttendance, DBUser,
+    DBFollower, DBRoom, DBRoomBlock, DBScheduledRoom, DBUser,
     DBUserBlock,
 };
 use crate::data_store::sql_execution_handler::ExecutionHandler;
@@ -107,6 +107,20 @@ pub async fn test_room_capture_and_gather(execution_handler: &mut ExecutionHandl
     assert_eq!(gather_results.1, -222);
     assert_eq!(gather_results.2, "fast");
     return room_id;
+}
+
+pub async fn test_scheduled_room_capture_and_gather(execution_handler: &mut ExecutionHandler){
+    let mock_room = generate_scheduled_room();
+    let mock_user_id:i32 = -434;
+    let room_capture_id = data_capturer::capture_new_scheduled_room(execution_handler, &mock_room, &mock_user_id ).await;
+    assert!(room_capture_id != -1);
+    let rooms_to_get = vec![room_capture_id];
+    let room_fetch_result:(bool,Vec<DBScheduledRoom>) = data_fetcher::get_scheduled_rooms(rooms_to_get, execution_handler).await;
+    assert_eq!(room_fetch_result.0,false);
+    assert_eq!(room_fetch_result.1.len(),1);
+    assert_eq!(room_fetch_result.1[0].room_name,mock_room.room_name);
+    assert_eq!(room_fetch_result.1[0].num_attending, mock_room.num_attending);
+    assert_eq!(room_fetch_result.1[0].scheduled_for, mock_room.scheduled_for);
 }
 
 //TODO: shorten function, too large
@@ -264,6 +278,15 @@ fn generate_room() -> DBRoom {
         id: -1,
         owner_id: -222, //we only need the id for the further tests
         chat_mode: "fast".to_owned(),
+    };
+}
+
+fn generate_scheduled_room() -> DBScheduledRoom{
+    return DBScheduledRoom{
+        id:-1,
+        room_name:"test_name".to_owned(),
+        num_attending:33 as i32,
+        scheduled_for:"test".to_owned()
     };
 }
 

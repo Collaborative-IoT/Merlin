@@ -80,7 +80,7 @@ pub async fn capture_new_scheduled_room_attendance(
         )
         .await;
     } else {
-        return row_does_not_exist_capture_result();
+        return too_many_insertions_exist_capture_result();
     }
 }
 

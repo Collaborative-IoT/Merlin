@@ -29,6 +29,7 @@ async fn test_capture_and_fetch() {
     )
     .await;
     let room_id = capture_and_fetch::test_room_capture_and_gather(&mut execution_handler).await;
+    capture_and_fetch::test_scheduled_room_capture_and_gather(&mut execution_handler).await;
     capture_and_fetch::test_room_block_and_gather(&mut execution_handler, &room_id).await;
     capture_and_fetch::test_user_follow_removal(
         &mut &mut execution_handler,
