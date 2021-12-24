@@ -46,9 +46,19 @@ pub async fn capture_new_room(execution_handler: &mut ExecutionHandler, room: &D
 pub async fn capture_new_scheduled_room(
     execution_handler: &mut ExecutionHandler,
     room: &DBScheduledRoom,
+    user_id: &i32,
 ) -> i32 {
-    let future_for_execution = execution_handler.insert_scheduled_room(room);
-    return capture_room(future_for_execution).await;
+    if less_than_x_row_exists(
+        execution_handler.select_all_owned_scheduled_rooms_for_user(user_id),
+        3,
+    )
+    .await
+    {
+        let future_for_execution = execution_handler.insert_scheduled_room(room);
+        return capture_room(future_for_execution).await;
+    } else {
+        return -1;
+    }
 }
 
 pub async fn capture_new_scheduled_room_attendance(
@@ -233,6 +243,21 @@ async fn row_exists(select_future: impl Future<Output = Result<Vec<Row>, Error>>
     }
 }
 
+//used for limiting the amount of
+//entries a user can make to a specific
+//table.
+async fn less_than_x_row_exists(
+    select_future: impl Future<Output = Result<Vec<Row>, Error>>,
+    x: usize,
+) -> bool {
+    let select_result = select_future.await;
+    if select_result.is_ok() && select_result.unwrap().len() < x {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 //only executes insert future if the insertion
 //won't be a duplicate.
 async fn ensure_no_duplicates_exist_and_capture(
@@ -308,5 +333,12 @@ fn row_does_not_exist_capture_result() -> CaptureResult {
     return CaptureResult {
         desc: "Invalid request!".to_owned(),
         encountered_error: true,
+    };
+}
+
+fn too_many_insertions_exist_capture_result() -> CaptureResult {
+    return CaptureResult {
+        desc: "Capture Limit Reached!".to_owned(),
+        encountered_error: false,
     };
 }

@@ -482,6 +482,15 @@ impl ExecutionHandler {
         return Ok(result);
     }
 
+    pub async fn select_all_owned_scheduled_rooms_for_user(
+        &mut self,
+        user_id: &i32,
+    ) -> Result<Vec<Row>, Error> {
+        let query = select_queries::SELECT_ALL_OWNED_SCHEDULED_ROOMS_FOR_USER;
+        let result: Vec<Row> = self.client.query(query, &[user_id]).await?;
+        return Ok(result);
+    }
+
     pub async fn select_all_scheduled_rooms(&mut self) -> Result<Vec<Row>, Error> {
         let query = select_queries::SELECT_ALL_SCHEDULED_ROOMS_QUERY;
         let result: Vec<Row> = self.client.query(query, &[]).await?;

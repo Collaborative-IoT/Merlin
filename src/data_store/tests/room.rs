@@ -119,6 +119,19 @@ pub async fn test_inserting_scheduled_room_attendance(execution_handler: &mut Ex
     assert_eq!(is_owner, true);
 }
 
+pub async fn test_getting_all_owned_scheduled_rooms_for_user(
+    execution_handler: &mut ExecutionHandler,
+) {
+    println!("testing getting all owned scheduled rooms for user");
+    //we know this attendence exists, due to prior tests
+    let user_id: i32 = 99;
+    let result = execution_handler
+        .select_all_owned_scheduled_rooms_for_user(&user_id)
+        .await;
+    let selected_rows = result.unwrap();
+    assert_eq!(selected_rows.len(), 1);
+}
+
 pub async fn test_gathering_single_attendance(execution_handler: &mut ExecutionHandler) {
     println!("testing gathering single attendance");
     let user_id: i32 = 99;

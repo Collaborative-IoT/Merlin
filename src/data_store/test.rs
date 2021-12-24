@@ -37,6 +37,7 @@ async fn test_room(execution_handler: &mut ExecutionHandler) {
     //scheduled
     tests::room::test_update_scheduled_room(execution_handler, sch_room_id.clone()).await;
     tests::room::test_inserting_scheduled_room_attendance(execution_handler).await;
+    tests::room::test_getting_all_owned_scheduled_rooms_for_user(execution_handler).await;
     tests::room::test_gathering_single_attendance(execution_handler).await;
     tests::room::test_deleting_scheduled_room(execution_handler, sch_room_id.clone()).await;
     tests::room::test_deleting_scheduled_room_attendance(execution_handler).await;
