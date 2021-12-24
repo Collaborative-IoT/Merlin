@@ -135,7 +135,6 @@ pub struct BaseUser {
     pub banner_url: String,
     pub num_following: i32,
     pub num_followers: i32,
-    pub current_room: Room,
     pub contributions: i32,
 }
 

@@ -3,6 +3,7 @@ abstracts usage of the sql execution handler
 by fetching and converts rows to correct response types.
 */
 use crate::communication::communication_types::{RoomPermissions, User, UserPreview};
+use crate::data_store::db_models::DBScheduledRoom;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use futures_util::Future;
 use std::collections::{HashMap, HashSet};
@@ -83,7 +84,6 @@ pub async fn gather_and_construct_users_for_user(
 Gathers all of the blockers,followers, for this specific user,
 determines if this user blocked/followed the requesting user
 for the fields "follows_you" and "they_blocked_you".
-
 */
 async fn get_meta_data_for_user_and_construct(
     execution_handler: &mut ExecutionHandler,
@@ -167,6 +167,29 @@ pub async fn get_user_previews_for_users(
         }
     }
     return (encountered_error, user_previews);
+}
+
+pub async fn get_scheduled_rooms(
+    room_ids: Vec<i32>,
+    execution_handler: &mut ExecutionHandler,
+) -> (bool, Vec<DBScheduledRoom>) {
+    let mut scheduled_rooms: Vec<DBScheduledRoom> = Vec::new();
+    for room_id in room_ids {
+        let room_gather_result = execution_handler
+            .select_scheduled_room_by_id(&room_id)
+            .await;
+        if room_gather_result.is_ok() {
+            let selected_rows = room_gather_result.unwrap();
+            for row in selected_rows {
+                let scheduled_room = construct_scheduled_room(&row);
+                scheduled_rooms.push(scheduled_room);
+            }
+            return (false, scheduled_rooms);
+        } else {
+            return (true, scheduled_rooms);
+        }
+    }
+    return (false, scheduled_rooms);
 }
 
 pub async fn get_blocked_user_ids_for_user(
@@ -312,4 +335,19 @@ pub async fn get_single_column_of_all_rows_by_id<
         encountered_error = true;
     }
     return (encountered_error, data_set);
+}
+
+fn construct_scheduled_room(row: &Row) -> DBScheduledRoom {
+    let room_id: i32 = row.get(0);
+    let room_name: String = row.get(1);
+    let num_attending: i32 = row.get(2);
+    let scheduled_for: String = row.get(3);
+
+    let scheduled_room = DBScheduledRoom {
+        id: room_id,
+        room_name: room_name,
+        num_attending: num_attending,
+        scheduled_for: scheduled_for,
+    };
+    return scheduled_room;
 }
