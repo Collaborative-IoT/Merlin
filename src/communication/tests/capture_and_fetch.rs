@@ -138,35 +138,43 @@ pub async fn test_room_block_and_gather(execution_handler: &mut ExecutionHandler
     assert_eq!(user_ids.contains(&second_room_block.blocked_user_id), true);
 }
 
-pub async fn test_user_follow_removal(execution_handler: &mut ExecutionHandler, user_ids:(&i32,&i32)){
+pub async fn test_user_follow_removal(
+    execution_handler: &mut ExecutionHandler,
+    user_ids: (&i32, &i32),
+) {
     let user_id = user_ids.0;
     let follower_id = user_ids.1;
-    let result:CaptureResult = data_capturer::capture_follower_removal(
-        execution_handler, 
-        follower_id, 
-        user_id).await;
+    let result: CaptureResult =
+        data_capturer::capture_follower_removal(execution_handler, follower_id, user_id).await;
     assert_eq!(result.encountered_error, false);
-    assert_eq!(result.desc ,"Sucessfully unfollowed user");
+    assert_eq!(result.desc, "Sucessfully unfollowed user");
 }
 
-pub async fn test_user_block_removal(execution_handler: &mut ExecutionHandler, user_ids:(&i32,&i32)){
+pub async fn test_user_block_removal(
+    execution_handler: &mut ExecutionHandler,
+    user_ids: (&i32, &i32),
+) {
     let user_id = user_ids.0;
     let blocked_user_id = user_ids.1;
-    let result:CaptureResult = data_capturer::capture_user_block_removal(execution_handler, user_id, blocked_user_id).await;
+    let result: CaptureResult =
+        data_capturer::capture_user_block_removal(execution_handler, user_id, blocked_user_id)
+            .await;
     assert_eq!(result.encountered_error, false);
     assert_eq!(result.desc, "User block successfully removed");
 }
 
-pub async fn test_room_block_removal(execution_handler: &mut ExecutionHandler, room_id: &i32){
-    let user_id:i32 = -333;
-    let result:CaptureResult = data_capturer::capture_room_block_removal(execution_handler, room_id, &user_id).await;
+pub async fn test_room_block_removal(execution_handler: &mut ExecutionHandler, room_id: &i32) {
+    let user_id: i32 = -333;
+    let result: CaptureResult =
+        data_capturer::capture_room_block_removal(execution_handler, room_id, &user_id).await;
     assert_eq!(result.encountered_error, false);
     assert_eq!(result.desc, "Room block successfully removed");
 }
 
-pub async fn test_room_removal(execution_handler: &mut ExecutionHandler, room_id:&i32){
-    let result:CaptureResult = data_capturer::capture_room_removal(execution_handler, room_id).await;
-    assert_eq!(result.encountered_error,false);
+pub async fn test_room_removal(execution_handler: &mut ExecutionHandler, room_id: &i32) {
+    let result: CaptureResult =
+        data_capturer::capture_room_removal(execution_handler, room_id).await;
+    assert_eq!(result.encountered_error, false);
     assert_eq!(result.desc, "Room Removed");
 }
 

@@ -55,64 +55,85 @@ pub async fn capture_new_scheduled_room_attendance(
     execution_handler: &mut ExecutionHandler,
     attendance: &DBScheduledRoomAttendance,
 ) -> CaptureResult {
-    let select_future = execution_handler
-        .select_single_room_attendance(&attendance.user_id, &attendance.scheduled_room_id);
-    let will_be_duplicate = insert_will_be_duplicate(select_future).await;
-    let insert_future = execution_handler.insert_scheduled_room_attendance(attendance);
-    return ensure_no_duplicates_exist_and_capture(
-        will_be_duplicate,
-        insert_future,
-        "You already declared you are attending this room!".to_owned(),
-    )
-    .await;
+    //we know the attender exist but we don't know the scheduled room exist, so check
+    if row_exists(execution_handler.select_scheduled_room_by_id(&attendance.scheduled_room_id))
+        .await
+    {
+        let select_future = execution_handler
+            .select_single_room_attendance(&attendance.user_id, &attendance.scheduled_room_id);
+        let will_be_duplicate = insert_will_be_duplicate(select_future).await;
+        let insert_future = execution_handler.insert_scheduled_room_attendance(attendance);
+        return ensure_no_duplicates_exist_and_capture(
+            will_be_duplicate,
+            insert_future,
+            "You already declared you are attending this room!".to_owned(),
+        )
+        .await;
+    } else {
+        return row_does_not_exist_capture_result();
+    }
 }
 
 pub async fn capture_new_follower(
     execution_handler: &mut ExecutionHandler,
     follower: &DBFollower,
 ) -> CaptureResult {
-    let select_future =
-        execution_handler.select_single_follow(&follower.follower_id, &follower.user_id);
-    let will_be_duplicate = insert_will_be_duplicate(select_future).await;
-    let insert_future = execution_handler.insert_follower(follower);
-    return ensure_no_duplicates_exist_and_capture(
-        will_be_duplicate,
-        insert_future,
-        "You are already following this user!".to_owned(),
-    )
-    .await;
+    //we know the follower exist but we don't know the followee exist, so check
+    if row_exists(execution_handler.select_user_by_id(&follower.user_id)).await {
+        let select_future =
+            execution_handler.select_single_follow(&follower.follower_id, &follower.user_id);
+        let will_be_duplicate = insert_will_be_duplicate(select_future).await;
+        let insert_future = execution_handler.insert_follower(follower);
+        return ensure_no_duplicates_exist_and_capture(
+            will_be_duplicate,
+            insert_future,
+            "You are already following this user!".to_owned(),
+        )
+        .await;
+    } else {
+        return row_does_not_exist_capture_result();
+    }
 }
 
 pub async fn capture_new_user_block(
     execution_handler: &mut ExecutionHandler,
     user_block: &DBUserBlock,
 ) -> CaptureResult {
-    let select_future = execution_handler
-        .select_single_user_block(&user_block.owner_user_id, &user_block.blocked_user_id);
-    let will_be_duplicate = insert_will_be_duplicate(select_future).await;
-    let insert_future = execution_handler.insert_user_block(user_block);
-    return ensure_no_duplicates_exist_and_capture(
-        will_be_duplicate,
-        insert_future,
-        "This user is already blocked!".to_owned(),
-    )
-    .await;
+    //we know the blocker exists, but we don't know the blockee exist, so check
+    if row_exists(execution_handler.select_user_by_id(&user_block.blocked_user_id)).await {
+        let select_future = execution_handler
+            .select_single_user_block(&user_block.owner_user_id, &user_block.blocked_user_id);
+        let will_be_duplicate = insert_will_be_duplicate(select_future).await;
+        let insert_future = execution_handler.insert_user_block(user_block);
+        return ensure_no_duplicates_exist_and_capture(
+            will_be_duplicate,
+            insert_future,
+            "This user is already blocked!".to_owned(),
+        )
+        .await;
+    } else {
+        return row_does_not_exist_capture_result();
+    }
 }
 
 pub async fn capture_new_room_block(
     execution_handler: &mut ExecutionHandler,
     room_block: &DBRoomBlock,
 ) -> CaptureResult {
-    let select_future = execution_handler
-        .select_single_room_block(&room_block.owner_room_id, &room_block.blocked_user_id);
-    let will_be_duplicate = insert_will_be_duplicate(select_future).await;
-    let insert_future = execution_handler.insert_room_block(room_block);
-    return ensure_no_duplicates_exist_and_capture(
-        will_be_duplicate,
-        insert_future,
-        "This user is already blocked for this room!".to_owned(),
-    )
-    .await;
+    if row_exists(execution_handler.select_user_by_id(&room_block.blocked_user_id)).await {
+        let select_future = execution_handler
+            .select_single_room_block(&room_block.owner_room_id, &room_block.blocked_user_id);
+        let will_be_duplicate = insert_will_be_duplicate(select_future).await;
+        let insert_future = execution_handler.insert_room_block(room_block);
+        return ensure_no_duplicates_exist_and_capture(
+            will_be_duplicate,
+            insert_future,
+            "This user is already blocked for this room!".to_owned(),
+        )
+        .await;
+    } else {
+        return row_does_not_exist_capture_result();
+    }
 }
 
 pub async fn capture_user_block_removal(
@@ -200,6 +221,18 @@ async fn handle_removal_capture(
     }
 }
 
+//checks to see if a select future execution has rows or not
+//useful for checking if a user exist before trying to
+//follow them etc.
+async fn row_exists(select_future: impl Future<Output = Result<Vec<Row>, Error>>) -> bool {
+    let select_result = select_future.await;
+    if select_result.is_ok() && select_result.unwrap().len() == 1 {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 //only executes insert future if the insertion
 //won't be a duplicate.
 async fn ensure_no_duplicates_exist_and_capture(
@@ -269,4 +302,11 @@ async fn insert_will_be_duplicate(
         //issue with future execution
         return true;
     }
+}
+
+fn row_does_not_exist_capture_result() -> CaptureResult {
+    return CaptureResult {
+        desc: "Invalid request!".to_owned(),
+        encountered_error: true,
+    };
 }
