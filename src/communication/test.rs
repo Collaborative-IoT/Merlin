@@ -1,5 +1,14 @@
 use crate::communication::tests::capture_and_fetch;
 
+/*
+Tests aren't executed in a isolated pattern
+due to the nature of the tests. These tests 
+are state driven and require the database instance
+that we are testing on to have specific data
+at each individual test. Some tests build on 
+other tests that come before them.
+*/
+
 #[tokio::test]
 pub async fn test() {
     test_capture_and_fetch().await;
