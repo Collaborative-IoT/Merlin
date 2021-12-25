@@ -53,7 +53,7 @@ pub struct DBScheduledRoom {
     pub room_name: String,
     pub num_attending: i32,
     pub scheduled_for: String,
-    pub desc:String
+    pub desc: String,
 }
 pub struct DBScheduledRoomAttendance {
     pub id: i32,

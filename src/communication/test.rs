@@ -10,8 +10,7 @@ other tests that come before them.
 */
 
 #[tokio::test]
-pub async fn test() {
-}
+pub async fn test() {}
 
 async fn test_capture_and_fetch() {
     let execution_handler_result = capture_and_fetch::setup_execution_handler().await;

@@ -3,8 +3,7 @@ use crate::communication::data_capturer;
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::data_fetcher;
 use crate::data_store::db_models::{
-    DBFollower, DBRoom, DBRoomBlock, DBScheduledRoom, DBUser,
-    DBUserBlock,
+    DBFollower, DBRoom, DBRoomBlock, DBScheduledRoom, DBUser, DBUserBlock,
 };
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use chrono::Utc;
@@ -109,18 +108,27 @@ pub async fn test_room_capture_and_gather(execution_handler: &mut ExecutionHandl
     return room_id;
 }
 
-pub async fn test_scheduled_room_capture_and_gather(execution_handler: &mut ExecutionHandler){
+pub async fn test_scheduled_room_capture_and_gather(execution_handler: &mut ExecutionHandler) {
     let mock_room = generate_scheduled_room();
-    let mock_user_id:i32 = -434;
-    let room_capture_id = data_capturer::capture_new_scheduled_room(execution_handler, &mock_room, &mock_user_id ).await;
+    let mock_user_id: i32 = -434;
+    let room_capture_id =
+        data_capturer::capture_new_scheduled_room(execution_handler, &mock_room, &mock_user_id)
+            .await;
     assert!(room_capture_id != -1);
     let rooms_to_get = vec![room_capture_id];
-    let room_fetch_result:(bool,Vec<DBScheduledRoom>) = data_fetcher::get_scheduled_rooms(rooms_to_get, execution_handler).await;
-    assert_eq!(room_fetch_result.0,false);
-    assert_eq!(room_fetch_result.1.len(),1);
-    assert_eq!(room_fetch_result.1[0].room_name,mock_room.room_name);
-    assert_eq!(room_fetch_result.1[0].num_attending, mock_room.num_attending);
-    assert_eq!(room_fetch_result.1[0].scheduled_for, mock_room.scheduled_for);
+    let room_fetch_result: (bool, Vec<DBScheduledRoom>) =
+        data_fetcher::get_scheduled_rooms(rooms_to_get, execution_handler).await;
+    assert_eq!(room_fetch_result.0, false);
+    assert_eq!(room_fetch_result.1.len(), 1);
+    assert_eq!(room_fetch_result.1[0].room_name, mock_room.room_name);
+    assert_eq!(
+        room_fetch_result.1[0].num_attending,
+        mock_room.num_attending
+    );
+    assert_eq!(
+        room_fetch_result.1[0].scheduled_for,
+        mock_room.scheduled_for
+    );
 }
 
 //TODO: shorten function, too large
@@ -157,12 +165,11 @@ pub async fn test_user_follow_removal(
     user_ids: (&i32, &i32),
 ) {
     //get size before deletion
-    let starting_follower_count = data_fetcher::get_follower_user_ids_for_user(
-        execution_handler,
-         user_ids.0)
-         .await
-         .1
-         .len() as i32;
+    let starting_follower_count =
+        data_fetcher::get_follower_user_ids_for_user(execution_handler, user_ids.0)
+            .await
+            .1
+            .len() as i32;
     let one_less_than_starting = starting_follower_count - 1;
 
     //deletion
@@ -174,13 +181,12 @@ pub async fn test_user_follow_removal(
     assert_eq!(result.desc, "Sucessfully unfollowed user");
 
     //check size after deletion
-    let second_follower_count = data_fetcher::get_follower_user_ids_for_user(
-        execution_handler,
-         user_ids.0)
-         .await
-         .1
-         .len() as i32;
-    assert_eq!(one_less_than_starting,second_follower_count);
+    let second_follower_count =
+        data_fetcher::get_follower_user_ids_for_user(execution_handler, user_ids.0)
+            .await
+            .1
+            .len() as i32;
+    assert_eq!(one_less_than_starting, second_follower_count);
 }
 
 pub async fn test_user_block_removal(
@@ -188,12 +194,11 @@ pub async fn test_user_block_removal(
     user_ids: (&i32, &i32),
 ) {
     //get size before deletion
-    let starting_block_count = data_fetcher::get_blocked_user_ids_for_user(
-        execution_handler,
-        user_ids.0)
-        .await
-        .1
-        .len() as i32;
+    let starting_block_count =
+        data_fetcher::get_blocked_user_ids_for_user(execution_handler, user_ids.0)
+            .await
+            .1
+            .len() as i32;
     let one_less_than_starting = starting_block_count - 1;
     //delete user block
     let user_id = user_ids.0;
@@ -205,20 +210,21 @@ pub async fn test_user_block_removal(
     assert_eq!(result.desc, "User block successfully removed");
 
     //get and check size after
-    let second_block_count =  data_fetcher::get_blocked_user_ids_for_user(
-        execution_handler,
-        user_ids.0)
-        .await
-        .1
-        .len() as i32;
-    assert_eq!(second_block_count,one_less_than_starting);
+    let second_block_count =
+        data_fetcher::get_blocked_user_ids_for_user(execution_handler, user_ids.0)
+            .await
+            .1
+            .len() as i32;
+    assert_eq!(second_block_count, one_less_than_starting);
 }
 
 pub async fn test_room_block_removal(execution_handler: &mut ExecutionHandler, room_id: &i32) {
     //gather size before deletion
-    let starting_block_count = data_fetcher::get_blocked_user_ids_for_room(
-        execution_handler, 
-        room_id).await.1.len() as i32;
+    let starting_block_count =
+        data_fetcher::get_blocked_user_ids_for_room(execution_handler, room_id)
+            .await
+            .1
+            .len() as i32;
     let one_less_than_starting = starting_block_count - 1;
     //delete
     let user_id: i32 = -333;
@@ -227,10 +233,11 @@ pub async fn test_room_block_removal(execution_handler: &mut ExecutionHandler, r
     assert_eq!(result.encountered_error, false);
     assert_eq!(result.desc, "Room block successfully removed");
     //gather and check size after
-    let second_block_count = data_fetcher::get_blocked_user_ids_for_room(
-        execution_handler, 
-        room_id).await.1.len() as i32;
-    assert_eq!(second_block_count,one_less_than_starting);
+    let second_block_count = data_fetcher::get_blocked_user_ids_for_room(execution_handler, room_id)
+        .await
+        .1
+        .len() as i32;
+    assert_eq!(second_block_count, one_less_than_starting);
 }
 
 pub async fn test_room_removal(execution_handler: &mut ExecutionHandler, room_id: &i32) {
@@ -329,13 +336,13 @@ fn generate_room() -> DBRoom {
     };
 }
 
-fn generate_scheduled_room() -> DBScheduledRoom{
-    return DBScheduledRoom{
-        id:-1,
-        room_name:"test_name".to_owned(),
-        num_attending:33 as i32,
-        scheduled_for:"test".to_owned(),
-        desc:"test".to_owned()
+fn generate_scheduled_room() -> DBScheduledRoom {
+    return DBScheduledRoom {
+        id: -1,
+        room_name: "test_name".to_owned(),
+        num_attending: 33 as i32,
+        scheduled_for: "test".to_owned(),
+        desc: "test".to_owned(),
     };
 }
 

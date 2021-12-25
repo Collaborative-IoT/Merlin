@@ -3,12 +3,12 @@ use crate::data_store::db_models::{
     DBUser, DBUserBlock,
 };
 
+use crate::communication::communication_types::BaseUser;
 use crate::data_store::creation_queries;
 use crate::data_store::delete_queries;
 use crate::data_store::insert_queries;
 use crate::data_store::select_queries;
 use crate::data_store::update_queries;
-use crate::communication::communication_types::{BaseUser};
 use tokio_postgres::{row::Row, Client, Error};
 
 pub struct ExecutionHandler {
@@ -156,7 +156,7 @@ impl ExecutionHandler {
                     &scheduled_room.room_name,
                     &scheduled_room.num_attending,
                     &scheduled_room.scheduled_for,
-                    &scheduled_room.desc
+                    &scheduled_room.desc,
                 ],
             )
             .await?;
@@ -361,15 +361,14 @@ impl ExecutionHandler {
 
     pub async fn update_scheduled_room(
         &mut self,
-        num_attending: &i32,
         scheduled_for: String,
         room_id: &i32,
-        desc:String
+        desc: String,
     ) -> Result<u64, Error> {
         let query = update_queries::UPDATE_SCHEDULED_ROOM_QUERY;
         let num_modified = self
             .client
-            .execute(query, &[num_attending, &scheduled_for, &desc, room_id])
+            .execute(query, &[&scheduled_for, &desc, room_id])
             .await?;
         return Ok(num_modified);
     }
@@ -466,16 +465,23 @@ impl ExecutionHandler {
         return Ok(num_modified);
     }
 
-    pub async fn update_base_user_fields(&mut self, base_user:&BaseUser)->Result<u64, Error> {
+    pub async fn update_base_user_fields(&mut self, base_user: &BaseUser) -> Result<u64, Error> {
         let query = update_queries::UPDATE_BASE_USER_FIELDS;
-        let num_modified = self.client.execute(query,
-             &[&base_user.display_name,
-                        &base_user.avatar_url,
-                        &base_user.username,
-                        &base_user.bio,
-                        &base_user.contributions,
-                        &base_user.banner_url,
-                        &base_user.user_id]).await?;
+        let num_modified = self
+            .client
+            .execute(
+                query,
+                &[
+                    &base_user.display_name,
+                    &base_user.avatar_url,
+                    &base_user.username,
+                    &base_user.bio,
+                    &base_user.contributions,
+                    &base_user.banner_url,
+                    &base_user.user_id,
+                ],
+            )
+            .await?;
         return Ok(num_modified);
     }
 

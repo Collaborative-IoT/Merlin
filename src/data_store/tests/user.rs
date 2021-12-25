@@ -297,7 +297,7 @@ pub async fn test_update_user_name(execution_handler: &mut ExecutionHandler, use
     return user_id;
 }
 
-pub async fn test_updating_entire_user(execution_handler: &mut ExecutionHandler)->i32{
+pub async fn test_updating_entire_user(execution_handler: &mut ExecutionHandler) -> i32 {
     println!("Testing updating entire user");
     let initial_user: DBUser = gather_user_struct();
     let insert_result = execution_handler.insert_user(&initial_user).await;
@@ -326,22 +326,25 @@ pub async fn test_updating_entire_user(execution_handler: &mut ExecutionHandler)
     return user_id;
 }
 
-pub async fn test_updating_base_user_fields(execution_handler: &mut ExecutionHandler, user_id:i32){
+pub async fn test_updating_base_user_fields(
+    execution_handler: &mut ExecutionHandler,
+    user_id: i32,
+) {
     println!("testing updating base user fields");
     //perform update
-    let base_user:BaseUser = gather_base_user_struct(user_id.clone());
+    let base_user: BaseUser = gather_base_user_struct(user_id.clone());
     let update_result = execution_handler.update_base_user_fields(&base_user).await;
-    assert_eq!(update_result.unwrap(),1);
+    assert_eq!(update_result.unwrap(), 1);
     //gather and check
     let user_gather_result = execution_handler.select_user_by_id(&user_id).await;
     let selected_rows = user_gather_result.unwrap();
-    let username:&str = selected_rows[0].get(3);
-    let display_name:&str = selected_rows[0].get(1);
-    let bio:&str = selected_rows[0].get(11);
-    let avatar_url:&str = selected_rows[0].get(2);
-    let banner_url:&str = selected_rows[0].get(13);
-    assert_eq!(username,base_user.username);
-    assert_eq!(display_name,base_user.display_name);
+    let username: &str = selected_rows[0].get(3);
+    let display_name: &str = selected_rows[0].get(1);
+    let bio: &str = selected_rows[0].get(11);
+    let avatar_url: &str = selected_rows[0].get(2);
+    let banner_url: &str = selected_rows[0].get(13);
+    assert_eq!(username, base_user.username);
+    assert_eq!(display_name, base_user.display_name);
     assert_eq!(bio, base_user.bio);
     assert_eq!(avatar_url, base_user.avatar_url);
     assert_eq!(banner_url, base_user.banner_url);
@@ -433,17 +436,17 @@ fn gather_different_user_struct() -> DBUser {
     return user;
 }
 
-fn gather_base_user_struct(user_id:i32)->BaseUser{
-    return BaseUser{
+fn gather_base_user_struct(user_id: i32) -> BaseUser {
+    return BaseUser {
         username: "test".to_owned(),
         last_online: "test".to_owned(),
-        user_id:user_id ,
+        user_id: user_id,
         bio: "the greatest".to_owned(),
         display_name: "the display_name2334".to_owned(),
-        avatar_url:"mock.com/test5/54".to_owned(),
+        avatar_url: "mock.com/test5/54".to_owned(),
         banner_url: "mock.com/test333/32323".to_owned(),
         num_following: 4 as i32,
         num_followers: 4 as i32,
         contributions: 44 as i32,
-   };
+    };
 }
