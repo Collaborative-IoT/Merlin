@@ -36,8 +36,9 @@ WHERE Id = $2;
 pub const UPDATE_SCHEDULED_ROOM_QUERY: &str = "
 UPDATE scheduled_room
 SET numAttending = $1,
-      scheduledFor = $2
-WHERE Id = $3;   
+      scheduledFor = $2,
+      description = $3
+WHERE Id = $4;   
 ";
 
 pub const UPDATE_GITHUB_ACCESS_TOKEN_QUERY: &str = "

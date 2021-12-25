@@ -63,7 +63,8 @@ pub const SCHEDULED_ROOM_CREATION: &str = "
         Id SERIAL PRIMARY KEY,
         roomName VARCHAR(255) NOT NULL,
         numAttending int NOT NULL,
-        scheduledFor VARCHAR(255)
+        scheduledFor VARCHAR(255),
+        description VARCHAR(255)
     );
 ";
 pub const SHEDULED_ROOM_ATTENDANCE: &str = "

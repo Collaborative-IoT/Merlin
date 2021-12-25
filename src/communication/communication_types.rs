@@ -75,9 +75,9 @@ pub struct UserProfileEdit {
 }
 
 pub struct RoomSettingsEditOrCreation {
-    name: String,
-    privacy: String,
-    description: String,
+    pub name: String,
+    pub scheduled_for: String,
+    pub description: String,
 }
 
 pub struct ScheduledRoomUpdate {

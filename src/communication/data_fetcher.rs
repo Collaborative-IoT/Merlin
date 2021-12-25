@@ -359,12 +359,14 @@ fn construct_scheduled_room(row: &Row) -> DBScheduledRoom {
     let room_name: String = row.get(1);
     let num_attending: i32 = row.get(2);
     let scheduled_for: String = row.get(3);
+    let desc:String = row.get(4);
 
     let scheduled_room = DBScheduledRoom {
         id: room_id,
         room_name: room_name,
         num_attending: num_attending,
         scheduled_for: scheduled_for,
+        desc:desc
     };
     return scheduled_room;
 }

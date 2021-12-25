@@ -156,18 +156,46 @@ pub async fn test_user_follow_removal(
     execution_handler: &mut ExecutionHandler,
     user_ids: (&i32, &i32),
 ) {
+    //get size before deletion
+    let starting_follower_count = data_fetcher::get_follower_user_ids_for_user(
+        execution_handler,
+         user_ids.0)
+         .await
+         .1
+         .len() as i32;
+    let one_less_than_starting = starting_follower_count - 1;
+
+    //deletion
     let user_id = user_ids.0;
     let follower_id = user_ids.1;
     let result: CaptureResult =
         data_capturer::capture_follower_removal(execution_handler, follower_id, user_id).await;
     assert_eq!(result.encountered_error, false);
     assert_eq!(result.desc, "Sucessfully unfollowed user");
+
+    //check size after deletion
+    let second_follower_count = data_fetcher::get_follower_user_ids_for_user(
+        execution_handler,
+         user_ids.0)
+         .await
+         .1
+         .len() as i32;
+    assert_eq!(one_less_than_starting,second_follower_count);
 }
 
 pub async fn test_user_block_removal(
     execution_handler: &mut ExecutionHandler,
     user_ids: (&i32, &i32),
 ) {
+    //get size before deletion
+    let starting_block_count = data_fetcher::get_blocked_user_ids_for_user(
+        execution_handler,
+        user_ids.0)
+        .await
+        .1
+        .len() as i32;
+    let one_less_than_starting = starting_block_count - 1;
+    //delete user block
     let user_id = user_ids.0;
     let blocked_user_id = user_ids.1;
     let result: CaptureResult =
@@ -175,14 +203,34 @@ pub async fn test_user_block_removal(
             .await;
     assert_eq!(result.encountered_error, false);
     assert_eq!(result.desc, "User block successfully removed");
+
+    //get and check size after
+    let second_block_count =  data_fetcher::get_blocked_user_ids_for_user(
+        execution_handler,
+        user_ids.0)
+        .await
+        .1
+        .len() as i32;
+    assert_eq!(second_block_count,one_less_than_starting);
 }
 
 pub async fn test_room_block_removal(execution_handler: &mut ExecutionHandler, room_id: &i32) {
+    //gather size before deletion
+    let starting_block_count = data_fetcher::get_blocked_user_ids_for_room(
+        execution_handler, 
+        room_id).await.1.len() as i32;
+    let one_less_than_starting = starting_block_count - 1;
+    //delete
     let user_id: i32 = -333;
     let result: CaptureResult =
         data_capturer::capture_room_block_removal(execution_handler, room_id, &user_id).await;
     assert_eq!(result.encountered_error, false);
     assert_eq!(result.desc, "Room block successfully removed");
+    //gather and check size after
+    let second_block_count = data_fetcher::get_blocked_user_ids_for_room(
+        execution_handler, 
+        room_id).await.1.len() as i32;
+    assert_eq!(second_block_count,one_less_than_starting);
 }
 
 pub async fn test_room_removal(execution_handler: &mut ExecutionHandler, room_id: &i32) {
@@ -286,7 +334,8 @@ fn generate_scheduled_room() -> DBScheduledRoom{
         id:-1,
         room_name:"test_name".to_owned(),
         num_attending:33 as i32,
-        scheduled_for:"test".to_owned()
+        scheduled_for:"test".to_owned(),
+        desc:"test".to_owned()
     };
 }
 

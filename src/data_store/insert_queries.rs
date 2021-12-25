@@ -53,8 +53,9 @@ pub const INSERT_SCHEDULED_ROOM_QUERY: &str = "
 INSERT INTO scheduled_room( 
     roomName,
     numAttending,
-    scheduledFor)
-VALUES($1,$2,$3) RETURNING Id;
+    scheduledFor,
+    description)
+VALUES($1,$2,$3,$4) RETURNING Id;
 ";
 
 pub const INSERT_SCHEDULED_ATTENDANCE_QUERY: &str = "

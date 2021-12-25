@@ -156,6 +156,7 @@ impl ExecutionHandler {
                     &scheduled_room.room_name,
                     &scheduled_room.num_attending,
                     &scheduled_room.scheduled_for,
+                    &scheduled_room.desc
                 ],
             )
             .await?;
@@ -363,11 +364,12 @@ impl ExecutionHandler {
         num_attending: &i32,
         scheduled_for: String,
         room_id: &i32,
+        desc:String
     ) -> Result<u64, Error> {
         let query = update_queries::UPDATE_SCHEDULED_ROOM_QUERY;
         let num_modified = self
             .client
-            .execute(query, &[num_attending, &scheduled_for, room_id])
+            .execute(query, &[num_attending, &scheduled_for, &desc, room_id])
             .await?;
         return Ok(num_modified);
     }
