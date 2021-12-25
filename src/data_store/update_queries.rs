@@ -1,3 +1,5 @@
+use crate::communication::communication_types::{UserProfileEdit};
+
 //Dry violations on purpose, helps read and follow each specific query
 pub const UPDATE_ROOM_OWNER_QUERY: &str = "
 UPDATE room
@@ -103,4 +105,14 @@ SET displayName = $1,
     contributions = $12,
     bannerUrl = $13
 WHERE Id = $14;
+";
+
+pub const UPDATE_BASE_USER_FIELDS: &str = "
+    UPDATE users
+    SET displayName = $1,
+    avatarUrl = $2,
+    userName = $3,
+    bio = $4,
+    contributions = $5,
+    bannerUrl = $6
 ";

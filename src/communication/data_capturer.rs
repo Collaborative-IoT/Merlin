@@ -9,8 +9,12 @@ use crate::data_store::db_models::{
     DBUserBlock,
 };
 use crate::data_store::sql_execution_handler::ExecutionHandler;
-use futures_util::Future;
+use crate::communication::communication_types::{UserProfileEdit};
+use futures_util::{Future};
 use tokio_postgres::{row::Row, Error};
+
+use super::communication_types::BaseUser;
+use super::data_fetcher;
 
 pub struct CaptureResult {
     pub desc: String,
@@ -154,13 +158,12 @@ pub async fn capture_user_block_removal(
     let deletion_result = execution_handler
         .delete_block_for_user(owner_id, blocked_id)
         .await;
-    return handle_removal_capture(
+    return handle_removal_or_update_capture(
         "User block successfully removed".to_owned(),
         "Unexpected error removing user block".to_owned(),
         1,
         deletion_result,
-    )
-    .await;
+    );
 }
 
 pub async fn capture_room_block_removal(
@@ -171,13 +174,12 @@ pub async fn capture_room_block_removal(
     let deletion_result = execution_handler
         .delete_room_block_for_user(owner_id, blocked_id)
         .await;
-    return handle_removal_capture(
+    return handle_removal_or_update_capture(
         "Room block successfully removed".to_owned(),
         "Unexpected error removing room block".to_owned(),
         1,
         deletion_result,
-    )
-    .await;
+    );
 }
 
 pub async fn capture_follower_removal(
@@ -188,13 +190,12 @@ pub async fn capture_follower_removal(
     let deletion_result = execution_handler
         .delete_follower_for_user(follower_id, user_id)
         .await;
-    return handle_removal_capture(
+    return handle_removal_or_update_capture(
         "Sucessfully unfollowed user".to_owned(),
         "Unexpected error unfollowing user".to_owned(),
         1,
         deletion_result,
-    )
-    .await;
+    );
 }
 
 pub async fn capture_room_removal(
@@ -202,17 +203,39 @@ pub async fn capture_room_removal(
     room_id: &i32,
 ) -> CaptureResult {
     let deletion_result = execution_handler.delete_room(room_id).await;
-    return handle_removal_capture(
+    return handle_removal_or_update_capture(
         "Room Removed".to_owned(),
         "Unexpected error removing room".to_owned(),
         1,
         deletion_result,
-    )
-    .await;
+    );
 }
 
-//makes sure a x amount of row were successfully deleted
-async fn handle_removal_capture(
+pub async fn capture_user_update(
+    execution_handler: &mut ExecutionHandler,
+    user_id:&i32,
+    edit:UserProfileEdit
+)-> CaptureResult{
+    let current_user_or_not:Option<BaseUser> = data_fetcher::gather_base_user(execution_handler, user_id).await;
+    if current_user_or_not.is_some(){
+        let mut current_user = current_user_or_not.unwrap();
+        merge_updates_with_current_user(&mut current_user, edit);
+        let updates_are_valid = new_user_updates_are_valid(&current_user).await;
+        if updates_are_valid{
+            let update_result = execution_handler.update_base_user_fields(current_user).await;
+            return handle_removal_or_update_capture(
+                "Fields Successfully Updated".to_owned(),
+                "Error Updating fields".to_owned(), 
+                1, update_result);
+
+        };
+    };
+    return generic_error_capture_result();
+}
+
+
+//makes sure a x amount of row were successfully deleted/updated
+fn handle_removal_or_update_capture(
     success_msg: String,
     error_msg: String,
     expected_amount: u64,
@@ -341,4 +364,35 @@ fn too_many_insertions_exist_capture_result() -> CaptureResult {
         desc: "Capture Limit Reached!".to_owned(),
         encountered_error: false,
     };
+}
+
+fn generic_error_capture_result() -> CaptureResult {
+    return CaptureResult {
+        desc: "Unexpected Error".to_owned(),
+        encountered_error: false,
+    };
+}
+
+fn merge_updates_with_current_user(current_user:&mut BaseUser, updates:UserProfileEdit){
+    if updates.display_name.is_some(){
+        current_user.display_name = updates.display_name.unwrap();
+    };
+    if updates.username.is_some(){
+        current_user.username = updates.username.unwrap();
+    };
+    if updates.bio.is_some(){
+        current_user.bio = updates.bio.unwrap();
+    };
+    if updates.avatar_url.is_some(){
+        current_user.avatar_url = updates.avatar_url.unwrap();
+    }
+    if updates.banner_url.is_some(){
+        current_user.banner_url = updates.banner_url.unwrap();
+    }
+}
+
+//makes sure the user didn't send an illegal update
+//illegal updates are things like duplicate usernames and etc.
+async fn new_user_updates_are_valid(current_user:&BaseUser)->bool{
+    return true;
 }

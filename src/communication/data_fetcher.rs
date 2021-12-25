@@ -10,6 +10,8 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use tokio_postgres::{row::Row, Error};
 
+use super::communication_types::BaseUser;
+
 /*
 Gathers user structs in direct relation
 to the requester, including relationship specific
@@ -78,6 +80,21 @@ pub async fn gather_and_construct_users_for_user(
         }
     }
     return (error_encountered, constructed_users);
+}
+
+//a user struct for the requesting user
+//this is how user's get their own data
+pub async fn gather_base_user(
+    execution_handler: &mut ExecutionHandler,
+    user_id: &i32) -> Option<BaseUser>{
+    let current_user_result = execution_handler.select_user_by_id(user_id).await;
+    if current_user_result.is_ok(){
+        let selected_rows = current_user_result.unwrap();
+        if selected_rows.len() == 1{
+            return Some(construct_base_user(&selected_rows[0], execution_handler).await);
+        };
+    };
+    return None;
 }
 
 /*
@@ -350,4 +367,31 @@ fn construct_scheduled_room(row: &Row) -> DBScheduledRoom {
         scheduled_for: scheduled_for,
     };
     return scheduled_room;
+}
+
+async fn construct_base_user(user_row:&Row, execution_handler: &mut ExecutionHandler) -> BaseUser{
+    let username: String = user_row.get(3);
+    let last_online: String = user_row.get(4);
+    let user_id: i32 = user_row.get(0);
+    let contributions: i32 = user_row.get(12);
+    let display_name: String = user_row.get(1);
+    let bio: String = user_row.get(11);
+    let avatar_url: String = user_row.get(2);
+    let banner_url: String = user_row.get(13);
+    //don't worry about errors getting following count
+    let num_following:i32 = get_following_user_ids_for_user(execution_handler, &user_id).await.1.len() as i32;
+    let num_followers:i32 = get_follower_user_ids_for_user(execution_handler, &user_id).await.1.len() as i32;
+
+    return BaseUser{
+        username:username,
+        num_following:num_following,
+        num_followers:num_followers,
+        last_online:last_online,
+        contributions:contributions,
+        display_name:display_name,
+        bio:bio,
+        avatar_url:avatar_url,
+        banner_url:banner_url,
+        user_id:user_id
+    };
 }

@@ -8,6 +8,9 @@ use crate::data_store::delete_queries;
 use crate::data_store::insert_queries;
 use crate::data_store::select_queries;
 use crate::data_store::update_queries;
+use crate::communication::communication_types::{UserProfileEdit, BaseUser};
+use tokio_postgres::ToStatement;
+use tokio_postgres::types::ToSql;
 use tokio_postgres::{row::Row, Client, Error};
 
 pub struct ExecutionHandler {
@@ -460,6 +463,18 @@ impl ExecutionHandler {
             .client
             .execute(query, &[&new_user_name, user_id])
             .await?;
+        return Ok(num_modified);
+    }
+
+    pub async fn update_base_user_fields(&mut self, base_user:BaseUser)->Result<u64, Error> {
+        let query = update_queries::UPDATE_BASE_USER_FIELDS;
+        let num_modified = self.client.execute(query,
+             &[&base_user.display_name,
+                        &base_user.avatar_url,
+                        &base_user.username,
+                        &base_user.bio,
+                        &base_user.contributions,
+                        &base_user.banner_url]).await?;
         return Ok(num_modified);
     }
 

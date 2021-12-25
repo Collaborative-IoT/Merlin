@@ -5,6 +5,8 @@ of the request/response(if there is any) will be the 'request_containing_data/re
 in json serialization.
 */
 
+use std::option::Option;
+
 //Gathering from client
 pub struct BasicRequest {
     request_op_code: String,
@@ -65,11 +67,11 @@ pub struct UserPreview {
 }
 
 pub struct UserProfileEdit {
-    display_name: String,
-    username: String,
-    bio: String,
-    avatar_url: String,
-    banner_url: String,
+    pub display_name: Option<String>,
+    pub username: Option<String>,
+    pub bio: Option<String>,
+    pub avatar_url: Option<String>,
+    pub banner_url: Option<String>,
 }
 
 pub struct RoomSettingsEditOrCreation {
