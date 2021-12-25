@@ -222,7 +222,7 @@ pub async fn capture_user_update(
         merge_updates_with_current_user(&mut current_user, edit);
         let updates_are_valid = new_user_updates_are_valid(&current_user).await;
         if updates_are_valid{
-            let update_result = execution_handler.update_base_user_fields(current_user).await;
+            let update_result = execution_handler.update_base_user_fields(&current_user).await;
             return handle_removal_or_update_capture(
                 "Fields Successfully Updated".to_owned(),
                 "Error Updating fields".to_owned(), 

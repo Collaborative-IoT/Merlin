@@ -11,7 +11,6 @@ other tests that come before them.
 
 #[tokio::test]
 pub async fn test() {
-    test_capture_and_fetch().await;
 }
 
 async fn test_capture_and_fetch() {

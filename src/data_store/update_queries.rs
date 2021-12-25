@@ -108,11 +108,12 @@ WHERE Id = $14;
 ";
 
 pub const UPDATE_BASE_USER_FIELDS: &str = "
-    UPDATE users
-    SET displayName = $1,
+UPDATE users
+SET displayName = $1,
     avatarUrl = $2,
     userName = $3,
     bio = $4,
     contributions = $5,
     bannerUrl = $6
+WHERE Id = $7;
 ";

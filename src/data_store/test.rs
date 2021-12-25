@@ -62,7 +62,8 @@ async fn test_users(execution_handler: &mut ExecutionHandler) {
     tests::user::test_update_contributions(execution_handler, user_id.clone()).await;
     tests::user::test_update_banner_url(execution_handler, user_id.clone()).await;
     tests::user::test_update_user_name(execution_handler, user_id.clone()).await;
-    tests::user::test_updating_entire_user(execution_handler).await;
+    let new_user_id = tests::user::test_updating_entire_user(execution_handler).await;
+    tests::user::test_updating_base_user_fields(execution_handler,new_user_id).await;
 }
 
 async fn setup_tables(execution_handler: &mut ExecutionHandler) {
