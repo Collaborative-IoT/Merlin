@@ -76,6 +76,11 @@ pub async fn capture_new_scheduled_room_attendance(
         let select_future = execution_handler
             .select_single_room_attendance(&attendance.user_id, &attendance.scheduled_room_id);
         let will_be_duplicate = insert_will_be_duplicate(select_future).await;
+        try_to_increase_num_attending_for_sch_room(
+            &attendance.scheduled_room_id,
+            execution_handler,
+        )
+        .await;
         let insert_future = execution_handler.insert_scheduled_room_attendance(attendance);
         return ensure_no_duplicates_exist_and_capture(
             will_be_duplicate,
@@ -239,7 +244,7 @@ pub async fn capture_user_update(
 
 pub async fn capture_scheduled_room_update(
     user_id: &i32,
-    update: ScheduledRoomUpdate,
+    update: &ScheduledRoomUpdate,
     execution_handler: &mut ExecutionHandler,
 ) -> CaptureResult {
     let owned_rooms_result = execution_handler
@@ -254,9 +259,9 @@ pub async fn capture_scheduled_room_update(
             if room_id == update.room_id {
                 let update_result = execution_handler
                     .update_scheduled_room(
-                        update.scheduled_for,
+                        update.scheduled_for.to_owned(),
                         &update.room_id,
-                        update.description,
+                        update.description.to_owned(),
                     )
                     .await;
                 return handle_removal_or_update_capture(
@@ -429,6 +434,26 @@ fn merge_updates_with_current_user(current_user: &mut BaseUser, updates: UserPro
     if updates.banner_url.is_some() {
         current_user.banner_url = updates.banner_url.unwrap();
     }
+}
+
+// non fatal operation, if failure occurs no big deal since it only captures how
+// many users will attend
+async fn try_to_increase_num_attending_for_sch_room(
+    room_id: &i32,
+    execution_handler: &mut ExecutionHandler,
+) {
+    let sch_room_result = execution_handler.select_scheduled_room_by_id(room_id).await;
+    if sch_room_result.is_ok() {
+        let selected_rows = sch_room_result.unwrap();
+        if selected_rows.len() == 1 {
+            let row = &selected_rows[0];
+            let old_num_attending: i32 = row.get(2);
+            let new_num_attending = old_num_attending + 1;
+            execution_handler
+                .update_num_attending_sch_room(&new_num_attending, room_id)
+                .await;
+        }
+    };
 }
 
 //makes sure the user didn't send an illegal update

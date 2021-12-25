@@ -104,6 +104,27 @@ pub async fn test_update_scheduled_room(
     return room_id;
 }
 
+pub async fn test_update_scheduled_room_num_attending(
+    execution_handler: &mut ExecutionHandler,
+    room_id: i32,
+) -> i32 {
+    println!("testing update scheduled room attending");
+    // we know the previous num attending was 99
+    let new_num_attending: i32 = 200;
+    let update_result = execution_handler
+        .update_num_attending_sch_room(&new_num_attending, &room_id)
+        .await;
+    assert_eq!(update_result.unwrap(), 1);
+    //check update
+    let gather_room_result = execution_handler
+        .select_scheduled_room_by_id(&room_id)
+        .await;
+    let selected_rows = gather_room_result.unwrap();
+    let num_attending: i32 = selected_rows[0].get(2);
+    assert_eq!(num_attending, new_num_attending);
+    return room_id;
+}
+
 pub async fn test_inserting_scheduled_room_attendance(execution_handler: &mut ExecutionHandler) {
     println!("testing inserting scheduled room attendance");
     let new_sch_room_attendance: DBScheduledRoomAttendance = gather_sch_db_room_attendance();

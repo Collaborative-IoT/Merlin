@@ -40,6 +40,12 @@ SET scheduledFor = $1,
 WHERE Id = $3;   
 ";
 
+pub const UPDATE_SCHEDULED_ROOM_ATTENDING_QUERY: &str = "
+UPDATE scheduled_room
+SET numAttending = $1
+WHERE Id = $2;
+";
+
 pub const UPDATE_GITHUB_ACCESS_TOKEN_QUERY: &str = "
 UPDATE users
 SET githubAccessToken = $1

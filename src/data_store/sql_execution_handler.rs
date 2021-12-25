@@ -373,6 +373,19 @@ impl ExecutionHandler {
         return Ok(num_modified);
     }
 
+    pub async fn update_num_attending_sch_room(
+        &mut self,
+        num_attending: &i32,
+        room_id: &i32,
+    ) -> Result<u64, Error> {
+        let query = update_queries::UPDATE_SCHEDULED_ROOM_ATTENDING_QUERY;
+        let num_modified = self
+            .client
+            .execute(query, &[num_attending, room_id])
+            .await?;
+        return Ok(num_modified);
+    }
+
     pub async fn update_ban_status_of_user(
         &mut self,
         banned: bool,

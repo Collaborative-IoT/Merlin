@@ -1,4 +1,4 @@
-use crate::communication::communication_types::User;
+use crate::communication::communication_types::{ScheduledRoomUpdate, User};
 use crate::communication::data_capturer;
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::data_fetcher;
@@ -108,10 +108,12 @@ pub async fn test_room_capture_and_gather(execution_handler: &mut ExecutionHandl
     return room_id;
 }
 
-pub async fn test_scheduled_room_capture_and_gather(execution_handler: &mut ExecutionHandler) {
+pub async fn test_scheduled_room_capture_and_gather(
+    execution_handler: &mut ExecutionHandler,
+) -> i32 {
     let mock_room = generate_scheduled_room();
     let mock_user_id: i32 = -434;
-    let room_capture_id =
+    let room_capture_id: i32 =
         data_capturer::capture_new_scheduled_room(execution_handler, &mock_room, &mock_user_id)
             .await;
     assert!(room_capture_id != -1);
@@ -129,6 +131,7 @@ pub async fn test_scheduled_room_capture_and_gather(execution_handler: &mut Exec
         room_fetch_result.1[0].scheduled_for,
         mock_room.scheduled_for
     );
+    return room_capture_id;
 }
 
 //TODO: shorten function, too large
@@ -247,6 +250,32 @@ pub async fn test_room_removal(execution_handler: &mut ExecutionHandler, room_id
     assert_eq!(result.desc, "Room Removed");
 }
 
+pub async fn test_scheduled_room_update_capture(
+    execution_handler: &mut ExecutionHandler,
+    room_id: &i32,
+) {
+    //we know this row exist(and user id) and has different values then the ones asserted
+    //due to previously executed tests
+    let user_id: i32 = -434;
+    let mock_update = generate_sch_room_update(room_id);
+    let capture_result =
+        data_capturer::capture_scheduled_room_update(&user_id, &mock_update, execution_handler)
+            .await;
+    assert_eq!(capture_result.encountered_error, false);
+    assert_eq!(capture_result.desc, "Room Successfully Updated".to_owned());
+
+    //verify update worked
+    let rooms_to_get = vec![room_id.to_owned()];
+    let room_fetch_result: (bool, Vec<DBScheduledRoom>) =
+        data_fetcher::get_scheduled_rooms(rooms_to_get, execution_handler).await;
+    assert_eq!(room_fetch_result.0, false);
+    assert_eq!(room_fetch_result.1.len(), 1);
+    let gathered_room = &room_fetch_result.1[0];
+    assert_eq!(gathered_room.room_name, mock_update.name);
+    assert_eq!(gathered_room.scheduled_for, mock_update.scheduled_for);
+    assert_eq!(gathered_room.desc, mock_update.description);
+}
+
 fn compare_user_and_db_user(communication_user: &User, db_user: &DBUser) {
     assert_eq!(db_user.display_name, communication_user.display_name);
     assert_eq!(db_user.avatar_url, communication_user.avatar_url);
@@ -343,6 +372,15 @@ fn generate_scheduled_room() -> DBScheduledRoom {
         num_attending: 33 as i32,
         scheduled_for: "test".to_owned(),
         desc: "test".to_owned(),
+    };
+}
+
+fn generate_sch_room_update(room_id: &i32) -> ScheduledRoomUpdate {
+    return ScheduledRoomUpdate {
+        room_id: room_id.to_owned(),
+        name: "test34839".to_owned(),
+        scheduled_for: "test59483".to_owned(),
+        description: "948394".to_owned(),
     };
 }
 
