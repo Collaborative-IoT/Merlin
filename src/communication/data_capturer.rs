@@ -226,18 +226,15 @@ pub async fn capture_user_update(
     if current_user_or_not.is_some() {
         let mut current_user = current_user_or_not.unwrap();
         merge_updates_with_current_user(&mut current_user, edit, execution_handler).await;
-        let updates_are_valid = new_user_updates_are_valid(&current_user).await;
-        if updates_are_valid {
-            let update_result = execution_handler
-                .update_base_user_fields(&current_user)
-                .await;
-            return handle_removal_or_update_capture(
-                "Fields Successfully Updated".to_owned(),
-                "Error Updating fields".to_owned(),
-                1,
-                update_result,
-            );
-        };
+        let update_result = execution_handler
+            .update_base_user_fields(&current_user)
+            .await;
+        return handle_removal_or_update_capture(
+            "Fields Successfully Updated".to_owned(),
+            "Error Updating fields".to_owned(),
+            1,
+            update_result,
+        );
     };
     return generic_error_capture_result();
 }
@@ -437,7 +434,7 @@ async fn merge_updates_with_current_user(
     };
     if updates.bio.is_some() {
         let target_update = updates.bio.unwrap();
-        if field_is_long_enough(&target_update, 40 as usize, 1 as usize){
+        if field_is_long_enough(&target_update, 40 as usize, 1 as usize) {
             current_user.bio = target_update;
         }
     };
@@ -467,12 +464,6 @@ async fn try_to_increase_num_attending_for_sch_room(
                 .await;
         }
     };
-}
-
-//makes sure the user didn't send an illegal update
-//illegal updates are things like duplicate usernames and etc.
-async fn new_user_updates_are_valid(current_user: &BaseUser) -> bool {
-    return true;
 }
 
 fn field_is_long_enough(data: &String, max_expected_len: usize, min_expected_len: usize) -> bool {
