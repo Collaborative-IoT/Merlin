@@ -276,6 +276,27 @@ pub async fn capture_scheduled_room_update(
     };
 }
 
+pub async fn capture_new_room_owner_update(
+    room_id: &i32,
+    new_owner_id: &i32,
+    execution_handler: &mut ExecutionHandler,
+) -> CaptureResult {
+    let room_update_result = execution_handler
+        .update_room_owner(room_id, new_owner_id)
+        .await;
+    if room_update_result.is_ok() && room_update_result.unwrap() == 1 {
+        return CaptureResult {
+            encountered_error: false,
+            desc: "Room owner updated successfully".to_owned(),
+        };
+    } else {
+        return CaptureResult {
+            encountered_error: true,
+            desc: "Issue updating room owner".to_owned(),
+        };
+    }
+}
+
 //makes sure a x amount of row were successfully deleted/updated
 fn handle_removal_or_update_capture(
     success_msg: String,
