@@ -86,6 +86,11 @@ SELECT * FROM users
 WHERE Id = $1;
 ";
 
+pub const SELECT_USER_BY_USERNAME: &str = "
+SELECT Id FROM users
+WHERE userName = $1;
+";
+
 pub const SELECT_ALL_PERMISSIONS_FOR_ROOM: &str = "
 SELECT * FROM room_permission
 WHERE roomId = $1;

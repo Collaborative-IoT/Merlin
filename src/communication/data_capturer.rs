@@ -225,7 +225,7 @@ pub async fn capture_user_update(
         data_fetcher::gather_base_user(execution_handler, user_id).await;
     if current_user_or_not.is_some() {
         let mut current_user = current_user_or_not.unwrap();
-        merge_updates_with_current_user(&mut current_user, edit);
+        merge_updates_with_current_user(&mut current_user, edit, execution_handler).await;
         let updates_are_valid = new_user_updates_are_valid(&current_user).await;
         if updates_are_valid {
             let update_result = execution_handler
@@ -418,15 +418,28 @@ fn generic_error_capture_result() -> CaptureResult {
     };
 }
 
-fn merge_updates_with_current_user(current_user: &mut BaseUser, updates: UserProfileEdit) {
+async fn merge_updates_with_current_user(
+    current_user: &mut BaseUser,
+    updates: UserProfileEdit,
+    execution_handler: &mut ExecutionHandler,
+) {
     if updates.display_name.is_some() {
-        current_user.display_name = updates.display_name.unwrap();
+        let target_update = updates.display_name.unwrap();
+        if field_is_long_enough(&target_update, 20 as usize, 3 as usize) {
+            current_user.display_name = target_update;
+        }
     };
     if updates.username.is_some() {
-        current_user.username = updates.username.unwrap();
+        let target_update = updates.username.unwrap();
+        if !username_already_exist(&target_update, execution_handler).await {
+            current_user.username = target_update;
+        };
     };
     if updates.bio.is_some() {
-        current_user.bio = updates.bio.unwrap();
+        let target_update = updates.bio.unwrap();
+        if field_is_long_enough(&target_update, 40 as usize, 1 as usize){
+            current_user.bio = target_update;
+        }
     };
     if updates.avatar_url.is_some() {
         current_user.avatar_url = updates.avatar_url.unwrap();
@@ -460,4 +473,30 @@ async fn try_to_increase_num_attending_for_sch_room(
 //illegal updates are things like duplicate usernames and etc.
 async fn new_user_updates_are_valid(current_user: &BaseUser) -> bool {
     return true;
+}
+
+fn field_is_long_enough(data: &String, max_expected_len: usize, min_expected_len: usize) -> bool {
+    let data_count = data.chars().count();
+    if data_count >= min_expected_len && data_count <= max_expected_len {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+async fn username_already_exist(
+    username: &String,
+    execution_handler: &mut ExecutionHandler,
+) -> bool {
+    let search_result = execution_handler.select_user_by_username(username).await;
+    if search_result.is_ok() {
+        let selected_rows = search_result.unwrap();
+        if selected_rows.len() != 0 {
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return true;
+    }
 }

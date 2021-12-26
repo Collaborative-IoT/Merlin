@@ -631,6 +631,12 @@ impl ExecutionHandler {
         return Ok(result);
     }
 
+    pub async fn select_user_by_username(&mut self, user_name: &String) -> Result<Vec<Row>, Error> {
+        let query: &str = select_queries::SELECT_USER_BY_USERNAME;
+        let result: Vec<Row> = self.client.query(query, &[user_name]).await?;
+        return Ok(result);
+    }
+
     pub async fn select_single_follow(
         &mut self,
         follower_id: &i32,
@@ -650,6 +656,7 @@ impl ExecutionHandler {
         let result: Vec<Row> = self.client.query(query, &[user_id, room_id]).await?;
         return Ok(result);
     }
+
     //owner of the block = owner_id
     pub async fn select_single_user_block(
         &mut self,
