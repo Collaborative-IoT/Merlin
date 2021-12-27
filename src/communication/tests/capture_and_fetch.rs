@@ -111,6 +111,7 @@ pub async fn test_room_capture_and_gather(execution_handler: &mut ExecutionHandl
 pub async fn test_scheduled_room_capture_and_gather(
     execution_handler: &mut ExecutionHandler,
 ) -> i32 {
+    println!("testing scheduled room capture and gather");
     let mock_room = generate_scheduled_room();
     let mock_user_id: i32 = -434;
     let room_capture_id: i32 =
@@ -136,7 +137,7 @@ pub async fn test_scheduled_room_capture_and_gather(
 
 //TODO: shorten function, too large
 pub async fn test_room_block_and_gather(execution_handler: &mut ExecutionHandler, room_id: &i32) {
-    println!("testing room block and gather");
+    println!("testing room block and gather capture");
     let room_block: DBRoomBlock = generate_room_block(room_id);
     let second_room_block: DBRoomBlock = generate_different_room_block(room_id);
 
@@ -167,6 +168,7 @@ pub async fn test_user_follow_removal(
     execution_handler: &mut ExecutionHandler,
     user_ids: (&i32, &i32),
 ) {
+    println!("testing user follow removal capture");
     //get size before deletion
     let starting_follower_count =
         data_fetcher::get_follower_user_ids_for_user(execution_handler, user_ids.0)
@@ -196,6 +198,7 @@ pub async fn test_user_block_removal(
     execution_handler: &mut ExecutionHandler,
     user_ids: (&i32, &i32),
 ) {
+    println!("testing user block removal capture");
     //get size before deletion
     let starting_block_count =
         data_fetcher::get_blocked_user_ids_for_user(execution_handler, user_ids.0)
@@ -222,6 +225,7 @@ pub async fn test_user_block_removal(
 }
 
 pub async fn test_room_block_removal(execution_handler: &mut ExecutionHandler, room_id: &i32) {
+    println!("testing room block removal capture");
     //gather size before deletion
     let starting_block_count =
         data_fetcher::get_blocked_user_ids_for_room(execution_handler, room_id)
@@ -243,6 +247,23 @@ pub async fn test_room_block_removal(execution_handler: &mut ExecutionHandler, r
     assert_eq!(second_block_count, one_less_than_starting);
 }
 
+pub async fn test_room_owner_update_capture_and_gather(
+    execution_handler: &mut ExecutionHandler,
+    room_id: &i32,
+) {
+    let new_owner_id = -888;
+    let capture_result =
+        data_capturer::capture_new_room_owner_update(room_id, &new_owner_id, execution_handler)
+            .await;
+    assert_eq!(capture_result.encountered_error, false);
+    assert_eq!(capture_result.desc, "Room owner updated successfully");
+    //check gather that returns (encountered_error, owner_id, chat_mode)
+    let owner_gather: (bool, i32, String) =
+        data_fetcher::get_room_owner_and_settings(execution_handler, room_id).await;
+    assert_eq!(false, owner_gather.0);
+    assert_eq!(owner_gather.1, new_owner_id);
+}
+
 pub async fn test_room_removal(execution_handler: &mut ExecutionHandler, room_id: &i32) {
     let result: CaptureResult =
         data_capturer::capture_room_removal(execution_handler, room_id).await;
@@ -254,6 +275,7 @@ pub async fn test_scheduled_room_update_capture(
     execution_handler: &mut ExecutionHandler,
     room_id: &i32,
 ) {
+    println!("testing scheduled room update capture");
     //we know this row exist(and user id) and has different values then the ones asserted
     //due to previously executed tests
     let user_id: i32 = -434;

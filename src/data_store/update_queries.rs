@@ -1,4 +1,3 @@
-
 //Dry violations on purpose, helps read and follow each specific query
 pub const UPDATE_ROOM_OWNER_QUERY: &str = "
 UPDATE room

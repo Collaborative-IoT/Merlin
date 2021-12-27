@@ -27,16 +27,15 @@ async fn test_capture_and_fetch() {
     )
     .await;
     let room_id = capture_and_fetch::test_room_capture_and_gather(&mut execution_handler).await;
+    capture_and_fetch::test_room_owner_update_capture_and_gather(&mut execution_handler, &room_id)
+        .await;
     let sch_room_id =
         capture_and_fetch::test_scheduled_room_capture_and_gather(&mut execution_handler).await;
     capture_and_fetch::test_scheduled_room_update_capture(&mut execution_handler, &sch_room_id)
         .await;
     capture_and_fetch::test_room_block_and_gather(&mut execution_handler, &room_id).await;
-    capture_and_fetch::test_user_follow_removal(
-        &mut &mut execution_handler,
-        (&user_ids.0, &user_ids.1),
-    )
-    .await;
+    capture_and_fetch::test_user_follow_removal(&mut execution_handler, (&user_ids.0, &user_ids.1))
+        .await;
     capture_and_fetch::test_user_block_removal(&mut execution_handler, (&user_ids.0, &user_ids.1))
         .await;
     capture_and_fetch::test_room_block_removal(&mut execution_handler, &room_id).await;
