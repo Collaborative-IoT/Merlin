@@ -6,8 +6,8 @@ the same user twice etc.
 
 use crate::communication::communication_types::{ScheduledRoomUpdate, UserProfileEdit};
 use crate::data_store::db_models::{
-    DBFollower, DBRoom, DBRoomBlock, DBScheduledRoom, DBScheduledRoomAttendance, DBUser,
-    DBUserBlock,
+    DBFollower, DBRoom, DBRoomBlock, DBRoomPermissions, DBScheduledRoom, DBScheduledRoomAttendance,
+    DBUser, DBUserBlock,
 };
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use futures_util::Future;
@@ -295,6 +295,21 @@ pub async fn capture_new_room_owner_update(
             desc: "Issue updating room owner".to_owned(),
         };
     }
+}
+
+pub async fn capture_new_room_permissions_update(
+    permissions: &DBRoomPermissions,
+    execution_handler: &mut ExecutionHandler,
+) -> CaptureResult {
+    let update_result = execution_handler
+        .update_entire_room_permissions(permissions)
+        .await;
+    return handle_removal_or_update_capture(
+        "Permissions Sucessfully Updated".to_owned(),
+        "Issue Updating Permissions".to_owned(),
+        1,
+        update_result,
+    );
 }
 
 //makes sure a x amount of row were successfully deleted/updated
