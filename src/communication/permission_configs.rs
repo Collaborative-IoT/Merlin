@@ -1,5 +1,9 @@
 use crate::data_store::db_models::{DBRoomPermissions};
 
+/*
+This file contains all possible configurations for a user of a room. Regarding speaking
+and moderation permissions.
+*/
 pub fn regular_speaker(room_id: i32, user_id: i32) -> DBRoomPermissions {
     return DBRoomPermissions {
         id: -1,

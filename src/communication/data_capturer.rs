@@ -284,17 +284,31 @@ pub async fn capture_new_room_owner_update(
     let room_update_result = execution_handler
         .update_room_owner(room_id, new_owner_id)
         .await;
-    if room_update_result.is_ok() && room_update_result.unwrap() == 1 {
-        return CaptureResult {
-            encountered_error: false,
-            desc: "Room owner updated successfully".to_owned(),
-        };
-    } else {
-        return CaptureResult {
-            encountered_error: true,
-            desc: "Issue updating room owner".to_owned(),
-        };
-    }
+        return handle_removal_or_update_capture(
+            "Room owner updated successfully".to_owned(), 
+            "Issue updating room owner".to_owned(), 
+            1, 
+            room_update_result);
+}
+
+pub async fn capture_new_room_permissions(
+    permissions: &DBRoomPermissions,
+    execution_handler: &mut ExecutionHandler)->bool{
+        let permissions_for_user = data_fetcher::get_room_permissions_for_users(&permissions.room_id, execution_handler).await;
+        //we didn't run into an error grabbing permissions and 
+        //we didn't find any for this room user.
+        if permissions_for_user.0 == false && !permissions_for_user.1.contains_key(&permissions.user_id){
+            let insert_result = execution_handler.insert_room_permission(permissions).await;
+            if insert_result.is_ok(){
+                return false;
+            }
+            else{
+                return true;
+            }
+        }
+        else{
+            return true;
+        }
 }
 
 pub async fn capture_new_room_permissions_update(
