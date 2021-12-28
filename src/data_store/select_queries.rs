@@ -105,5 +105,5 @@ WHERE Id = $1;
 //the one that doesn't exist is -1
 pub const SELECT_USER_BY_CREATION_IDENTIFIERS: &str = "
 SELECT * FROM users
-    WHERE githubId = $1 AND discordId = $2;
+WHERE githubId = $1 AND discordId = $2;
 ";

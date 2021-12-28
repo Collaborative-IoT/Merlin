@@ -6,6 +6,8 @@ extern crate log;
 use std::sync::{Arc, Mutex};
 use std::{env, io::Error};
 use tokio::net::TcpListener;
+mod test;
+
 pub mod state {
     pub mod state;
     pub mod state_types;

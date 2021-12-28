@@ -86,7 +86,12 @@ pub async fn test_update_scheduled_room(
     let scheduled_for = "for".to_owned();
     //update
     let update_result = execution_handler
-        .update_scheduled_room(scheduled_for, &room_id, "test44".to_owned())
+        .update_scheduled_room(
+            scheduled_for,
+            &room_id,
+            "test44".to_owned(),
+            "updated".to_owned(),
+        )
         .await;
     let num_updated = update_result.unwrap();
     assert_eq!(1, num_updated);
@@ -97,10 +102,12 @@ pub async fn test_update_scheduled_room(
 
     let selected_rows = gather_room_result.unwrap();
     let scheduled_for: &str = selected_rows[0].get(3);
+    let room_name: &str = selected_rows[0].get(1);
     let desc: &str = selected_rows[0].get(4);
 
     assert_eq!(scheduled_for, "for");
     assert_eq!(desc, "test44");
+    assert_eq!(room_name, "updated");
     return room_id;
 }
 

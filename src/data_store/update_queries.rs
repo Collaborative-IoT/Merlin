@@ -34,8 +34,9 @@ WHERE Id = $2;
 pub const UPDATE_SCHEDULED_ROOM_QUERY: &str = "
 UPDATE scheduled_room
 SET scheduledFor = $1,
-      description = $2
-WHERE Id = $3;   
+      description = $2,
+      roomName = $3
+WHERE Id = $4;   
 ";
 
 pub const UPDATE_SCHEDULED_ROOM_ATTENDING_QUERY: &str = "

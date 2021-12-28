@@ -1,7 +1,6 @@
 use crate::data_store::{sql_execution_handler::ExecutionHandler, tests};
 use tokio_postgres::{Error, NoTls};
 
-#[tokio::test]
 pub async fn test() {
     let mut execution_handler = setup_execution_handler().await.unwrap();
     setup_tables(&mut execution_handler).await;

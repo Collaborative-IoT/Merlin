@@ -35,9 +35,11 @@ pub async fn capture_new_user(execution_handler: &mut ExecutionHandler, user: &D
             let user_id: i32 = insert_result.unwrap();
             return user_id;
         } else {
+            println!("not ok");
             return -1 as i32;
         }
     } else {
+        println!("already exist");
         return -1 as i32;
     }
 }
@@ -59,7 +61,14 @@ pub async fn capture_new_scheduled_room(
     .await
     {
         let future_for_execution = execution_handler.insert_scheduled_room(room);
-        return capture_room(future_for_execution).await;
+        let room_id = capture_room(future_for_execution).await;
+        let req_results =
+            handle_scheduled_room_capture_reqs(execution_handler, &room_id, user_id).await;
+        if req_results == false {
+            return room_id;
+        } else {
+            return -1;
+        }
     } else {
         return -1;
     }
@@ -102,6 +111,7 @@ pub async fn capture_new_follower(
         let select_future =
             execution_handler.select_single_follow(&follower.follower_id, &follower.user_id);
         let will_be_duplicate = insert_will_be_duplicate(select_future).await;
+        println!("{}", will_be_duplicate);
         let insert_future = execution_handler.insert_follower(follower);
         return ensure_no_duplicates_exist_and_capture(
             will_be_duplicate,
@@ -252,13 +262,14 @@ pub async fn capture_scheduled_room_update(
 
         //go through owned rooms, find the match and update.
         for row in selected_rows {
-            let room_id: i32 = row.get(0);
+            let room_id: i32 = row.get(2);
             if room_id == update.room_id {
                 let update_result = execution_handler
                     .update_scheduled_room(
                         update.scheduled_for.to_owned(),
                         &update.room_id,
                         update.description.to_owned(),
+                        update.name.to_owned(),
                     )
                     .await;
                 return handle_removal_or_update_capture(
@@ -284,31 +295,33 @@ pub async fn capture_new_room_owner_update(
     let room_update_result = execution_handler
         .update_room_owner(room_id, new_owner_id)
         .await;
-        return handle_removal_or_update_capture(
-            "Room owner updated successfully".to_owned(), 
-            "Issue updating room owner".to_owned(), 
-            1, 
-            room_update_result);
+    return handle_removal_or_update_capture(
+        "Room owner updated successfully".to_owned(),
+        "Issue updating room owner".to_owned(),
+        1,
+        room_update_result,
+    );
 }
 
 pub async fn capture_new_room_permissions(
     permissions: &DBRoomPermissions,
-    execution_handler: &mut ExecutionHandler)->bool{
-        let permissions_for_user = data_fetcher::get_room_permissions_for_users(&permissions.room_id, execution_handler).await;
-        //we didn't run into an error grabbing permissions and 
-        //we didn't find any for this room user.
-        if permissions_for_user.0 == false && !permissions_for_user.1.contains_key(&permissions.user_id){
-            let insert_result = execution_handler.insert_room_permission(permissions).await;
-            if insert_result.is_ok(){
-                return false;
-            }
-            else{
-                return true;
-            }
-        }
-        else{
+    execution_handler: &mut ExecutionHandler,
+) -> bool {
+    let permissions_for_user =
+        data_fetcher::get_room_permissions_for_users(&permissions.room_id, execution_handler).await;
+    //we didn't run into an error grabbing permissions and
+    //we didn't find any for this room user.
+    if permissions_for_user.0 == false && !permissions_for_user.1.contains_key(&permissions.user_id)
+    {
+        let insert_result = execution_handler.insert_room_permission(permissions).await;
+        if insert_result.is_ok() {
+            return false;
+        } else {
             return true;
         }
+    } else {
+        return true;
+    }
 }
 
 pub async fn capture_new_room_permissions_update(
@@ -319,7 +332,7 @@ pub async fn capture_new_room_permissions_update(
         .update_entire_room_permissions(permissions)
         .await;
     return handle_removal_or_update_capture(
-        "Permissions Sucessfully Updated".to_owned(),
+        "Permissions Successfully Updated".to_owned(),
         "Issue Updating Permissions".to_owned(),
         1,
         update_result,
@@ -432,7 +445,7 @@ async fn insert_will_be_duplicate(
     let future_result = future_exc.await;
     if future_result.is_ok() {
         let selected_rows = future_result.unwrap();
-        if selected_rows.len() != 1 {
+        if selected_rows.len() > 0 {
             return true;
         } else {
             return false;
@@ -540,4 +553,21 @@ async fn username_already_exist(
     } else {
         return true;
     }
+}
+
+//atempts to insert the room creator's attendance as the owner
+//and increases the sch room attendance number(apart od sch room attendance)
+async fn handle_scheduled_room_capture_reqs(
+    execution_handler: &mut ExecutionHandler,
+    room_id: &i32,
+    user_id: &i32,
+) -> bool {
+    let attendance = DBScheduledRoomAttendance {
+        id: -1,
+        scheduled_room_id: room_id.clone(),
+        user_id: user_id.clone(),
+        is_owner: true,
+    };
+    let capture_res = capture_new_scheduled_room_attendance(execution_handler, &attendance).await;
+    return capture_res.encountered_error;
 }

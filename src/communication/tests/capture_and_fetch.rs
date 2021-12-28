@@ -1,9 +1,11 @@
-use crate::communication::communication_types::{ScheduledRoomUpdate, User};
+use crate::communication::communication_types::{RoomPermissions, ScheduledRoomUpdate, User};
 use crate::communication::data_capturer;
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::data_fetcher;
+
+use crate::communication::permission_configs;
 use crate::data_store::db_models::{
-    DBFollower, DBRoom, DBRoomBlock, DBScheduledRoom, DBUser, DBUserBlock,
+    DBFollower, DBRoom, DBRoomBlock, DBRoomPermissions, DBScheduledRoom, DBUser, DBUserBlock,
 };
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use chrono::Utc;
@@ -76,7 +78,7 @@ pub async fn test_user_block_capture_and_gather(
     let second_capture_result: CaptureResult =
         data_capturer::capture_new_user_block(execution_handler, &user_block).await;
     assert_eq!(second_capture_result.encountered_error, true);
-    assert_eq!(second_capture_result.desc, "Issue with execution");
+    assert_eq!(second_capture_result.desc, "This user is already blocked!");
 
     //check user struct gather properties
     //to make sure the user struct is being
@@ -126,7 +128,7 @@ pub async fn test_scheduled_room_capture_and_gather(
     assert_eq!(room_fetch_result.1[0].room_name, mock_room.room_name);
     assert_eq!(
         room_fetch_result.1[0].num_attending,
-        mock_room.num_attending
+        mock_room.num_attending + 1 //check +1 due to the incrementing of num attending.
     );
     assert_eq!(
         room_fetch_result.1[0].scheduled_for,
@@ -136,10 +138,35 @@ pub async fn test_scheduled_room_capture_and_gather(
 }
 
 //TODO: shorten function, too large
-pub async fn test_room_block_and_gather(execution_handler: &mut ExecutionHandler, room_id: &i32) {
+pub async fn test_room_block_and_gather(
+    execution_handler: &mut ExecutionHandler,
+    room_id: &i32,
+) -> i32 {
     println!("testing room block and gather capture");
-    let room_block: DBRoomBlock = generate_room_block(room_id);
-    let second_room_block: DBRoomBlock = generate_different_room_block(room_id);
+    //create two new users to be blocked, since our capturer protects
+    //against creating blocks for non existing users
+    let first_user_id = data_capturer::capture_new_user(
+        execution_handler,
+        &dyn_generate_user_struct(
+            "teyre".to_owned(),
+            "845u73ynr".to_owned(),
+            "4938477rj4r".to_owned(),
+        ),
+    )
+    .await;
+    let second_user_id = data_capturer::capture_new_user(
+        execution_handler,
+        &dyn_generate_user_struct(
+            "tryetrb".to_owned(),
+            "i4imimmm3".to_owned(),
+            "rifiemo4murmfdoewo9".to_owned(),
+        ),
+    )
+    .await;
+    println!("{},{}", first_user_id, second_user_id);
+
+    let room_block: DBRoomBlock = generate_room_block(room_id, first_user_id.clone());
+    let second_room_block: DBRoomBlock = generate_different_room_block(room_id, second_user_id);
 
     //insert room blocks
     let first_capture_result: CaptureResult =
@@ -154,7 +181,10 @@ pub async fn test_room_block_and_gather(execution_handler: &mut ExecutionHandler
     let duplicate_capture_result: CaptureResult =
         data_capturer::capture_new_room_block(execution_handler, &room_block).await;
     assert_eq!(duplicate_capture_result.encountered_error, true);
-    assert_eq!(duplicate_capture_result.desc, "Issue with execution");
+    assert_eq!(
+        duplicate_capture_result.desc,
+        "This user is already blocked for this room!"
+    );
     //test gathering new captured
     let fetch_result: (bool, HashSet<i32>) =
         data_fetcher::get_blocked_user_ids_for_room(execution_handler, room_id).await;
@@ -162,6 +192,7 @@ pub async fn test_room_block_and_gather(execution_handler: &mut ExecutionHandler
     assert_eq!(fetch_result.0, false);
     assert_eq!(user_ids.contains(&room_block.blocked_user_id), true);
     assert_eq!(user_ids.contains(&second_room_block.blocked_user_id), true);
+    return first_user_id; //need for removal test
 }
 
 pub async fn test_user_follow_removal(
@@ -224,7 +255,11 @@ pub async fn test_user_block_removal(
     assert_eq!(second_block_count, one_less_than_starting);
 }
 
-pub async fn test_room_block_removal(execution_handler: &mut ExecutionHandler, room_id: &i32) {
+pub async fn test_room_block_removal(
+    execution_handler: &mut ExecutionHandler,
+    room_id: &i32,
+    user_id: i32,
+) {
     println!("testing room block removal capture");
     //gather size before deletion
     let starting_block_count =
@@ -234,7 +269,6 @@ pub async fn test_room_block_removal(execution_handler: &mut ExecutionHandler, r
             .len() as i32;
     let one_less_than_starting = starting_block_count - 1;
     //delete
-    let user_id: i32 = -333;
     let result: CaptureResult =
         data_capturer::capture_room_block_removal(execution_handler, room_id, &user_id).await;
     assert_eq!(result.encountered_error, false);
@@ -298,11 +332,53 @@ pub async fn test_scheduled_room_update_capture(
     assert_eq!(gathered_room.desc, mock_update.description);
 }
 
+pub async fn test_room_permission_capture_and_gather(execution_handler: &mut ExecutionHandler) {
+    //insert
+    let mock_permissions = generate_room_permissions();
+    let encountered_error: bool =
+        data_capturer::capture_new_room_permissions(&mock_permissions, execution_handler).await;
+    assert_eq!(encountered_error, false);
+    //test against duplication
+    let encountered_error_second: bool =
+        data_capturer::capture_new_room_permissions(&mock_permissions, execution_handler).await;
+    assert_eq!(encountered_error_second, true);
+
+    //test
+    let permissions_for_room =
+        data_fetcher::get_room_permissions_for_users(&mock_permissions.room_id, execution_handler)
+            .await;
+    assert_eq!(permissions_for_room.0, false);
+    assert_eq!(
+        permissions_for_room
+            .1
+            .contains_key(&mock_permissions.user_id),
+        true
+    );
+}
+
+pub async fn test_room_permission_update(execution_handler: &mut ExecutionHandler) {
+    //insert
+    let new_config = permission_configs::modded_speaker(-1000, -919);
+    let capture_result =
+        data_capturer::capture_new_room_permissions_update(&new_config, execution_handler).await;
+    assert_eq!(capture_result.encountered_error, false);
+    assert_eq!(capture_result.desc, "Permissions Successfully Updated");
+    let permissions_for_room =
+        data_fetcher::get_room_permissions_for_users(&new_config.room_id, execution_handler).await;
+    let permissions: &RoomPermissions = permissions_for_room.1.get(&new_config.user_id).unwrap();
+    assert_eq!(permissions.asked_to_speak, new_config.asked_to_speak);
+    assert_eq!(permissions.is_mod, new_config.is_mod);
+    assert_eq!(permissions.is_speaker, new_config.is_speaker);
+}
+
 fn compare_user_and_db_user(communication_user: &User, db_user: &DBUser) {
+    //we aren't testing last online since, we are comparing
+    //static values that we know we inserted.
+    //last online is a datetime string that we don't save in memory
+    //or in plain text so we don't know it directly to compare
     assert_eq!(db_user.display_name, communication_user.display_name);
     assert_eq!(db_user.avatar_url, communication_user.avatar_url);
     assert_eq!(db_user.banner_url, communication_user.banner_url);
-    assert_eq!(db_user.last_online, communication_user.last_online);
     assert_eq!(db_user.bio, communication_user.bio);
     assert_eq!(db_user.user_name, communication_user.username);
     assert_eq!(db_user.contributions, communication_user.contributions);
@@ -313,10 +389,30 @@ fn generate_user_struct() -> DBUser {
         id: 0, //doesn't matter in insertion
         display_name: "test12".to_string(),
         avatar_url: "tes2t.com/avatar".to_string(),
-        user_name: "ultima2ete_tester".to_string(),
+        user_name: "ultima2etbvjhjhjhe_tester".to_string(),
         last_online: Utc::now().to_string(),
         github_id: "dw1".to_string(),
         discord_id: "2dwed".to_string(),
+        github_access_token: "2323wed2".to_string(),
+        discord_access_token: "29wedwed320".to_string(),
+        banned: true,
+        banned_reason: "ban evadding".to_string(),
+        bio: "teeeest".to_string(),
+        contributions: 40,
+        banner_url: "test.com/dwtest_banner".to_string(),
+    };
+    return user;
+}
+
+fn dyn_generate_user_struct(user_name: String, d_id: String, g_id: String) -> DBUser {
+    let user: DBUser = DBUser {
+        id: 0, //doesn't matter in insertion
+        display_name: "test12".to_string(),
+        avatar_url: "tes2t.com/avatar".to_string(),
+        user_name: user_name,
+        last_online: Utc::now().to_string(),
+        github_id: g_id,
+        discord_id: d_id,
         github_access_token: "2323wed2".to_string(),
         discord_access_token: "29wedwed320".to_string(),
         banned: true,
@@ -348,18 +444,18 @@ fn generate_different_user_struct() -> DBUser {
     return user;
 }
 
-fn generate_room_block(room_id: &i32) -> DBRoomBlock {
+fn generate_room_block(room_id: &i32, user_id: i32) -> DBRoomBlock {
     return DBRoomBlock {
         id: -1,
         owner_room_id: room_id.clone(),
-        blocked_user_id: -333,
+        blocked_user_id: user_id,
     };
 }
-fn generate_different_room_block(room_id: &i32) -> DBRoomBlock {
+fn generate_different_room_block(room_id: &i32, user_id: i32) -> DBRoomBlock {
     return DBRoomBlock {
         id: -1,
         owner_room_id: room_id.clone(),
-        blocked_user_id: -444,
+        blocked_user_id: user_id,
     };
 }
 
@@ -406,6 +502,17 @@ fn generate_sch_room_update(room_id: &i32) -> ScheduledRoomUpdate {
     };
 }
 
+fn generate_room_permissions() -> DBRoomPermissions {
+    return DBRoomPermissions {
+        room_id: -1000,
+        id: -1,
+        user_id: -919,
+        is_mod: true,
+        is_speaker: false,
+        asked_to_speak: false,
+    };
+}
+
 pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
     let (client, connection) = tokio_postgres::connect(
         "host=localhost user=postgres port=5432 password=password",
@@ -419,4 +526,9 @@ pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
     });
     let handler = ExecutionHandler::new(client);
     return Ok(handler);
+}
+
+pub async fn setup_tables(execution_handler: &mut ExecutionHandler) {
+    let result = execution_handler.create_all_tables_if_needed().await;
+    result.unwrap();
 }

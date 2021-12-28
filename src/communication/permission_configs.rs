@@ -1,4 +1,4 @@
-use crate::data_store::db_models::{DBRoomPermissions};
+use crate::data_store::db_models::DBRoomPermissions;
 
 /*
 This file contains all possible configurations for a user of a room. Regarding speaking
@@ -15,7 +15,7 @@ pub fn regular_speaker(room_id: i32, user_id: i32) -> DBRoomPermissions {
     };
 }
 
-pub fn modded_speaker(room_id: i32, user_id: i32) -> DBRoomPermissions{
+pub fn modded_speaker(room_id: i32, user_id: i32) -> DBRoomPermissions {
     return DBRoomPermissions {
         id: -1,
         is_mod: true,
