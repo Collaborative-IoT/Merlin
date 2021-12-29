@@ -18,7 +18,7 @@ async fn start_server() {
     pretty_env_logger::init();
 
     // Keep track of all connected users(websocket sender value).
-    let users = Users::default();
+    let users:Arc<RwLock<ServerState>>= Arc::new(RwLock::new(ServerState::new()));
     // Turn our "state" into a new Filter...
     let users = warp::any().map(move || users.clone());
 
@@ -26,7 +26,7 @@ async fn start_server() {
         // The `ws()` filter will prepare Websocket handshake...
         .and(warp::ws())
         .and(users)
-        .map(|ws: warp::ws::Ws, users| {
+        .map(|ws: warp::ws::Ws, users:Arc<RwLock<ServerState>>| {
             // This will call our function if the handshake succeeds.
             ws.on_upgrade(move |socket| user_connected(socket, users))
         });
@@ -34,7 +34,7 @@ async fn start_server() {
     warp::serve(main).run(([127, 0, 0, 1], 3030)).await;
 }
 
-async fn user_connected(ws: WebSocket, users: Users) {
+async fn user_connected(ws: WebSocket, server_state: Arc<RwLock<ServerState>>) {
     // Split the socket into a sender and receive of messages.
     let (mut user_ws_tx, mut user_ws_rx) = ws.split();
 
@@ -58,7 +58,7 @@ async fn user_connected(ws: WebSocket, users: Users) {
                     .await;
             }
         });
-        users.write().await.insert(current_user_id, tx);
+        server_state.write().await.peer_map.insert(current_user_id, tx);
 
         // Every time the user sends a message, broadcast it to
         // all other users...
@@ -70,27 +70,26 @@ async fn user_connected(ws: WebSocket, users: Users) {
                     break;
                 }
             };
-            user_message(&current_user_id, msg, &users).await;
+            user_message(&current_user_id, msg, &server_state).await;
         }
 
         // user_ws_rx stream will keep processing as long as the user stays
         // connected. Once they disconnect, then...
-        user_disconnected(&current_user_id, &users).await;
+        user_disconnected(&current_user_id, &server_state).await;
     }
 }
 
-async fn user_message(current_user_id: &i32, msg: Message, users: &Users) {
+async fn user_message(current_user_id: &i32, msg: Message, server_state:&Arc<RwLock<ServerState>> ) {
     // Skip any non-Text messages...
     let msg = if let Ok(s) = msg.to_str() {
         s
     } else {
         return;
     };
-    
 }
 
-async fn broadcast_message(current_user_id: &i32, new_msg: String, users: &Users) {
-    for (&uid, tx) in users.read().await.iter() {
+async fn broadcast_message(current_user_id: &i32, new_msg: String, server_state:&Arc<RwLock<ServerState>> ) {
+    for (&uid, tx) in server_state.read().await.peer_map.iter() {
         if current_user_id.to_owned() != uid {
             if let Err(_disconnected) = tx.send(Message::text(new_msg.clone())) {
                 //user disconnection is handled in another task
@@ -99,9 +98,9 @@ async fn broadcast_message(current_user_id: &i32, new_msg: String, users: &Users
     }
 }
 
-async fn user_disconnected(current_user_id: &i32, users: &Users) {
+async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<ServerState>>) {
     // Stream closed up, so remove from the user list
-    users.write().await.remove(current_user_id);
+    server_state.write().await.peer_map.remove(current_user_id);
 }
 
 async fn handle_authentication(
