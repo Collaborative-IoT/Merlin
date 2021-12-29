@@ -1,6 +1,7 @@
 // #![deny(warnings)]
 use futures_util::stream::SplitStream;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
+use std::net::SocketAddr;
 use std::collections::HashMap;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -12,9 +13,7 @@ use warp::ws::{Message, WebSocket};
 use warp::Filter;
 use crate::state::state::ServerState;
 
-type Users = Arc<RwLock<HashMap<i32, mpsc::UnboundedSender<Message>>>>;
-
-async fn start_server() {
+async fn start_server<T:Into<SocketAddr>>(addr:T) {
     pretty_env_logger::init();
 
     // Keep track of all connected users(websocket sender value).
@@ -31,7 +30,7 @@ async fn start_server() {
             ws.on_upgrade(move |socket| user_connected(socket, users))
         });
 
-    warp::serve(main).run(([127, 0, 0, 1], 3030)).await;
+    warp::serve(main).run(addr).await;
 }
 
 async fn user_connected(ws: WebSocket, server_state: Arc<RwLock<ServerState>>) {
