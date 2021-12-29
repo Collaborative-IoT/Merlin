@@ -1,11 +1,7 @@
-mod server;
 extern crate chrono;
 extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
-use std::sync::{Arc, Mutex};
-use std::{env, io::Error};
-use tokio::net::TcpListener;
 mod test;
 
 pub mod state {
@@ -42,6 +38,8 @@ pub mod communication {
         pub mod capture_and_fetch;
     }
 }
+
+pub mod server;
 
 #[tokio::main]
 async fn main() {

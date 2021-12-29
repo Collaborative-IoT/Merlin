@@ -5,8 +5,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tokio::net::{TcpListener, TcpStream};
-use tokio_tungstenite::tungstenite::{Message, Result};
-use tokio_tungstenite::WebSocketStream;
+use tokio::sync::mpsc;
+use warp::ws::{Message, WebSocket};
 //.keys().cloned().collect::<Vec<_>>();
 
 pub struct Board {
@@ -45,7 +45,7 @@ pub type IoTServerConnections = HashMap<String, Board>;
 //user id -> write connection.
 //broadcasting requires you to acquire the lock of the mutex
 //to access peer connections.
-pub type PeerMap = HashMap<String, SplitSink<WebSocketStream<tokio::net::TcpStream>, Message>>;
+pub type PeerMap = HashMap<i32, mpsc::UnboundedSender<Message>>;
 
 //current connected and authed users
 pub type ActiveUsers = HashMap<i32, User>;
