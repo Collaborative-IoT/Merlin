@@ -2,32 +2,29 @@
 use futures_util::stream::SplitStream;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
 use std::net::SocketAddr;
-use std::collections::HashMap;
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
-};
+use std::sync::{Arc};
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 use warp::Filter;
 use crate::state::state::ServerState;
+use crate::communication::communication_router;
 
 async fn start_server<T:Into<SocketAddr>>(addr:T) {
     pretty_env_logger::init();
 
     // Keep track of all connected users(websocket sender value).
-    let users:Arc<RwLock<ServerState>>= Arc::new(RwLock::new(ServerState::new()));
+    let server_state:Arc<RwLock<ServerState>>= Arc::new(RwLock::new(ServerState::new()));
     // Turn our "state" into a new Filter...
-    let users = warp::any().map(move || users.clone());
+    let server_state = warp::any().map(move || server_state.clone());
 
     let main = warp::path("main")
         // The `ws()` filter will prepare Websocket handshake...
         .and(warp::ws())
-        .and(users)
-        .map(|ws: warp::ws::Ws, users:Arc<RwLock<ServerState>>| {
+        .and(server_state)
+        .map(|ws: warp::ws::Ws, server_state:Arc<RwLock<ServerState>>| {
             // This will call our function if the handshake succeeds.
-            ws.on_upgrade(move |socket| user_connected(socket, users))
+            ws.on_upgrade(move |socket| user_connected(socket, server_state))
         });
 
     warp::serve(main).run(addr).await;
@@ -85,6 +82,7 @@ async fn user_message(current_user_id: &i32, msg: Message, server_state:&Arc<RwL
     } else {
         return;
     };
+    communication_router::route_msg(msg.to_string(), current_user_id).await;
 }
 
 async fn broadcast_message(current_user_id: &i32, new_msg: String, server_state:&Arc<RwLock<ServerState>> ) {
