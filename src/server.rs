@@ -13,43 +13,17 @@ use crate::auth::oauth_locations;
 use crate::auth::authentication_handler;
 use crate::http::Uri;
 
+
+
 async fn start_server<T:Into<SocketAddr>>(addr:T) {
     pretty_env_logger::init();
 
     // Keep track of all connected users(websocket sender value).
     let server_state:Arc<RwLock<ServerState>>= Arc::new(RwLock::new(ServerState::new()));
     // Turn our "state" into a new Filter...
-    let server_state = warp::any().map(move || server_state.clone());
 
-    //GET /user-api
-    let user_api_route = warp::path("/user-api")
-        // The `ws()` filter will prepare Websocket handshake...
-        .and(warp::ws())
-        .and(server_state)
-        .map(|ws: warp::ws::Ws, server_state:Arc<RwLock<ServerState>>| {
-            // This will call our function if the handshake succeeds.
-            ws.on_upgrade(move |socket| user_connected(socket, server_state))
-        });
 
-    let discord_redirect_url:Uri = oauth_locations::discord().parse().unwrap();
-    
-    //GET /auth
-    let discord_auth_route = 
-        warp::path("/auth/discord")
-        .map(move || warp::redirect(discord_redirect_url.to_owned()));
-    
-    //GET /api/discord/auth-callback
-    let discord_auth_callback_route = warp::path("/api/discord/auth-callback")
-        .map(||authentication_handler::gather_tokens_and_setup_account_if_needed(true));
 
-    let routes = 
-        warp::get()
-        .and(
-            user_api_route
-            .or(discord_auth_route)
-     );
-        
-    warp::serve(routes).run(addr).await;
 }
 
 async fn user_connected(ws: WebSocket, server_state: Arc<RwLock<ServerState>>) {
@@ -127,4 +101,37 @@ async fn handle_authentication(
     user_ws_rx: &mut SplitStream<WebSocket>,
 ) -> (bool, i32) {
     return (true, 2 as i32);
+}
+
+async fn setup_routes_and_serve<T:Into<SocketAddr>>(addr:T, server_state:Arc<RwLock<ServerState>>) {
+    let server_state = warp::any().map(move || server_state.clone());
+    //GET /user-api
+    let user_api_route = warp::path("/user-api")
+        // The `ws()` filter will prepare Websocket handshake...
+        .and(warp::ws())
+        .and(server_state)
+        .map(|ws: warp::ws::Ws, server_state:Arc<RwLock<ServerState>>| {
+            // This will call our function if the handshake succeeds.
+            ws.on_upgrade(move |socket| user_connected(socket, server_state))
+        });
+
+    let discord_redirect_url:Uri = oauth_locations::discord().parse().unwrap();
+    
+    //GET /auth
+    let discord_auth_route = 
+        warp::path("/auth/discord")
+        .map(move || warp::redirect(discord_redirect_url.to_owned()));
+    
+    //GET /api/discord/auth-callback
+    let discord_auth_callback_route = warp::path("/api/discord/auth-callback")
+        .map(||authentication_handler::gather_tokens_and_setup_account_if_needed(true));
+
+    let routes = 
+        warp::get()
+        .and(
+            user_api_route
+            .or(discord_auth_route)
+     );
+        
+    warp::serve(routes).run(addr).await;
 }
