@@ -1,4 +1,5 @@
 extern crate chrono;
+extern crate reqwest;
 extern crate warp;
 mod test;
 
@@ -37,7 +38,7 @@ pub mod communication {
     }
 }
 
-pub mod auth{
+pub mod auth {
     pub mod authentication_handler;
     pub mod oauth_locations;
 }

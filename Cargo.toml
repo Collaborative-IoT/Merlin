@@ -15,3 +15,4 @@ tokio = { version = "1", features = ["full"] }
 warp = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 tokio-stream = { version = "0.1.1", features = ["net"] }
+reqwest = { version = "0.11", features = ["json"] }

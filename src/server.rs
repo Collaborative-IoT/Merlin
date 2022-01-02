@@ -1,21 +1,21 @@
 // #![deny(warnings)]
+use crate::auth::authentication_handler;
+use crate::auth::oauth_locations;
+use crate::communication::communication_router;
+use crate::state::state::ServerState;
+use crate::warp::http::Uri;
 use futures_util::stream::SplitStream;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
 use std::net::SocketAddr;
-use std::sync::{Arc};
+use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 use warp::Filter;
-use crate::state::state::ServerState;
-use crate::communication::communication_router;
-use crate::auth::oauth_locations;
-use crate::auth::authentication_handler;
-use crate::warp::{http::Uri};
 
-pub async fn start_server<T:Into<SocketAddr>>(addr:T) {
+pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
     // Keep track of all connected users(websocket sender value).
-    let server_state:Arc<RwLock<ServerState>>= Arc::new(RwLock::new(ServerState::new()));
+    let server_state: Arc<RwLock<ServerState>> = Arc::new(RwLock::new(ServerState::new()));
     // Turn our "state" into a new Filter...
     setup_routes_and_serve(addr, server_state).await;
 }
@@ -44,7 +44,11 @@ async fn user_connected(ws: WebSocket, server_state: Arc<RwLock<ServerState>>) {
                     .await;
             }
         });
-        server_state.write().await.peer_map.insert(current_user_id, tx);
+        server_state
+            .write()
+            .await
+            .peer_map
+            .insert(current_user_id, tx);
 
         // Every time the user sends a message, broadcast it to
         // all other users...
@@ -65,7 +69,11 @@ async fn user_connected(ws: WebSocket, server_state: Arc<RwLock<ServerState>>) {
     }
 }
 
-async fn user_message(current_user_id: &i32, msg: Message, server_state:&Arc<RwLock<ServerState>> ) {
+async fn user_message(
+    current_user_id: &i32,
+    msg: Message,
+    server_state: &Arc<RwLock<ServerState>>,
+) {
     // Skip any non-Text messages...
     let msg = if let Ok(s) = msg.to_str() {
         s
@@ -75,7 +83,11 @@ async fn user_message(current_user_id: &i32, msg: Message, server_state:&Arc<RwL
     communication_router::route_msg(msg.to_string(), current_user_id).await;
 }
 
-async fn broadcast_message(current_user_id: &i32, new_msg: String, server_state:&Arc<RwLock<ServerState>> ) {
+async fn broadcast_message(
+    current_user_id: &i32,
+    new_msg: String,
+    server_state: &Arc<RwLock<ServerState>>,
+) {
     for (&uid, tx) in server_state.read().await.peer_map.iter() {
         if current_user_id.to_owned() != uid {
             if let Err(_disconnected) = tx.send(Message::text(new_msg.clone())) {
@@ -97,39 +109,41 @@ async fn handle_authentication(
     return (true, 2 as i32);
 }
 
-async fn setup_routes_and_serve<T:Into<SocketAddr>>(addr:T, server_state:Arc<RwLock<ServerState>>) {
+async fn setup_routes_and_serve<T: Into<SocketAddr>>(
+    addr: T,
+    server_state: Arc<RwLock<ServerState>>,
+) {
     let server_state = warp::any().map(move || server_state.clone());
+
     //GET /user-api
     let user_api_route = warp::path("user-api")
         // The `ws()` filter will prepare Websocket handshake...
         .and(warp::ws())
         .and(server_state)
-        .map(|ws: warp::ws::Ws, server_state:Arc<RwLock<ServerState>>| {
+        .map(|ws: warp::ws::Ws, server_state: Arc<RwLock<ServerState>>| {
             // This will call our function if the handshake succeeds.
             ws.on_upgrade(move |socket| user_connected(socket, server_state))
         });
 
-    let discord_redirect_url:Uri = oauth_locations::discord().parse().unwrap();
-    println!("{}",discord_redirect_url.to_owned());
-    let discord_auth_callback_route_url:Uri = oauth_locations::save_tokens_location("test".to_owned(), "test".to_owned()).parse().unwrap();
-    
-    //GET /auth
-    let discord_auth_route = 
-        warp::path!("auth"/"discord")
-        .map(move || 
-            warp::redirect::redirect(discord_redirect_url.to_owned()));
-    
-    //GET /api/discord/auth-callback
-    let discord_auth_callback_route = warp::path!("api"/"discord"/"auth-callback")
-        .map(move ||warp::redirect::redirect(discord_auth_callback_route_url.to_owned()));
+    let discord_redirect_url: Uri = oauth_locations::discord().parse().unwrap();
+    let discord_auth_callback_route_url: Uri =
+        oauth_locations::save_tokens_location("test".to_owned(), "test".to_owned())
+            .parse()
+            .unwrap();
 
-    let routes = 
-        warp::get()
-        .and(
-            user_api_route
+    //GET /auth
+    let discord_auth_route = warp::path!("auth" / "discord")
+        .map(move || warp::redirect::redirect(discord_redirect_url.to_owned()));
+
+    //GET /api/discord/auth-callback
+    let discord_auth_callback_route = warp::path!("api" / "discord" / "auth-callback")
+        .map(move || warp::redirect::redirect(discord_auth_callback_route_url.to_owned()));
+
+    let routes = warp::get().and(
+        user_api_route
             .or(discord_auth_route)
-            .or(discord_auth_callback_route)
-     );
-        
+            .or(discord_auth_callback_route),
+    );
+
     warp::serve(routes).run(addr).await;
 }
