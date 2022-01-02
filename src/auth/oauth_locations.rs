@@ -7,6 +7,7 @@ pub fn discord()->String{
     let our_redirect_url = format!("{}/api/discord/auth-callback",base_url);
     let discord_redirect_url = format!("https://discord.com/api/oauth2/authorize?client_id={}&redirect_uri={}&response_type=code&scope=identify",
         client_id, our_redirect_url);
+    println!("{}",discord_redirect_url);
     return discord_redirect_url;
 }
 

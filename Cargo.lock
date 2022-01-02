@@ -9,7 +9,6 @@ dependencies = [
  "chrono",
  "futures-channel",
  "futures-util",
- "http",
  "log",
  "tokio",
  "tokio-postgres",
