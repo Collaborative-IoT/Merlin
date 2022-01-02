@@ -1,7 +1,4 @@
 extern crate chrono;
-extern crate pretty_env_logger;
-#[macro_use]
-extern crate log;
 extern crate http;
 mod test;
 
@@ -49,8 +46,8 @@ pub mod server;
 
 #[tokio::main]
 async fn main() {
-    pretty_env_logger::init();
     print_start();
+    server::start_server(([127, 0, 0, 1], 3030)).await;
     //trace!("a trace example");
     //debug!("deboogging");
 
@@ -59,5 +56,5 @@ async fn main() {
 }
 
 fn print_start() {
-    info!("Started....");
+    //info!("Started....");
 }

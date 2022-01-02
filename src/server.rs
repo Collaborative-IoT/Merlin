@@ -13,17 +13,11 @@ use crate::auth::oauth_locations;
 use crate::auth::authentication_handler;
 use crate::http::Uri;
 
-
-
-async fn start_server<T:Into<SocketAddr>>(addr:T) {
-    pretty_env_logger::init();
-
+pub async fn start_server<T:Into<SocketAddr>>(addr:T) {
     // Keep track of all connected users(websocket sender value).
     let server_state:Arc<RwLock<ServerState>>= Arc::new(RwLock::new(ServerState::new()));
     // Turn our "state" into a new Filter...
-
-
-
+    setup_routes_and_serve(addr, server_state).await;
 }
 
 async fn user_connected(ws: WebSocket, server_state: Arc<RwLock<ServerState>>) {
@@ -106,7 +100,7 @@ async fn handle_authentication(
 async fn setup_routes_and_serve<T:Into<SocketAddr>>(addr:T, server_state:Arc<RwLock<ServerState>>) {
     let server_state = warp::any().map(move || server_state.clone());
     //GET /user-api
-    let user_api_route = warp::path("/user-api")
+    let user_api_route = warp::path("user-api")
         // The `ws()` filter will prepare Websocket handshake...
         .and(warp::ws())
         .and(server_state)
@@ -116,21 +110,24 @@ async fn setup_routes_and_serve<T:Into<SocketAddr>>(addr:T, server_state:Arc<RwL
         });
 
     let discord_redirect_url:Uri = oauth_locations::discord().parse().unwrap();
-    
+    let discord_auth_callback_route:Uri = oauth_locations::save_tokens_location("test".to_owned(), "test".to_owned()).parse().unwrap();
     //GET /auth
     let discord_auth_route = 
-        warp::path("/auth/discord")
-        .map(move || warp::redirect(discord_redirect_url.to_owned()));
+        warp::path!("auth"/"discord")
+        .map(move || {
+            println!("redirecting");
+            warp::redirect(discord_redirect_url.to_owned())});
     
     //GET /api/discord/auth-callback
-    let discord_auth_callback_route = warp::path("/api/discord/auth-callback")
-        .map(||authentication_handler::gather_tokens_and_setup_account_if_needed(true));
+    let discord_auth_callback_route = warp::path!("api"/"discord"/"auth-callback")
+        .map(move ||warp::redirect(discord_auth_callback_route.to_owned()));
 
     let routes = 
         warp::get()
         .and(
             user_api_route
             .or(discord_auth_route)
+            .or(discord_auth_callback_route)
      );
         
     warp::serve(routes).run(addr).await;
