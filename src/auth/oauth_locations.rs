@@ -14,7 +14,8 @@ pub fn discord()->String{
 //where the api redirects you on the frontend client
 //to save the tokens in the browser
 //before you authenticate via websocket
-pub fn save_tokens_location()->String{
+pub fn save_tokens_location(access:String, refresh:String)->String{
     let base_ui_url = env::var("BASE_UI_URL").unwrap();
-    return base_ui_url;
+    let ui_url:String = format!("{}/save_info?refresh={}&access={}", base_ui_url,refresh,access);
+    return ui_url;
 }
