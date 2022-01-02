@@ -2,6 +2,7 @@ extern crate chrono;
 extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
+extern crate http;
 mod test;
 
 pub mod state {
@@ -37,6 +38,11 @@ pub mod communication {
     pub mod tests {
         pub mod capture_and_fetch;
     }
+}
+
+pub mod auth{
+    pub mod authentication_handler;
+    pub mod oauth_locations;
 }
 
 pub mod server;

@@ -9,6 +9,9 @@ use warp::ws::{Message, WebSocket};
 use warp::Filter;
 use crate::state::state::ServerState;
 use crate::communication::communication_router;
+use crate::auth::oauth_locations;
+use crate::auth::authentication_handler;
+use crate::http::Uri;
 
 async fn start_server<T:Into<SocketAddr>>(addr:T) {
     pretty_env_logger::init();
@@ -18,7 +21,8 @@ async fn start_server<T:Into<SocketAddr>>(addr:T) {
     // Turn our "state" into a new Filter...
     let server_state = warp::any().map(move || server_state.clone());
 
-    let main = warp::path("main")
+    //GET /user-api
+    let user_api_route = warp::path("/user-api")
         // The `ws()` filter will prepare Websocket handshake...
         .and(warp::ws())
         .and(server_state)
@@ -27,7 +31,25 @@ async fn start_server<T:Into<SocketAddr>>(addr:T) {
             ws.on_upgrade(move |socket| user_connected(socket, server_state))
         });
 
-    warp::serve(main).run(addr).await;
+    let discord_redirect_url:Uri = oauth_locations::discord().parse().unwrap();
+    
+    //GET /auth
+    let discord_auth_route = 
+        warp::path("/auth/discord")
+        .map(move || warp::redirect(discord_redirect_url.to_owned()));
+    
+    //GET /api/discord/auth-callback
+    let discord_auth_callback_route = warp::path("/api/discord/auth-callback")
+        .map(||authentication_handler::gather_tokens_and_setup_account_if_needed(true));
+
+    let routes = 
+        warp::get()
+        .and(
+            user_api_route
+            .or(discord_auth_route)
+     );
+        
+    warp::serve(routes).run(addr).await;
 }
 
 async fn user_connected(ws: WebSocket, server_state: Arc<RwLock<ServerState>>) {
