@@ -10,6 +10,17 @@ pub fn discord() -> String {
     return discord_redirect_url;
 }
 
+pub fn github() -> String {
+    let client_id = env::var("GH_CLIENT_ID").unwrap();
+    let base_url = env::var("BASE_API_URL").unwrap();
+    let our_redirect_url = format!("{}/api/github/auth-callback", base_url);
+    let github_redirect_url = format!(
+        "https://github.com/login/oauth/authorize?client_id={}&redirect_uri={}&allow_signup=true",
+        client_id, our_redirect_url
+    );
+    return github_redirect_url;
+}
+
 //where the api redirects you on the frontend client
 //to save the tokens in the browser
 //before you authenticate via websocket

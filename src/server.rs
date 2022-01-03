@@ -126,8 +126,8 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
             ws.on_upgrade(move |socket| user_connected(socket, server_state))
         });
 
-    let discord_redirect_url: Uri = oauth_locations::discord().parse().unwrap();
     //GET /auth/discord
+    let discord_redirect_url: Uri = oauth_locations::discord().parse().unwrap();
     let discord_auth_route = warp::path!("auth" / "discord")
         .map(move || warp::redirect::redirect(discord_redirect_url.to_owned()));
 
@@ -147,10 +147,28 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
             }
         });
 
+    //GET auth/github
+    let github_redirect_url: Uri = oauth_locations::github().parse().unwrap();
+    let github_auth_route = warp::path!("auth" / "github")
+        .map(move || warp::redirect::redirect(github_redirect_url.to_owned()));
+
+    //GET /api/github/auth-callback
+    let github_auth_callback_route =
+        warp::path!("api" / "github" / "auth-callback").then(|| async {
+            warp::redirect::redirect(
+                authentication_handler::gather_tokens_and_construct_save_url_github(
+                    "test".to_owned(),
+                )
+                .await
+                .unwrap(),
+            )
+        });
     let routes = warp::get().and(
         user_api_route
             .or(discord_auth_route)
-            .or(discord_auth_callback_route),
+            .or(discord_auth_callback_route)
+            .or(github_auth_route)
+            .or(github_auth_callback_route),
     );
 
     warp::serve(routes).run(addr).await;

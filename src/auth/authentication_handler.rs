@@ -49,12 +49,17 @@ pub async fn gather_tokens_and_construct_save_url_discord(code: String) -> Resul
     }
 }
 
+pub async fn gather_tokens_and_construct_save_url_github(code: String) -> Result<Uri, Error> {
+    let url: Uri = "http://localhost:3030/test".parse().unwrap();
+    return Ok(url);
+}
+
 pub async fn gather_user_basic_data_discord(
     access_token: String,
 ) -> Result<serde_json::Value, Error> {
     let base_url = "https://discord.com/api/v6/users/@me";
-    let bearer_token: String = format!("Bearer {}", &access_token[1..access_token.len()-1]); //removes double quotes
-    println!("{}",bearer_token);
+    let bearer_token: String = format!("Bearer {}", &access_token[1..access_token.len() - 1]); //removes double quotes
+    println!("{}", bearer_token);
     let client = reqwest::Client::new();
     let result: serde_json::Value = client
         .get(base_url)
