@@ -1,6 +1,6 @@
 // #![deny(warnings)]
-use crate::auth::authentication_handler::CodeParams;
 use crate::auth::authentication_handler;
+use crate::auth::authentication_handler::CodeParams;
 use crate::auth::oauth_locations;
 use crate::communication::communication_router;
 use crate::state::state::ServerState;
@@ -13,7 +13,6 @@ use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 use warp::Filter;
-
 
 pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
     // Keep track of all connected users(websocket sender value).
@@ -135,9 +134,10 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
     //GET /api/discord/auth-callback
     let discord_auth_callback_route = warp::path!("api" / "discord" / "auth-callback")
         .and(warp::query::<CodeParams>())
-        .map(move |code: CodeParams| async {
-            //injects access/refresh tokens into a client location url and redirects
-            let url:Uri = authentication_handler::gather_tokens_and_save_url_for_discord(code.code).await;
+        .then(|code: CodeParams| async {
+            let url: Uri =
+                authentication_handler::gather_tokens_and_construct_save_url_discord(code.code)
+                    .await;
             warp::redirect::redirect(url)
         });
 

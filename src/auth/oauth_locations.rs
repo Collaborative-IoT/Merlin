@@ -17,7 +17,17 @@ pub fn save_tokens_location(access: String, refresh: String) -> String {
     let base_ui_url = env::var("BASE_UI_URL").unwrap();
     let ui_url: String = format!(
         "{}/save_tokens?refresh={}&access={}",
-        base_ui_url, refresh, access
+        base_ui_url,
+        &refresh[1..refresh.len() - 2],
+        &access[1..access.len() - 2] //removes the double quotes
     );
+    println!("{}", ui_url);
+    return ui_url;
+}
+
+//place where all failed auth attempts redirect
+pub fn error_auth_location() -> String {
+    let base_ui_url = env::var("BASE_UI_URL").unwrap();
+    let ui_url: String = format!("{}/error_auth", base_ui_url);
     return ui_url;
 }

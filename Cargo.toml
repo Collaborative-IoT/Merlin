@@ -17,3 +17,4 @@ futures-util = { version = "0.3", default-features = false, features = ["sink"] 
 tokio-stream = { version = "0.1.1", features = ["net"] }
 reqwest = { version = "0.11", features = ["json"] }
 serde = {version = "1.0.133", features = ["derive"] }
+serde_json = "1.0"
