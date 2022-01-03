@@ -10,14 +10,6 @@ pub struct CodeParams {
     pub code: String,
 }
 
-pub async fn authenticate_with_discord(token: String) -> bool {
-    return true;
-}
-
-pub async fn authenticate_with_github(token: String) -> bool {
-    return false;
-}
-
 pub async fn gather_tokens_and_construct_save_url_discord(code: String) -> Result<Uri, Error> {
     let base_url = "https://discordapp.com/api/oauth2/token";
     let base_api_url = env::var("BASE_API_URL").unwrap();
@@ -46,9 +38,6 @@ pub async fn gather_tokens_and_construct_save_url_discord(code: String) -> Resul
     if discord_token_gather_is_valid(&result) {
         let access_token: String = result["access_token"].to_owned().to_string();
         let refresh_token: String = result["refresh_token"].to_owned().to_string();
-        println!("access {}",access_token);
-        println!("refresh {}",refresh_token);
-        gather_user_basic_data_discord(access_token.to_owned()).await;
         let discord_auth_callback_route_url: Uri =
             oauth_locations::save_tokens_location(access_token, refresh_token)
                 .parse()
@@ -64,7 +53,7 @@ pub async fn gather_user_basic_data_discord(
     access_token: String,
 ) -> Result<serde_json::Value, Error> {
     let base_url = "https://discord.com/api/v6/users/@me";
-    let bearer_token: String = format!("Bearer {}", &access_token[1..access_token.len()-1]);
+    let bearer_token: String = format!("Bearer {}", &access_token[1..access_token.len()-1]); //removes double quotes
     println!("{}",bearer_token);
     let client = reqwest::Client::new();
     let result: serde_json::Value = client
