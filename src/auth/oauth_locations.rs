@@ -18,8 +18,8 @@ pub fn save_tokens_location(access: String, refresh: String) -> String {
     let ui_url: String = format!(
         "{}/save_tokens?refresh={}&access={}",
         base_ui_url,
-        &refresh[1..refresh.len() - 2],
-        &access[1..access.len() - 2] //removes the double quotes
+        &refresh[1..refresh.len() - 1],
+        &access[1..access.len() - 1] //removes the double quotes
     );
     println!("{}", ui_url);
     return ui_url;

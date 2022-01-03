@@ -135,10 +135,16 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
     let discord_auth_callback_route = warp::path!("api" / "discord" / "auth-callback")
         .and(warp::query::<CodeParams>())
         .then(|code: CodeParams| async {
-            let url: Uri =
+            let token_url_result =
                 authentication_handler::gather_tokens_and_construct_save_url_discord(code.code)
                     .await;
-            warp::redirect::redirect(url)
+            if token_url_result.is_ok() {
+                let url: Uri = token_url_result.unwrap();
+                warp::redirect::redirect(url)
+            } else {
+                let url: Uri = oauth_locations::error_auth_location().parse().unwrap();
+                warp::redirect::redirect(url)
+            }
         });
 
     let routes = warp::get().and(
