@@ -51,6 +51,28 @@ pub async fn gather_tokens_and_construct_save_url_discord(code: String) -> Resul
 
 pub async fn gather_tokens_and_construct_save_url_github(code: String) -> Result<Uri, Error> {
     let url: Uri = "http://localhost:3030/test".parse().unwrap();
+    let base_url = "https://github.com/login/oauth/token";
+    let client_id = env::var("GH_CLIENT_ID").unwrap();
+    let client_secret = env::var("GH_CLIENT_SECRET").unwrap();
+    let base_api_url = env::var("BASE_API_URL").unwrap();
+    let our_redirect_url = format!("{}/api/github/auth-callback", base_api_url);
+    let client = reqwest::Client::new();
+    let params = [
+        ("client_id", client_id),
+        ("client_secret", client_secret),
+        ("code", code),
+        ("redirect_uri", our_redirect_url),
+    ];
+
+    let result = client
+        .post(base_url)
+        .form(&params)
+        .send()
+        .await?
+        .text()
+        .await?;
+
+    println!("{:?}", result);
     return Ok(url);
 }
 

@@ -153,14 +153,13 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
         .map(move || warp::redirect::redirect(github_redirect_url.to_owned()));
 
     //GET /api/github/auth-callback
-    let github_auth_callback_route =
-        warp::path!("api" / "github" / "auth-callback").then(|| async {
+    let github_auth_callback_route = warp::path!("api" / "github" / "auth-callback")
+        .and(warp::query::<CodeParams>())
+        .then(|code: CodeParams| async {
             warp::redirect::redirect(
-                authentication_handler::gather_tokens_and_construct_save_url_github(
-                    "test".to_owned(),
-                )
-                .await
-                .unwrap(),
+                authentication_handler::gather_tokens_and_construct_save_url_github(code.code)
+                    .await
+                    .unwrap(),
             )
         });
     let routes = warp::get().and(
