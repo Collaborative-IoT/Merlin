@@ -123,7 +123,10 @@ pub async fn gather_user_basic_data_github(
         .get(base_url)
         .header("Authorization", bearer_token)
         .header("Accept", "application/json")
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0")
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0",
+        )
         .send()
         .await?
         .json()
