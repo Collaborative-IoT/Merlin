@@ -4,7 +4,7 @@ by using access tokens.
 */
 
 use crate::data_store::sql_execution_handler::ExecutionHandler;
-use crate::communication::communication_handler;
+use crate::communication::{data_capturer, data_fetcher};
 
 pub async fn parse_and_capture_discord_user_data(data:serde_json::Value){
 
