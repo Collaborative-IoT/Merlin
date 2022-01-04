@@ -10,7 +10,7 @@ use futures_util::stream::SplitStream;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
 use std::env;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::sync::{mpsc, RwLock};
 use tokio_postgres::{Error, NoTls};
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -20,9 +20,10 @@ use warp::Filter;
 pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
     // Keep track of all connected users(websocket sender value).
     let server_state: Arc<RwLock<ServerState>> = Arc::new(RwLock::new(ServerState::new()));
-
+    let execution_handler: Arc<Mutex<ExecutionHandler>> =
+        Arc::new(Mutex::new(setup_execution_handler().await.unwrap()));
     // Turn our "state" into a new Filter...
-    setup_routes_and_serve(addr, server_state).await;
+    setup_routes_and_serve(addr, server_state, execution_handler).await;
 }
 
 async fn user_connected(ws: WebSocket, server_state: Arc<RwLock<ServerState>>) {
@@ -117,18 +118,25 @@ async fn handle_authentication(
 async fn setup_routes_and_serve<T: Into<SocketAddr>>(
     addr: T,
     server_state: Arc<RwLock<ServerState>>,
+    execution_handler: Arc<Mutex<ExecutionHandler>>,
 ) {
     let server_state = warp::any().map(move || server_state.clone());
+    let execution_handler = warp::any().map(move || execution_handler.clone());
 
     //GET /user-api
     let user_api_route = warp::path("user-api")
         // The `ws()` filter will prepare Websocket handshake...
         .and(warp::ws())
         .and(server_state)
-        .map(|ws: warp::ws::Ws, server_state: Arc<RwLock<ServerState>>| {
-            // This will call our function if the handshake succeeds.
-            ws.on_upgrade(move |socket| user_connected(socket, server_state))
-        });
+        .and(execution_handler)
+        .map(
+            |ws: warp::ws::Ws,
+             server_state: Arc<RwLock<ServerState>>,
+             execution_handler: Arc<Mutex<ExecutionHandler>>| {
+                // This will call our function if the handshake succeeds.
+                ws.on_upgrade(move |socket| user_connected(socket, server_state))
+            },
+        );
 
     //GET /auth/discord
     let discord_redirect_url: Uri = oauth_locations::discord().parse().unwrap();
@@ -189,6 +197,7 @@ async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
     );
 
     let (client, connection) = tokio_postgres::connect(&config, NoTls).await?;
+    //TODO: handle connection error
     tokio::spawn(async move { if let Err(e) = connection.await {} });
     let handler = ExecutionHandler::new(client);
     return Ok(handler);
