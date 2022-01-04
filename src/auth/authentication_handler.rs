@@ -50,8 +50,7 @@ pub async fn gather_tokens_and_construct_save_url_discord(code: String) -> Resul
 }
 
 pub async fn gather_tokens_and_construct_save_url_github(code: String) -> Result<Uri, Error> {
-    let url: Uri = "http://localhost:3030/test".parse().unwrap();
-    let base_url = "https://github.com/login/oauth/token";
+    let base_url = "https://github.com/login/oauth/access_token";
     let client_id = env::var("GH_CLIENT_ID").unwrap();
     let client_secret = env::var("GH_CLIENT_SECRET").unwrap();
     let base_api_url = env::var("BASE_API_URL").unwrap();
@@ -67,13 +66,26 @@ pub async fn gather_tokens_and_construct_save_url_github(code: String) -> Result
     let result = client
         .post(base_url)
         .form(&params)
+        .header("Accept", "application/json")
         .send()
         .await?
         .text()
         .await?;
+    //comes with surrounding double quotes
+    let json_value: serde_json::Value = serde_json::from_str(&result).unwrap();
 
-    println!("{:?}", result);
-    return Ok(url);
+    if github_token_gather_is_valid(&json_value) {
+        let access_token: String = json_value["access_token"].to_owned().to_string();
+        let refresh_token: String = " invalidforplatform ".to_owned().to_string();
+        let github_auth_callback_route_url: Uri =
+            oauth_locations::save_tokens_location(access_token, refresh_token)
+                .parse()
+                .unwrap();
+        return Ok(github_auth_callback_route_url);
+    } else {
+        let failed_auth_location: Uri = oauth_locations::error_auth_location().parse().unwrap();
+        return Ok(failed_auth_location);
+    }
 }
 
 pub async fn gather_user_basic_data_discord(
@@ -99,6 +111,14 @@ pub fn discord_token_gather_is_valid(result: &serde_json::Value) -> bool {
         && result["refresh_token"] != serde_json::Value::Null
         && result["error"] == serde_json::Value::Null
     {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+pub fn github_token_gather_is_valid(result: &serde_json::Value) -> bool {
+    if result["access_token"] != serde_json::Value::Null {
         return true;
     } else {
         return false;
