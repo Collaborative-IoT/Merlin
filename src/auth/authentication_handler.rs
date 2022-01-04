@@ -9,7 +9,7 @@ use std::env;
 
 /*
 Handles the authentication logic for gathering basic data
-and constructing url for callbacks.
+and constructing urls for callbacks.
 
 Logic could be reduced, but is better to clearly show endpoints.
 */
@@ -84,6 +84,7 @@ pub async fn gather_tokens_and_construct_save_url_github(code: String) -> Result
 
     if github_token_gather_is_valid(&json_value) {
         let access_token: String = json_value["access_token"].to_owned().to_string();
+        gather_user_basic_data_github(access_token.to_owned()).await;
         let refresh_token: String = " invalidforplatform ".to_owned().to_string();
         let github_auth_callback_route_url: Uri =
             oauth_locations::save_tokens_location(access_token, refresh_token)
@@ -101,7 +102,6 @@ pub async fn gather_user_basic_data_discord(
 ) -> Result<serde_json::Value, Error> {
     let base_url = "https://discord.com/api/v6/users/@me";
     let bearer_token: String = format!("Bearer {}", &access_token[1..access_token.len() - 1]); //removes double quotes
-    println!("{}", bearer_token);
     let client = reqwest::Client::new();
     let result: serde_json::Value = client
         .get(base_url)
@@ -113,6 +113,24 @@ pub async fn gather_user_basic_data_discord(
     println!("{:?}", result);
     return Ok(result);
 }
+
+pub async fn gather_user_basic_data_github(
+    access_token: String,
+) -> Result<serde_json::Value, Error> {
+    let base_url = "https://api.github.com/user";
+    let bearer_token: String = format!("Bearer {}", &access_token[1..access_token.len() - 1]); //removes double quotes
+    let client = reqwest::Client::new();
+    let result: serde_json::Value = client
+        .get(base_url)
+        .header("Authorization", bearer_token)
+        .send()
+        .await?
+        .json()
+        .await?;
+    println!("{:?}", result);
+    return Ok(result);
+}
+
 
 pub fn discord_token_gather_is_valid(result: &serde_json::Value) -> bool {
     if result["access_token"] != serde_json::Value::Null
