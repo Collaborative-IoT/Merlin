@@ -115,7 +115,7 @@ pub async fn gather_user_basic_data_discord(
 
 pub async fn gather_user_basic_data_github(
     access_token: String,
-) -> Result<(), Error> {
+) -> Result<serde_json::Value, Error> {
     let base_url = "https://api.github.com/user";
     let bearer_token: String = format!("token {}", &access_token[1..access_token.len() - 1]); //removes double quotes
     let client = reqwest::Client::new();
@@ -126,12 +126,11 @@ pub async fn gather_user_basic_data_github(
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0")
         .send()
         .await?
-        .text()
+        .json()
         .await?;
     println!("{:?}", result);
-    return Ok(());
+    return Ok(result);
 }
-
 
 pub fn discord_token_gather_is_valid(result: &serde_json::Value) -> bool {
     if result["access_token"] != serde_json::Value::Null
