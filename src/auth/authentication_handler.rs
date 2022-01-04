@@ -6,6 +6,14 @@ use serde::{Deserialize, Serialize};
 use std::env;
 
 #[derive(Deserialize, Serialize)]
+
+/*
+Handles the authentication logic for gathering basic data
+and constructing url for callbacks.
+
+Logic could be reduced, but is better to clearly show endpoints.
+*/
+
 pub struct CodeParams {
     pub code: String,
 }
