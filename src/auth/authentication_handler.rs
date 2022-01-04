@@ -84,7 +84,7 @@ pub async fn gather_tokens_and_construct_save_url_github(code: String) -> Result
 
     if github_token_gather_is_valid(&json_value) {
         let access_token: String = json_value["access_token"].to_owned().to_string();
-        gather_user_basic_data_github(access_token.to_owned()).await;
+        gather_user_basic_data_github(access_token.to_owned()).await.unwrap();
         let refresh_token: String = " invalidforplatform ".to_owned().to_string();
         let github_auth_callback_route_url: Uri =
             oauth_locations::save_tokens_location(access_token, refresh_token)
@@ -116,19 +116,21 @@ pub async fn gather_user_basic_data_discord(
 
 pub async fn gather_user_basic_data_github(
     access_token: String,
-) -> Result<serde_json::Value, Error> {
+) -> Result<(), Error> {
     let base_url = "https://api.github.com/user";
-    let bearer_token: String = format!("Bearer {}", &access_token[1..access_token.len() - 1]); //removes double quotes
+    let bearer_token: String = format!("token {}", &access_token[1..access_token.len() - 1]); //removes double quotes
     let client = reqwest::Client::new();
-    let result: serde_json::Value = client
+    let result = client
         .get(base_url)
         .header("Authorization", bearer_token)
+        .header("Accept", "application/json")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0")
         .send()
         .await?
-        .json()
+        .text()
         .await?;
     println!("{:?}", result);
-    return Ok(result);
+    return Ok(());
 }
 
 
