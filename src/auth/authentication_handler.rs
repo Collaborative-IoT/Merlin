@@ -84,7 +84,6 @@ pub async fn gather_tokens_and_construct_save_url_github(code: String) -> Result
 
     if github_token_gather_is_valid(&json_value) {
         let access_token: String = json_value["access_token"].to_owned().to_string();
-        gather_user_basic_data_github(access_token.to_owned()).await.unwrap();
         let refresh_token: String = " invalidforplatform ".to_owned().to_string();
         let github_auth_callback_route_url: Uri =
             oauth_locations::save_tokens_location(access_token, refresh_token)
