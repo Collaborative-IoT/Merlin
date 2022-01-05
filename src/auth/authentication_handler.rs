@@ -46,6 +46,7 @@ pub async fn gather_tokens_and_construct_save_url_discord(code: String) -> Resul
     if discord_token_gather_is_valid(&result) {
         let access_token: String = result["access_token"].to_owned().to_string();
         let refresh_token: String = result["refresh_token"].to_owned().to_string();
+        gather_user_basic_data_discord(access_token.to_owned()).await;
         let discord_auth_callback_route_url: Uri =
             oauth_locations::save_tokens_location(access_token, refresh_token)
                 .parse()
