@@ -16,21 +16,28 @@ pub async fn parse_and_capture_discord_user_data(
     if discord_user_request_is_valid(&data) {
         let discord_user_id: String = data["id"].to_string();
         let discord_avatar_id: String = data["avatar"].to_string();
+        let discord_username: String = data["username"].to_string();
 
         //remove the trailing/begining double quotes
         //since the avatar id is formatted like "djweodiwdk"
         //instead of just djweodiwdk
-        let fixed_dc_user_id = discord_user_id.to_owned()[1..discord_user_id.len() - 1].to_string();
-        let fixed_dc_avatar_id =
-            discord_avatar_id.to_owned()[1..discord_avatar_id.len() - 1].to_string();
+        let fixed_dc_user_id = discord_user_id[1..discord_user_id.len() - 1].to_string();
+        let fixed_dc_avatar_id = discord_avatar_id[1..discord_avatar_id.len() - 1].to_string();
+        let fixed_dc_username = discord_username[1..discord_username.len() - 1].to_string();
         let avatar_url =
             construct_discord_image_url(fixed_dc_user_id.as_str(), fixed_dc_avatar_id.as_str());
         let mut handler = execution_handler.lock().unwrap();
         let pre_check_result = handler
-            .select_user_by_discord_or_github_id(discord_user_id.to_owned(), "-1".to_string())
+            .select_user_by_discord_or_github_id(fixed_dc_user_id.to_owned(), "-1".to_string())
             .await;
         if pre_check_result.is_ok() && pre_check_result.unwrap().len() == 0 {
-            generate_and_capture_new_user(fixed_dc_user_id, "-1".to_string(), avatar_url)
+            //using discord username as our initial display name
+            generate_and_capture_new_user(
+                fixed_dc_user_id,
+                "-1".to_string(),
+                avatar_url,
+                fixed_dc_username,
+            )
         }
     }
 }
@@ -47,7 +54,7 @@ pub fn construct_discord_image_url(discord_user_id: &str, discord_user_avatar_id
 pub fn discord_user_request_is_valid(data: &serde_json::Value) -> bool {
     if data["avatar"] != serde_json::Value::Null
         && data["id"] != serde_json::Value::Null
-        && data[""]
+        && data["username"] != serde_json::Value::Null
     {
         return true;
     } else {
@@ -55,9 +62,14 @@ pub fn discord_user_request_is_valid(data: &serde_json::Value) -> bool {
     }
 }
 
-pub fn generate_and_capture_new_user(discord_id: String, github_id: String, avatar_url: String) {
+pub fn generate_and_capture_new_user(
+    discord_id: String,
+    github_id: String,
+    avatar_url: String,
+    display_name: String,
+) {
     let user: DBUser = DBUser {
-        id: 0, //doesn't matter in insertion
+        id: -1, //doesn't matter in insertion
         display_name: "test12".to_string(),
         avatar_url: "test.com/avatar2".to_string(),
         user_name: "ultimate_tester2".to_string(),
