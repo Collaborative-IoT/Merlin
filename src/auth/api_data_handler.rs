@@ -42,7 +42,9 @@ pub async fn parse_and_capture_discord_user_data(
                 fixed_dc_username,
                 "-1".to_owned(),
                 access_token,
+                &mut handler,
             )
+            .await;
         }
     }
 }
@@ -67,13 +69,14 @@ pub fn discord_user_request_is_valid(data: &serde_json::Value) -> bool {
     }
 }
 
-pub fn generate_and_capture_new_user(
+pub async fn generate_and_capture_new_user(
     discord_id: String,
     github_id: String,
     avatar_url: String,
     display_name: String,
     gh_access: String,
     dc_access: String,
+    execution_handler: &mut ExecutionHandler,
 ) {
     let user: DBUser = DBUser {
         id: -1, //doesn't matter in insertion
@@ -86,9 +89,10 @@ pub fn generate_and_capture_new_user(
         github_access_token: gh_access,
         discord_access_token: dc_access,
         banned: false,
-        banned_reason: "not banned",
+        banned_reason: "not banned".to_string(),
         bio: "This user is a myth!".to_string(),
-        contributions: 40,
+        contributions: 0,
         banner_url: "".to_string(),
     };
+    data_capturer::capture_new_user(execution_handler, &user).await;
 }
