@@ -5,13 +5,16 @@ by using access tokens.
 use crate::communication::{data_capturer, data_fetcher};
 use crate::data_store::db_models::DBUser;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
+use chrono::Utc;
 use std::sync::{Arc, Mutex};
+use uuid::Uuid;
 
 //grabs user api data and
 //creates new user if it doesn't exist
 pub async fn parse_and_capture_discord_user_data(
     data: serde_json::Value,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    access_token: String,
 ) {
     if discord_user_request_is_valid(&data) {
         let discord_user_id: String = data["id"].to_string();
@@ -37,6 +40,8 @@ pub async fn parse_and_capture_discord_user_data(
                 "-1".to_string(),
                 avatar_url,
                 fixed_dc_username,
+                "-1".to_owned(),
+                access_token,
             )
         }
     }
@@ -67,21 +72,23 @@ pub fn generate_and_capture_new_user(
     github_id: String,
     avatar_url: String,
     display_name: String,
+    gh_access: String,
+    dc_access: String,
 ) {
     let user: DBUser = DBUser {
         id: -1, //doesn't matter in insertion
-        display_name: "test12".to_string(),
-        avatar_url: "test.com/avatar2".to_string(),
-        user_name: "ultimate_tester2".to_string(),
+        display_name: display_name,
+        avatar_url: avatar_url,
+        user_name: Uuid::new_v4().to_string(),
         last_online: Utc::now().to_string(),
-        github_id: "12".to_string(),
-        discord_id: "22".to_string(),
-        github_access_token: "232322".to_string(),
-        discord_access_token: "293202".to_string(),
-        banned: true,
-        banned_reason: "ban evading2".to_string(),
-        bio: "test2".to_string(),
+        github_id: github_id,
+        discord_id: discord_id,
+        github_access_token: gh_access,
+        discord_access_token: dc_access,
+        banned: false,
+        banned_reason: "not banned",
+        bio: "This user is a myth!".to_string(),
         contributions: 40,
-        banner_url: "test.com/test_banner2".to_string(),
+        banner_url: "".to_string(),
     };
 }
