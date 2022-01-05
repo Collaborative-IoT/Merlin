@@ -1,6 +1,6 @@
 # Auth
 
-This is the auth handler, this collection of code handles the main logic behind authentication,
+This is the auth handler, this collection of code handles the main logic behind authentication.
 
 ## It handles:
  - Initial user creation by using the global sql execution handler(along with the capture manager).
