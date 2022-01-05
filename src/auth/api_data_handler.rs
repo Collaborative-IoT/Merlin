@@ -6,16 +6,17 @@ use crate::communication::{data_capturer, data_fetcher};
 use crate::data_store::db_models::DBUser;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use chrono::Utc;
-use std::sync::{Arc, Mutex};
+use futures::lock::Mutex;
+use std::sync::Arc;
 use uuid::Uuid;
 
 //grabs user api data and
 //creates new user if it doesn't exist
 pub async fn parse_and_capture_discord_user_data(
     data: serde_json::Value,
-    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    execution_handler: Arc<Mutex<ExecutionHandler>>,
     access_token: String,
-) {
+) -> bool {
     if discord_user_request_is_valid(&data) {
         let discord_user_id: String = data["id"].to_string();
         let discord_avatar_id: String = data["avatar"].to_string();
@@ -29,13 +30,13 @@ pub async fn parse_and_capture_discord_user_data(
         let fixed_dc_username = discord_username[1..discord_username.len() - 1].to_string();
         let avatar_url =
             construct_discord_image_url(fixed_dc_user_id.as_str(), fixed_dc_avatar_id.as_str());
-        let mut handler = execution_handler.lock().unwrap();
+        let mut handler = execution_handler.lock().await;
         let pre_check_result = handler
             .select_user_by_discord_or_github_id(fixed_dc_user_id.to_owned(), "-1".to_string())
             .await;
         if pre_check_result.is_ok() && pre_check_result.unwrap().len() == 0 {
             //using discord username as our initial display name
-            generate_and_capture_new_user(
+            return generate_and_capture_new_user(
                 fixed_dc_user_id,
                 "-1".to_string(),
                 avatar_url,
@@ -45,8 +46,9 @@ pub async fn parse_and_capture_discord_user_data(
                 &mut handler,
             )
             .await;
-        }
-    }
+        };
+    };
+    return false;
 }
 
 pub async fn parse_and_capture_github_user_data(data: serde_json::Value) {}
@@ -77,7 +79,7 @@ pub async fn generate_and_capture_new_user(
     gh_access: String,
     dc_access: String,
     execution_handler: &mut ExecutionHandler,
-) {
+) -> bool {
     let user: DBUser = DBUser {
         id: -1, //doesn't matter in insertion
         display_name: display_name,
@@ -94,5 +96,12 @@ pub async fn generate_and_capture_new_user(
         contributions: 0,
         banner_url: "".to_string(),
     };
-    data_capturer::capture_new_user(execution_handler, &user).await;
+    let user_id = data_capturer::capture_new_user(execution_handler, &user).await;
+    if user_id != -1 {
+        println!("user successfully created!");
+        return true;
+    } else {
+        println!("issue with user creation!");
+        return false;
+    }
 }

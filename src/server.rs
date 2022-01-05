@@ -6,11 +6,12 @@ use crate::communication::communication_router;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::state::state::ServerState;
 use crate::warp::http::Uri;
+use futures::lock::Mutex;
 use futures_util::stream::SplitStream;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
 use std::env;
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tokio_postgres::{Error, NoTls};
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -128,7 +129,7 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
         // The `ws()` filter will prepare Websocket handshake...
         .and(warp::ws())
         .and(server_state)
-        .and(execution_handler)
+        .and(execution_handler.clone())
         .map(
             |ws: warp::ws::Ws,
              server_state: Arc<RwLock<ServerState>>,
@@ -145,19 +146,25 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
 
     //GET /api/discord/auth-callback
     let discord_auth_callback_route = warp::path!("api" / "discord" / "auth-callback")
+        .and(execution_handler.clone())
         .and(warp::query::<CodeParams>())
-        .then(|code: CodeParams| async {
-            let token_url_result =
-                authentication_handler::gather_tokens_and_construct_save_url_discord(code.code)
+        .then(
+            |execution_handler: Arc<Mutex<ExecutionHandler>>, code: CodeParams| async {
+                let token_url_result =
+                    authentication_handler::gather_tokens_and_construct_save_url_discord(
+                        code.code,
+                        execution_handler,
+                    )
                     .await;
-            if token_url_result.is_ok() {
-                let url: Uri = token_url_result.unwrap();
-                warp::redirect::redirect(url)
-            } else {
-                let url: Uri = oauth_locations::error_auth_location().parse().unwrap();
-                warp::redirect::redirect(url)
-            }
-        });
+                if token_url_result.is_ok() {
+                    let url: Uri = token_url_result.unwrap();
+                    warp::redirect::redirect(url)
+                } else {
+                    let url: Uri = oauth_locations::error_auth_location().parse().unwrap();
+                    warp::redirect::redirect(url)
+                }
+            },
+        );
 
     //GET auth/github
     let github_redirect_url: Uri = oauth_locations::github().parse().unwrap();
