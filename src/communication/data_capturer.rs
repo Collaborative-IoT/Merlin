@@ -35,11 +35,11 @@ pub async fn capture_new_user(execution_handler: &mut ExecutionHandler, user: &D
             let user_id: i32 = insert_result.unwrap();
             return user_id;
         } else {
-            println!("not ok");
-            return -1 as i32;
+            //unexpected error
+            return -2 as i32;
         }
     } else {
-        println!("already exist");
+        //duplicate
         return -1 as i32;
     }
 }

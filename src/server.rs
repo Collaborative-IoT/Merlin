@@ -206,6 +206,7 @@ async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
     let (client, connection) = tokio_postgres::connect(&config, NoTls).await?;
     //TODO: handle connection error
     tokio::spawn(async move { if let Err(e) = connection.await {} });
-    let handler = ExecutionHandler::new(client);
+    let mut handler = ExecutionHandler::new(client);
+    handler.create_all_tables_if_needed().await?;
     return Ok(handler);
 }

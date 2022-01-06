@@ -28,12 +28,12 @@ pub const FOLLOWER_TABLE_CREATION: &str = "
 pub const USER_TABLE_CREATION: &str = "
     CREATE TABLE IF NOT EXISTS users(
         Id SERIAL PRIMARY KEY,
-        displayName VARCHAR(30),
+        displayName VARCHAR(255),
         avatarUrl VARCHAR(255),
-        userName VARCHAR(30),
+        userName VARCHAR(255),
         lastOnline VARCHAR(255),
-        githubId VARCHAR(50),
-        discordId VARCHAR(50),
+        githubId VARCHAR(255),
+        discordId VARCHAR(255),
         githubAccessToken VARCHAR(255),
         discordAccessToken VARCHAR(255),
         banned BOOLEAN NOT NULL,

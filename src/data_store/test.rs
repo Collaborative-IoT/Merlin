@@ -83,6 +83,7 @@ async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
             println!("connection error: {}", e);
         }
     });
-    let handler = ExecutionHandler::new(client);
+    let mut handler = ExecutionHandler::new(client);
+    //if error? should never error out due to query correction
     return Ok(handler);
 }

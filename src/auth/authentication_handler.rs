@@ -50,22 +50,33 @@ pub async fn gather_tokens_and_construct_save_url_discord(
 
     let failed_auth_location: Uri = oauth_locations::error_auth_location().parse().unwrap();
 
-    //make sure response is correct and construct url for client side saving
     if discord_token_gather_is_valid(&result) {
         let access_token: String = result["access_token"].to_owned().to_string();
         let refresh_token: String = result["refresh_token"].to_owned().to_string();
 
+        //make api request and grab user json data
         let basic_data_gather_result =
             gather_user_basic_data_discord(access_token.to_owned()).await;
+
+        //if the json data was good, meaning no errors from api call
         if basic_data_gather_result.is_ok() {
             let basic_data = basic_data_gather_result.unwrap();
-            api_data_handler::parse_and_capture_discord_user_data(
+            let action_was_successful = api_data_handler::parse_and_capture_discord_user_data(
                 basic_data,
                 execution_handler,
                 access_token.to_owned(),
             )
             .await;
+            //if did not successfully create a new user/update the old user's access token
+            if action_was_successful == false {
+                return Ok(failed_auth_location);
+            }
+        } else {
+            return Ok(failed_auth_location);
         }
+        //we encountered 0 issues, we want to save the new set of tokens
+        //on the client side by redirecting them to a 
+        //page made for stripping and saving access tokens
         let discord_auth_callback_route_url: Uri =
             oauth_locations::save_tokens_location(access_token, refresh_token)
                 .parse()

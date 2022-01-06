@@ -20,7 +20,7 @@ pub async fn test_capture_user(execution_handler: &mut ExecutionHandler) -> (i32
         data_capturer::capture_new_user(execution_handler, &new_user).await;
     //try to capture the same one twice
     //to test against duplicates
-    assert!(first_capture_user_id != -1); // -1 means issue or duplicate
+    assert!(first_capture_user_id != -1); // -1 means duplicate
     let second_capture_user_id: i32 =
         data_capturer::capture_new_user(execution_handler, &new_user).await;
     assert_eq!(second_capture_user_id, -1); // should be -1 due to the duplication
