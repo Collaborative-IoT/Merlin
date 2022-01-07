@@ -87,7 +87,10 @@ pub async fn gather_tokens_and_construct_save_url_discord(
     }
 }
 
-pub async fn gather_tokens_and_construct_save_url_github(code: String) -> Result<Uri, Error> {
+pub async fn gather_tokens_and_construct_save_url_github(
+    code: String,
+    execution_handler: Arc<Mutex<ExecutionHandler>>,
+) -> Result<Uri, Error> {
     let base_url = "https://github.com/login/oauth/access_token";
     let client_id = env::var("GH_CLIENT_ID").unwrap();
     let client_secret = env::var("GH_CLIENT_SECRET").unwrap();
@@ -111,17 +114,42 @@ pub async fn gather_tokens_and_construct_save_url_github(code: String) -> Result
         .await?;
     //comes with surrounding double quotes
     let json_value: serde_json::Value = serde_json::from_str(&result).unwrap();
+    let failed_auth_location: Uri = oauth_locations::error_auth_location().parse().unwrap();
 
     if github_token_gather_is_valid(&json_value) {
         let access_token: String = json_value["access_token"].to_owned().to_string();
         let refresh_token: String = " invalidforplatform ".to_owned().to_string();
+
+        //make api request and grab user json data
+        let basic_data_gather_result = gather_user_basic_data_github(access_token.to_owned()).await;
+
+        //if the json data was good, meaning no errors from api call
+        if basic_data_gather_result.is_ok() {
+            let basic_data = basic_data_gather_result.unwrap();
+            let action_was_successful = api_data_handler::parse_and_capture_github_user_data(
+                basic_data,
+                execution_handler,
+                access_token.to_owned(),
+            )
+            .await;
+
+            //if did not successfully create a new user/update the old user's access token
+            if action_was_successful == false {
+                return Ok(failed_auth_location);
+            };
+        } else {
+            return Ok(failed_auth_location);
+        }
+
+        //we encountered 0 issues, we want to save the new set of tokens
+        //on the client side by redirecting them to a
+        //page made for stripping and saving access tokens
         let github_auth_callback_route_url: Uri =
             oauth_locations::save_tokens_location(access_token, refresh_token)
                 .parse()
                 .unwrap();
         return Ok(github_auth_callback_route_url);
     } else {
-        let failed_auth_location: Uri = oauth_locations::error_auth_location().parse().unwrap();
         return Ok(failed_auth_location);
     }
 }

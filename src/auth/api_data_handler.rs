@@ -11,8 +11,6 @@ use std::sync::Arc;
 use tokio_postgres::row::Row;
 use uuid::Uuid;
 
-use super::oauth_locations::github;
-
 //grabs user api data and
 //creates new user if it doesn't exist
 //updates tokens if it does

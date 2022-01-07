@@ -173,14 +173,25 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
 
     //GET /api/github/auth-callback
     let github_auth_callback_route = warp::path!("api" / "github" / "auth-callback")
+        .and(execution_handler.clone())
         .and(warp::query::<CodeParams>())
-        .then(|code: CodeParams| async {
-            warp::redirect::redirect(
-                authentication_handler::gather_tokens_and_construct_save_url_github(code.code)
-                    .await
-                    .unwrap(),
-            )
-        });
+        .then(
+            |execution_handler: Arc<Mutex<ExecutionHandler>>, code: CodeParams| async {
+                let token_url_result =
+                    authentication_handler::gather_tokens_and_construct_save_url_github(
+                        code.code,
+                        execution_handler,
+                    )
+                    .await;
+                if token_url_result.is_ok() {
+                    let url: Uri = token_url_result.unwrap();
+                    warp::redirect::redirect(url)
+                } else {
+                    let url: Uri = oauth_locations::error_auth_location().parse().unwrap();
+                    warp::redirect::redirect(url)
+                }
+            },
+        );
     let routes = warp::get().and(
         user_api_route
             .or(discord_auth_route)
