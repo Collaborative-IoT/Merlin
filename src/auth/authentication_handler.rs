@@ -75,7 +75,7 @@ pub async fn gather_tokens_and_construct_save_url_discord(
             return Ok(failed_auth_location);
         }
         //we encountered 0 issues, we want to save the new set of tokens
-        //on the client side by redirecting them to a 
+        //on the client side by redirecting them to a
         //page made for stripping and saving access tokens
         let discord_auth_callback_route_url: Uri =
             oauth_locations::save_tokens_location(access_token, refresh_token)

@@ -11,8 +11,11 @@ use std::sync::Arc;
 use tokio_postgres::row::Row;
 use uuid::Uuid;
 
+use super::oauth_locations::github;
+
 //grabs user api data and
 //creates new user if it doesn't exist
+//updates tokens if it does
 pub async fn parse_and_capture_discord_user_data(
     data: serde_json::Value,
     execution_handler: Arc<Mutex<ExecutionHandler>>,
@@ -33,10 +36,7 @@ pub async fn parse_and_capture_discord_user_data(
         let avatar_url =
             construct_discord_image_url(fixed_dc_user_id.as_str(), fixed_dc_avatar_id.as_str());
         let mut handler = execution_handler.lock().await;
-        //using discord username as our initial display name
-        // -1 -> user is a duplicate
-        // -2 -> unexpected error inserting
-        // else -> success
+
         let user_id = generate_and_capture_new_user(
             fixed_dc_user_id.to_owned(),
             "-1".to_string(),
@@ -61,16 +61,59 @@ pub async fn parse_and_capture_discord_user_data(
     return action_was_successful;
 }
 
-pub async fn parse_and_capture_github_user_data(data: serde_json::Value) {}
+pub async fn parse_and_capture_github_user_data(
+    data: serde_json::Value,
+    execution_handler: Arc<Mutex<ExecutionHandler>>,
+    access_token: String,
+) -> bool {
+    let mut action_was_successful = true;
+    if github_user_request_is_valid(&data) {
+        let github_avatar_url: String = data["avatar_url"].to_string();
+        let github_name: String = data["name"].to_string();
+        let github_id: String = data["id"].to_string();
 
-pub fn construct_discord_image_url(discord_user_id: &str, discord_user_avatar_id: &str) -> String {
+        //remove the trailing/begining double quotes
+        //since the id is formatted like "djweodiwdk"
+        //instead of just djweodiwdk
+        let fixed_avatar_url: String =
+            github_avatar_url[1..github_avatar_url.len() - 1].to_string();
+        let fixed_github_name: String = github_name[1..github_name.len() - 1].to_string();
+        let fixed_github_id: String = github_id[1..github_id.len() - 1].to_string();
+        let mut handler = execution_handler.lock().await;
+
+        let user_id = generate_and_capture_new_user(
+            "-1".to_owned(),
+            fixed_github_id.to_owned(),
+            fixed_avatar_url,
+            fixed_github_name,
+            access_token.to_owned(),
+            "-1".to_owned(),
+            &mut handler,
+        )
+        .await;
+
+        check_user_id_and_continue(
+            user_id,
+            "-1".to_owned(),
+            access_token,
+            &mut action_was_successful,
+            &mut handler,
+            "-1".to_owned(),
+            fixed_github_id,
+        )
+        .await;
+    };
+    return action_was_successful;
+}
+
+fn construct_discord_image_url(discord_user_id: &str, discord_user_avatar_id: &str) -> String {
     return format!(
         "https://cdn.discordapp.com/avatars/{}/{}.png",
         discord_user_id, discord_user_avatar_id
     );
 }
 
-pub fn discord_user_request_is_valid(data: &serde_json::Value) -> bool {
+fn discord_user_request_is_valid(data: &serde_json::Value) -> bool {
     if data["avatar"] != serde_json::Value::Null
         && data["id"] != serde_json::Value::Null
         && data["username"] != serde_json::Value::Null
@@ -81,7 +124,18 @@ pub fn discord_user_request_is_valid(data: &serde_json::Value) -> bool {
     }
 }
 
-pub async fn generate_and_capture_new_user(
+fn github_user_request_is_valid(data: &serde_json::Value) -> bool {
+    if data["avatar_url"] != serde_json::Value::Null
+        && data["name"] != serde_json::Value::Null
+        && data["id"] != serde_json::Value::Null
+    {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+async fn generate_and_capture_new_user(
     discord_id: String,
     github_id: String,
     avatar_url: String,
@@ -110,7 +164,7 @@ pub async fn generate_and_capture_new_user(
     return user_id;
 }
 
-pub async fn check_user_id_and_continue(
+async fn check_user_id_and_continue(
     user_id: i32,
     dc_access_token: String,
     gh_access_token: String,
@@ -152,7 +206,7 @@ pub async fn check_user_id_and_continue(
     }
 }
 
-pub async fn grab_user_and_update_tokens(
+async fn grab_user_and_update_tokens(
     user_rows: Vec<Row>,
     dc_access_token: String,
     gh_access_token: String,
