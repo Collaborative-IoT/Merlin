@@ -166,7 +166,10 @@ pub async fn exchange_discord_refresh_token_for_access(
         ("client_id", client_id),
         ("client_secret", client_secret),
         ("grant_type", "refresh_token".to_owned()),
-        ("refresh_token", refresh_token[1..refresh_token.len()-1].to_string()),
+        (
+            "refresh_token",
+            refresh_token[1..refresh_token.len() - 1].to_string(),
+        ),
     ];
     let client = reqwest::Client::new();
     //send request to get access/refresh tokens

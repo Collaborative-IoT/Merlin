@@ -4,30 +4,44 @@ All requests/responses will start as a BasicRequest/BasicResponse, the true data
 of the request/response(if there is any) will be the 'request_containing_data/response_containing_data'
 in json serialization.
 */
+use serde::{Deserialize, Serialize};
+
 
 use std::option::Option;
 
 //Gathering from client
+
+#[derive(Deserialize, Serialize)]
 pub struct BasicRequest {
-    request_op_code: String,
-    request_containing_data: String,
+    pub request_op_code: String,
+    pub request_containing_data: String,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct BasicResponse {
-    response_op_code: String,
-    response_containing_data: String,
+    pub response_op_code: String,
+    pub response_containing_data: String,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct JoinRoomAndGetInfo {
-    room_id: i32,
+    pub room_id: i32,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct GetFollowList {
-    user_id: i32,
+    pub user_id: i32,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct UserRemovedFromRoom{
+    pub user_id: i32,
+    pub type_of_ban:String
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct GetUserProfile {
-    user_id: i32,
+    pub user_id: i32,
 }
 
 //basic types
