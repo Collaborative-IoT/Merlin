@@ -2,7 +2,7 @@
 Handles the json gathered from api end points
 by using access tokens.
 */
-use crate::communication::{data_capturer, data_fetcher};
+use crate::communication::data_capturer;
 use crate::data_store::db_models::DBUser;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use chrono::Utc;

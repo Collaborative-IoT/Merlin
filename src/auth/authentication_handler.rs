@@ -74,6 +74,7 @@ pub async fn gather_tokens_and_construct_save_url_discord(
         } else {
             return Ok(failed_auth_location);
         }
+
         //we encountered 0 issues, we want to save the new set of tokens
         //on the client side by redirecting them to a
         //page made for stripping and saving access tokens
@@ -152,6 +153,32 @@ pub async fn gather_tokens_and_construct_save_url_github(
     } else {
         return Ok(failed_auth_location);
     }
+}
+
+pub async fn exchange_discord_refresh_token_for_access(
+    refresh_token: String,
+) -> Result<serde_json::Value, Error> {
+    //https://discord.com/api/v8/oauth2/token
+    let base_url = "https://discord.com/api/v8/oauth2/token";
+    let client_id = env::var("DC_CLIENT_ID").unwrap();
+    let client_secret = env::var("DC_CLIENT_SECRET").unwrap();
+    let params = [
+        ("client_id", client_id),
+        ("client_secret", client_secret),
+        ("grant_type", "refresh_token".to_owned()),
+        ("refresh_token", refresh_token[1..refresh_token.len()-1].to_string()),
+    ];
+    let client = reqwest::Client::new();
+    //send request to get access/refresh tokens
+    let result = client
+        .post(base_url)
+        .form(&params)
+        .send()
+        .await?
+        .json()
+        .await?;
+    println!("{:?}", result);
+    return Ok(result);
 }
 
 pub async fn gather_user_basic_data_discord(
