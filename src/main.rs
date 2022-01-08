@@ -45,6 +45,9 @@ pub mod auth {
 }
 
 pub mod server;
+pub mod ws_fan{
+    pub mod fan;
+}
 
 #[tokio::main]
 async fn main() {
