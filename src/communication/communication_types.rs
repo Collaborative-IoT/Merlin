@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use std::option::Option;
 
-//Gathering from client
+//Gathering from client/sending to rabbitmq
 
 #[derive(Deserialize, Serialize)]
 pub struct BasicRequest {

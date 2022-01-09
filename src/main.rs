@@ -48,7 +48,9 @@ pub mod server;
 pub mod ws_fan {
     pub mod fan;
 }
-
+pub mod rabbitmq{
+    pub mod rabbit;
+}
 #[tokio::main]
 async fn main() {
     print_start();
