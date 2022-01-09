@@ -10,32 +10,32 @@ use warp::ws::{Message, WebSocket};
 //.keys().cloned().collect::<Vec<_>>();
 
 pub struct Board {
-    room_id: String,
-    owner_user_id: String,
+    pub room_id: String,
+    pub owner_user_id: String,
     //Those granted permissions by the owner
-    users_with_permission: HashSet<String>,
+    pub users_with_permission: HashSet<String>,
 }
 
 pub struct User {
-    avatar_url: String,
-    display_name: String,
-    user_name: String,
-    last_online: DateTime<Utc>,
-    muted: bool,
-    deaf: bool,
-    ip: String,
-    bio: String,
-    banner_url: String,
+    pub avatar_url: String,
+    pub display_name: String,
+    pub user_name: String,
+    pub last_online: DateTime<Utc>,
+    pub muted: bool,
+    pub deaf: bool,
+    pub ip: String,
+    pub bio: String,
+    pub banner_url: String,
 }
 
 pub struct Room {
-    room_id: i32,
-    muted: HashSet<String>,
-    voice_server_id: String,
-    deaf: HashSet<String>,
-    user_ids: HashSet<String>,
-    public: bool,
-    auto_speaker: bool,
+    pub room_id: i32,
+    pub muted: HashSet<String>,
+    pub voice_server_id: String,
+    pub deaf: HashSet<String>,
+    pub user_ids: HashSet<String>,
+    pub public: bool,
+    pub auto_speaker: bool,
 }
 
 //IoTServerConnectionId -> Permissions for the connection(represented as the board)

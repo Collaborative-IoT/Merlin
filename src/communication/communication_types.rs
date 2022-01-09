@@ -36,7 +36,8 @@ pub struct GetFollowList {
 #[derive(Deserialize, Serialize)]
 pub struct UserRemovedFromRoom{
     pub user_id: i32,
-    pub type_of_ban:String
+    pub type_of_ban:String,
+    pub requester:i32,
 }
 
 #[derive(Deserialize, Serialize)]
