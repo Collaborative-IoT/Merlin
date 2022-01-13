@@ -6,6 +6,7 @@ use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
 use futures::lock::Mutex;
+use serde::ser;
 use std::sync::Arc;
 use warp::ws::Message;
 
@@ -74,7 +75,30 @@ pub async fn block_user_from_room(
     );
 }
 
-pub async fn handle_user_block_capture_result(
+pub async fn remove_user_from_room_basic(
+    user_id: i32,
+    room_id: i32,
+    type_of_ban: String,
+    requester: i32,
+    server_state: &mut ServerState,
+) {
+    let remove_request = UserRemovedFromRoom {
+        user_id: user_id,
+        type_of_ban: type_of_ban,
+        requester: requester,
+        room_id: room_id.to_owned(),
+    };
+    let remove_request_str: String = serde_json::to_string(&remove_request).unwrap();
+    rabbit::publish_message_to_voice_server(remove_request_str).await;
+    server_state
+        .rooms
+        .get_mut(&room_id)
+        .unwrap()
+        .user_ids
+        .remove(&user_id.to_string());
+}
+
+async fn handle_user_block_capture_result(
     capture_result: CaptureResult,
     requester_id: i32,
     user_id: i32,
@@ -82,22 +106,14 @@ pub async fn handle_user_block_capture_result(
     room_id: i32,
 ) {
     if capture_result.encountered_error == false {
-        //construct removal json request for rabbit queue
-        //remove user from room state
-        let remove_request = UserRemovedFromRoom {
-            user_id: user_id,
-            type_of_ban: "user".to_string(),
-            requester: requester_id,
-            room_id: room_id.to_owned(),
-        };
-        let remove_request_str: String = serde_json::to_string(&remove_request).unwrap();
-        rabbit::publish_message_to_voice_server(remove_request_str).await;
-        server_state
-            .rooms
-            .get_mut(&room_id)
-            .unwrap()
-            .user_ids
-            .remove(&user_id.to_string());
+        remove_user_from_room_basic(
+            user_id,
+            room_id,
+            "user".to_string(),
+            requester_id,
+            server_state,
+        )
+        .await;
     }
     send_error_to_requester_channel(
         user_id,
