@@ -38,6 +38,7 @@ pub struct UserRemovedFromRoom{
     pub user_id: i32,
     pub type_of_ban:String,
     pub requester:i32,
+    pub room_id:i32
 }
 
 #[derive(Deserialize, Serialize)]

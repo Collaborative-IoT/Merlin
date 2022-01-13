@@ -6,6 +6,7 @@ mod test;
 pub mod state {
     pub mod state;
     pub mod state_types;
+    pub mod state_helpers;
 }
 
 pub mod data_store {
@@ -50,6 +51,9 @@ pub mod ws_fan {
 }
 pub mod rabbitmq{
     pub mod rabbit;
+}
+pub mod rooms{
+    pub mod room_handler;
 }
 #[tokio::main]
 async fn main() {
