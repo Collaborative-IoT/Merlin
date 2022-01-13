@@ -17,5 +17,4 @@ impl ServerState {
             rooms: ActiveRooms::new(),
         }
     }
-
 }

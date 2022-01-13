@@ -5,8 +5,8 @@ mod test;
 
 pub mod state {
     pub mod state;
-    pub mod state_types;
     pub mod state_helpers;
+    pub mod state_types;
 }
 
 pub mod data_store {
@@ -49,10 +49,10 @@ pub mod server;
 pub mod ws_fan {
     pub mod fan;
 }
-pub mod rabbitmq{
+pub mod rabbitmq {
     pub mod rabbit;
 }
-pub mod rooms{
+pub mod rooms {
     pub mod room_handler;
 }
 #[tokio::main]
