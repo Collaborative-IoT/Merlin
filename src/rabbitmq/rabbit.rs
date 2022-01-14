@@ -3,7 +3,7 @@ use futures_util::stream::StreamExt;
 use tokio_amqp::*;
 use lapin::{
     options::*, publisher_confirm::Confirmation, types::FieldTable, BasicProperties, Connection,
-    ConnectionProperties, Result,
+    ConnectionProperties, Result,message::Delivery
 };
 
 pub async fn setup_rabbit_connection()->Result<Connection>{
@@ -12,7 +12,7 @@ pub async fn setup_rabbit_connection()->Result<Connection>{
     return Ok(conn);
 }
 
-pub async fn setup_consume_task(conn:&Connection)->Result<()>{
+pub async fn setup_consume_task(conn:&Connection, )->Result<()>{
     let channel = conn.create_channel().await?;
     //declare/create new main queue
     channel.queue_declare(
@@ -30,7 +30,10 @@ pub async fn setup_consume_task(conn:&Connection)->Result<()>{
         )
         .await?;
 
-    //listen for messages forever
+    //listen for messages forever and forward messages to
+    //the correct user channel
+    //Background: messages from the voice server are responses that
+    //are directly send and handled by the end user on the frontend/client.
     tokio::task::spawn(async move{
         while let Some(delivery) = consumer.next().await {
             let (_, delivery) = delivery.expect("error in consumer");
@@ -38,11 +41,25 @@ pub async fn setup_consume_task(conn:&Connection)->Result<()>{
                 .ack(BasicAckOptions::default())
                 .await
                 .expect("ack");
+            
         }
     });
-
-
     return Ok(());
 }
+
+//this gives us the type of request that is 
+//sent by the voice server which is actually
+//either an update for all users of a room 
+//or one user a room
+//"room" or "user"
+pub fn type_of_request(json_string:String)->String{
+    
+}
+
+pub fn parse_message(delivery:Delivery)->String{
+    //fill out the del parsing
+    return "".to_string();
+}
+
 
 pub async fn publish_message_to_voice_server(message: String) {}
