@@ -53,7 +53,13 @@ pub async fn setup_consume_task(conn:&Connection, )->Result<()>{
 //or one user a room
 //"room" or "user"
 pub fn type_of_request(json_string:String)->String{
-    
+    let data:serde_json::Value = serde_json::from_str(&json_string).unwrap();
+    if data["uid"] == serde_json::Value::Null{
+        return "room".to_string();
+    }
+    else{
+        return "user".to_string();
+    }
 }
 
 pub fn parse_message(delivery:Delivery)->String{
