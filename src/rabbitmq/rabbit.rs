@@ -5,6 +5,10 @@ use lapin::{
     options::*, publisher_confirm::Confirmation, types::FieldTable, BasicProperties, Connection,
     ConnectionProperties, Result,message::Delivery
 };
+use futures::lock::Mutex;
+use std::sync::Arc;
+
+use crate::state::state::ServerState;
 
 pub async fn setup_rabbit_connection()->Result<Connection>{
     let addr = std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp://127.0.0.1:5672/%2f".into());
@@ -12,7 +16,7 @@ pub async fn setup_rabbit_connection()->Result<Connection>{
     return Ok(conn);
 }
 
-pub async fn setup_consume_task(conn:&Connection, )->Result<()>{
+pub async fn setup_consume_task(conn:&Connection, server_state:Arc<Mutex<ServerState>>)->Result<()>{
     let channel = conn.create_channel().await?;
     //declare/create new main queue
     channel.queue_declare(
@@ -35,16 +39,22 @@ pub async fn setup_consume_task(conn:&Connection, )->Result<()>{
     //Background: messages from the voice server are responses that
     //are directly send and handled by the end user on the frontend/client.
     tokio::task::spawn(async move{
+        let mut state = server_state.lock().await;
         while let Some(delivery) = consumer.next().await {
             let (_, delivery) = delivery.expect("error in consumer");
             delivery
                 .ack(BasicAckOptions::default())
                 .await
                 .expect("ack");
-            
+            let message = parse_message(delivery);
+            handle_message(message, &mut state).await;
         }
     });
     return Ok(());
+}
+
+pub async fn handle_message(message:String, server_state:&mut ServerState){
+
 }
 
 //this gives us the type of request that is 

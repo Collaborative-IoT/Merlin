@@ -90,20 +90,6 @@ async fn user_message(
     communication_router::route_msg(msg.to_string(), current_user_id).await;
 }
 
-async fn broadcast_message(
-    current_user_id: &i32,
-    new_msg: String,
-    server_state: &Arc<RwLock<ServerState>>,
-) {
-    for (&uid, tx) in server_state.read().await.peer_map.iter() {
-        if current_user_id.to_owned() != uid {
-            if let Err(_disconnected) = tx.send(Message::text(new_msg.clone())) {
-                //user disconnection is handled in another task
-            }
-        }
-    }
-}
-
 async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<ServerState>>) {
     // Stream closed up, so remove from the user list
     server_state.write().await.peer_map.remove(current_user_id);
