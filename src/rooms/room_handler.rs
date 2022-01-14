@@ -6,7 +6,6 @@ use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
 use futures::lock::Mutex;
-use serde::ser;
 use std::sync::Arc;
 use warp::ws::Message;
 
