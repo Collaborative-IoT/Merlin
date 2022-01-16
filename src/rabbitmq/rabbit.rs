@@ -2,8 +2,9 @@ use futures::lock::Mutex;
 use futures_util::stream::StreamExt;
 use lapin::{
     message::Delivery, options::*, publisher_confirm::Confirmation, types::FieldTable,
-    BasicProperties, Channel, Connection, ConnectionProperties, Result,
+    BasicProperties, Channel, Connection, ConnectionProperties, Result, Error
 };
+use serde::__private::de;
 use std::sync::Arc;
 use tokio_amqp::*;
 
@@ -72,7 +73,9 @@ fn convert_string_to_vec_u8(data: String) -> Vec<u8> {
     return bytes;
 }
 
-async fn handle_message(message: String, server_state: &mut ServerState) {}
+async fn handle_message(message: String, server_state: &mut ServerState) {
+
+}
 
 //this gives us the type of request that is
 //sent by the voice server which is actually
@@ -88,9 +91,12 @@ pub fn type_of_request(json_string: String) -> String {
     }
 }
 
-pub fn parse_message(delivery: Delivery) -> String {
-    //fill out the del parsing
-    return "".to_string();
+pub fn parse_message(delivery: Delivery) -> String{
+    let result = String::from_utf8(delivery.data);
+    if result.is_ok(){
+        return result.unwrap();
+    }
+    else{
+        return "".to_owned();
+    }
 }
-
-pub async fn publish_message_to_voice_server(message: String) {}
