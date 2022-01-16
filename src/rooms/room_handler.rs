@@ -40,7 +40,7 @@ pub async fn block_user_from_room(
             .get(&room_id)
             .unwrap()
             .user_ids
-            .contains(&user_id.to_string())
+            .contains(&user_id)
     {
         let owner_gather: (bool, i32, String) =
             data_fetcher::get_room_owner_and_settings(&mut handler, &room_id).await;
@@ -98,7 +98,7 @@ pub async fn remove_user_from_room_basic(
         .get_mut(&room_id)
         .unwrap()
         .user_ids
-        .remove(&user_id.to_string());
+        .remove(&user_id);
 }
 
 async fn handle_user_block_capture_result(

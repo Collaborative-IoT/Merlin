@@ -4,9 +4,10 @@ use lapin::{
     message::Delivery, options::*, publisher_confirm::Confirmation, types::FieldTable,
     BasicProperties, Channel, Connection, ConnectionProperties, Result, Error
 };
-use serde::__private::de;
 use std::sync::Arc;
 use tokio_amqp::*;
+use warp::ws::Message;
+use crate::communication::communication_types::BasicResponse;
 
 use crate::state::state::ServerState;
 
@@ -74,7 +75,26 @@ fn convert_string_to_vec_u8(data: String) -> Vec<u8> {
 }
 
 async fn handle_message(message: String, server_state: &mut ServerState) {
-
+    let data: serde_json::Value = serde_json::from_str(&message).unwrap();
+    let request_type = type_of_request(&data);
+    //all room messages(events from voice server) need to be brodcasted across the room
+    //all user messages(events from voice server) need to be brodcasted to the user alone
+    //*NOTE*-> error for sending to websocket channels are handled in a different task
+    let message_for_user = BasicResponse{response_op_code:"voice_server_msg".to_owned(), response_containing_data:message};
+    let string_basic_response = serde_json::to_string(&message_for_user).unwrap();
+    if request_type == "room"{
+        let room_id:i32 = data["rid"].to_string().parse().unwrap();
+        let room_users:Vec<&i32> = server_state.rooms.get(&room_id).unwrap().user_ids.iter().collect();
+        for id in room_users{
+            let user_websocket_channel = server_state.peer_map.get(&id).unwrap();
+            user_websocket_channel.send(Message::text(string_basic_response.clone()));
+        }
+    }
+    else{
+        let user_id:i32 = data["rid"].to_string().parse().unwrap();
+        let user_websocket_channel = server_state.peer_map.get(&user_id).unwrap();
+        user_websocket_channel.send(Message::text(string_basic_response.clone()));
+    }
 }
 
 //this gives us the type of request that is
@@ -82,8 +102,7 @@ async fn handle_message(message: String, server_state: &mut ServerState) {
 //either an update for all users of a room
 //or one user a room
 //"room" or "user"
-pub fn type_of_request(json_string: String) -> String {
-    let data: serde_json::Value = serde_json::from_str(&json_string).unwrap();
+pub fn type_of_request(data:&serde_json::Value) -> String {
     if data["uid"] == serde_json::Value::Null {
         return "room".to_string();
     } else {
