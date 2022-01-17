@@ -51,6 +51,7 @@ pub mod ws_fan {
 }
 pub mod rabbitmq {
     pub mod rabbit;
+    pub mod test;
 }
 pub mod rooms {
     pub mod room_handler;
