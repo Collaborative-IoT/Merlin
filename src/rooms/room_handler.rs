@@ -1,4 +1,7 @@
-use crate::communication::communication_types::{BasicResponse, UserRemovedFromRoom};
+use crate::communication::communication_types::{
+    BasicResponse, RoomPermissions, UserRemovedFromRoom, VoiceServerClosePeer,
+    VoiceServerJoinAsSpeaker, VoiceServerRemoveSpeaker,
+};
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::{data_capturer, data_fetcher};
 use crate::data_store::db_models::DBRoomBlock;
@@ -6,6 +9,7 @@ use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
 use futures::lock::Mutex;
+use std::collections::HashMap;
 use std::sync::Arc;
 use warp::ws::Message;
 
@@ -77,28 +81,56 @@ pub async fn block_user_from_room(
 }
 
 pub async fn remove_user_from_room_basic(
-    user_id: i32,
-    room_id: i32,
-    type_of_ban: String,
-    requester: i32,
+    request_to_voice_server: VoiceServerClosePeer,
     server_state: &mut ServerState,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) {
-    let remove_request = UserRemovedFromRoom {
-        user_id: user_id,
-        type_of_ban: type_of_ban,
-        requester: requester,
-        room_id: room_id.to_owned(),
-    };
-    let remove_request_str: String = serde_json::to_string(&remove_request).unwrap();
+    let remove_request_str: String = serde_json::to_string(&request_to_voice_server).unwrap();
     let channel = publish_channel.lock().await;
     rabbit::publish_message(&channel, remove_request_str).await;
     server_state
         .rooms
-        .get_mut(&room_id)
+        .get_mut(&request_to_voice_server.roomId.parse().unwrap())
         .unwrap()
         .user_ids
-        .remove(&user_id);
+        .remove(&request_to_voice_server.peerId.parse().unwrap());
+}
+
+pub async fn join_room_as_speaker(
+    request_to_voice_server: VoiceServerJoinAsSpeaker,
+    server_state: &mut ServerState,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    requester_id: i32,
+) {
+    let mut handler = execution_handler.lock().await;
+    let room_id: i32 = request_to_voice_server.roomId.parse().unwrap();
+    let user_id: i32 = request_to_voice_server.peerId.parse().unwrap();
+    //could be more efficient by only selecting single row
+    let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
+        data_fetcher::get_room_permissions_for_users(
+            &room_id,
+            &mut handler,
+        )
+        .await;
+    //if no errors gathering data
+    if all_room_permissions.0 == false {
+        let current_user_permissions: &RoomPermissions =
+            all_room_permissions.1.get(&user_id).unwrap();
+        if current_user_permissions.is_speaker {
+            let channel = publish_channel.lock().await;
+            let request_str = serde_json::to_string(&request_to_voice_server).unwrap();
+            rabbit::publish_message(&channel, request_str).await;
+            add_user_to_room_state(room_id, user_id, server_state);
+            return;
+        }
+    }
+    send_error_to_requester_channel(
+        user_id,
+        requester_id,
+        server_state,
+        "issue_joining_room_as_speaker".to_string(),
+    );
 }
 
 async fn handle_user_block_capture_result(
@@ -110,15 +142,12 @@ async fn handle_user_block_capture_result(
     publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) {
     if capture_result.encountered_error == false {
-        remove_user_from_room_basic(
-            user_id,
-            room_id,
-            "user".to_string(),
-            requester_id,
-            server_state,
-            publish_channel,
-        )
-        .await;
+        let request = VoiceServerClosePeer {
+            roomId: room_id.to_string(),
+            peerId: user_id.to_string(),
+            kicked: true,
+        };
+        remove_user_from_room_basic(request, server_state, publish_channel).await;
     }
     send_error_to_requester_channel(
         user_id,
@@ -144,4 +173,13 @@ fn send_error_to_requester_channel(
         .get(&requester_id)
         .unwrap()
         .send(Message::text(serde_json::to_string(&response).unwrap()));
+}
+
+fn add_user_to_room_state(room_id: i32, user_id: i32, state: &mut ServerState) {
+    state
+        .rooms
+        .get_mut(&room_id)
+        .unwrap()
+        .user_ids
+        .insert(user_id);
 }

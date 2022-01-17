@@ -209,3 +209,10 @@ pub struct VoiceServerJoinAsNewPeer {
     pub roomId: String,
     pub peerId: String,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct VoiceServerClosePeer {
+    pub roomId: String,
+    pub peerId: String,
+    pub kicked: bool,
+}
