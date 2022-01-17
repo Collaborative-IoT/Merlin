@@ -175,3 +175,37 @@ pub struct Message {
     sent_at: String,
     is_whisper: bool,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct VoiceServerRemoveSpeaker {
+    pub roomId: String,
+    pub peerId: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct VoiceServerDestroyRoom {
+    pub roomId: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct VoiceServerCreateRoom {
+    pub roomId: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct VoiceServerAddSpeaker {
+    pub roomId: String,
+    pub peerId: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct VoiceServerJoinAsSpeaker {
+    pub roomId: String,
+    pub peerId: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct VoiceServerJoinAsNewPeer {
+    pub roomId: String,
+    pub peerId: String,
+}
