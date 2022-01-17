@@ -8,7 +8,7 @@ use lapin::{
     message::Delivery, options::*, publisher_confirm::Confirmation, types::FieldTable,
     BasicProperties, Channel, Connection, ConnectionProperties, Error, Result,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, __private::de};
 use tokio_amqp::*;
 
 #[derive(Deserialize, Serialize)]
@@ -33,10 +33,18 @@ pub async fn test() {
 pub async fn test_publish_and_consume() {
     let conn: Connection = rabbit::setup_rabbit_connection().await.unwrap();
     let channel_one = conn.create_channel().await.unwrap();
+    channel_one
+        .queue_declare(
+            "main",
+            QueueDeclareOptions::default(),
+            FieldTable::default(),
+        )
+        .await
+        .unwrap();
     let channel_two = conn.create_channel().await.unwrap();
     let data_to_publish: String = "test".to_owned();
     let publish_result = rabbit::publish_message(&channel_one, data_to_publish.clone()).await;
-    assert_eq!(publish_result.is_ok(), true);
+    assert_eq!(publish_result.unwrap(), true);
     let mut consumer = channel_two
         .basic_consume(
             "main",
@@ -49,6 +57,8 @@ pub async fn test_publish_and_consume() {
 
     //should not hang or be None due to previous publish
     let delivery = consumer.next().await.unwrap().unwrap().1;
+    //let queue know we got the message acknowledge aka ack
+    delivery.ack(BasicAckOptions::default()).await.expect("ack");
     let parsed_msg = rabbit::parse_message(delivery);
     assert_eq!(parsed_msg, data_to_publish);
 }

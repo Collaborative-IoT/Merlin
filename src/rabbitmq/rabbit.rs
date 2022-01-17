@@ -13,7 +13,8 @@ use warp::ws::Message;
 use crate::state::state::ServerState;
 
 pub async fn setup_rabbit_connection() -> Result<Connection> {
-    let addr = std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp://127.0.0.1:5672/%2f".into());
+    let addr =
+        std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp://guest:guest@localhost:5672".into());
     let conn: Connection =
         Connection::connect(&addr, ConnectionProperties::default().with_tokio()).await?; // Note the `with_tokio()` here
     return Ok(conn);
@@ -58,8 +59,8 @@ pub async fn setup_consume_task(
 pub async fn publish_message(publish_channel: &Channel, data: String) -> Result<bool> {
     let confirm = publish_channel
         .basic_publish(
-            "main",
             "",
+            "main",
             BasicPublishOptions::default(),
             convert_string_to_vec_u8(data),
             BasicProperties::default(),
