@@ -1,13 +1,13 @@
+use crate::communication::communication_types::BasicResponse;
 use futures::lock::Mutex;
 use futures_util::stream::StreamExt;
 use lapin::{
     message::Delivery, options::*, publisher_confirm::Confirmation, types::FieldTable,
-    BasicProperties, Channel, Connection, ConnectionProperties, Result, Error
+    BasicProperties, Channel, Connection, ConnectionProperties, Error, Result,
 };
 use std::sync::Arc;
 use tokio_amqp::*;
 use warp::ws::Message;
-use crate::communication::communication_types::BasicResponse;
 
 use crate::state::state::ServerState;
 
@@ -80,18 +80,26 @@ async fn handle_message(message: String, server_state: &mut ServerState) {
     //all room messages(events from voice server) need to be brodcasted across the room
     //all user messages(events from voice server) need to be brodcasted to the user alone
     //*NOTE*-> error for sending to websocket channels are handled in a different task
-    let message_for_user = BasicResponse{response_op_code:"voice_server_msg".to_owned(), response_containing_data:message};
+    let message_for_user = BasicResponse {
+        response_op_code: "voice_server_msg".to_owned(),
+        response_containing_data: message,
+    };
     let string_basic_response = serde_json::to_string(&message_for_user).unwrap();
-    if request_type == "room"{
-        let room_id:i32 = data["rid"].to_string().parse().unwrap();
-        let room_users:Vec<&i32> = server_state.rooms.get(&room_id).unwrap().user_ids.iter().collect();
-        for id in room_users{
+    if request_type == "room" {
+        let room_id: i32 = data["rid"].to_string().parse().unwrap();
+        let room_users: Vec<&i32> = server_state
+            .rooms
+            .get(&room_id)
+            .unwrap()
+            .user_ids
+            .iter()
+            .collect();
+        for id in room_users {
             let user_websocket_channel = server_state.peer_map.get(&id).unwrap();
             user_websocket_channel.send(Message::text(string_basic_response.clone()));
         }
-    }
-    else{
-        let user_id:i32 = data["rid"].to_string().parse().unwrap();
+    } else {
+        let user_id: i32 = data["rid"].to_string().parse().unwrap();
         let user_websocket_channel = server_state.peer_map.get(&user_id).unwrap();
         user_websocket_channel.send(Message::text(string_basic_response.clone()));
     }
@@ -102,7 +110,7 @@ async fn handle_message(message: String, server_state: &mut ServerState) {
 //either an update for all users of a room
 //or one user a room
 //"room" or "user"
-pub fn type_of_request(data:&serde_json::Value) -> String {
+pub fn type_of_request(data: &serde_json::Value) -> String {
     if data["uid"] == serde_json::Value::Null {
         return "room".to_string();
     } else {
@@ -110,12 +118,11 @@ pub fn type_of_request(data:&serde_json::Value) -> String {
     }
 }
 
-pub fn parse_message(delivery: Delivery) -> String{
+pub fn parse_message(delivery: Delivery) -> String {
     let result = String::from_utf8(delivery.data);
-    if result.is_ok(){
+    if result.is_ok() {
         return result.unwrap();
-    }
-    else{
+    } else {
         return "".to_owned();
     }
 }

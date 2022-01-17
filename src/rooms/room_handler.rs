@@ -28,7 +28,7 @@ pub async fn block_user_from_room(
     requester_id: i32,
     server_state: &Arc<Mutex<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
-    publish_channel:&Arc<Mutex<lapin::Channel>>
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) {
     let mut state = server_state.lock().await;
     let mut handler = execution_handler.lock().await;
@@ -62,7 +62,7 @@ pub async fn block_user_from_room(
                 user_id.clone(),
                 &mut state,
                 room_id,
-                publish_channel
+                publish_channel,
             )
             .await;
             return;
@@ -82,7 +82,7 @@ pub async fn remove_user_from_room_basic(
     type_of_ban: String,
     requester: i32,
     server_state: &mut ServerState,
-    publish_channel:&Arc<Mutex<lapin::Channel>>
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) {
     let remove_request = UserRemovedFromRoom {
         user_id: user_id,
@@ -92,7 +92,7 @@ pub async fn remove_user_from_room_basic(
     };
     let remove_request_str: String = serde_json::to_string(&remove_request).unwrap();
     let channel = publish_channel.lock().await;
-    rabbit::publish_message(&channel,remove_request_str).await;
+    rabbit::publish_message(&channel, remove_request_str).await;
     server_state
         .rooms
         .get_mut(&room_id)
@@ -107,7 +107,7 @@ async fn handle_user_block_capture_result(
     user_id: i32,
     server_state: &mut ServerState,
     room_id: i32,
-    publish_channel:&Arc<Mutex<lapin::Channel>>
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) {
     if capture_result.encountered_error == false {
         remove_user_from_room_basic(
@@ -116,7 +116,7 @@ async fn handle_user_block_capture_result(
             "user".to_string(),
             requester_id,
             server_state,
-            publish_channel
+            publish_channel,
         )
         .await;
     }
