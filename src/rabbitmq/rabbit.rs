@@ -1,4 +1,5 @@
 use crate::communication::communication_types::BasicResponse;
+use crate::ws_fan;
 use futures::lock::Mutex;
 use futures_util::stream::StreamExt;
 use lapin::{
@@ -87,19 +88,9 @@ async fn handle_message(message: String, server_state: &mut ServerState) {
     let string_basic_response = serde_json::to_string(&message_for_user).unwrap();
     if request_type == "room" {
         let room_id: i32 = data["rid"].to_string().parse().unwrap();
-        let room_users: Vec<&i32> = server_state
-            .rooms
-            .get(&room_id)
-            .unwrap()
-            .user_ids
-            .iter()
-            .collect();
-        for id in room_users {
-            let user_websocket_channel = server_state.peer_map.get(&id).unwrap();
-            user_websocket_channel.send(Message::text(string_basic_response.clone()));
-        }
+        ws_fan::fan::broadcast_message_to_room(string_basic_response, server_state, room_id).await;
     } else {
-        let user_id: i32 = data["rid"].to_string().parse().unwrap();
+        let user_id: i32 = data["uid"].to_string().parse().unwrap();
         let user_websocket_channel = server_state.peer_map.get(&user_id).unwrap();
         user_websocket_channel.send(Message::text(string_basic_response.clone()));
     }

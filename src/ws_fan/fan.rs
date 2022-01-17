@@ -16,7 +16,18 @@ pub async fn broadcast_message_to_all_active_users(
 
 pub async fn broadcast_message_to_room(
     new_msg: String,
-    server_state: &Arc<Mutex<ServerState>>,
+    server_state: &mut ServerState,
     room_id: i32,
 ) {
+    let room_users: Vec<&i32> = server_state
+        .rooms
+        .get(&room_id)
+        .unwrap()
+        .user_ids
+        .iter()
+        .collect();
+    for id in room_users {
+        let user_websocket_channel = server_state.peer_map.get(&id).unwrap();
+        user_websocket_channel.send(Message::text(new_msg.clone()));
+    }
 }
