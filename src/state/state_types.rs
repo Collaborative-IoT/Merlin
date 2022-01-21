@@ -30,9 +30,9 @@ pub struct User {
 
 pub struct Room {
     pub room_id: i32,
-    pub muted: HashSet<String>,
+    pub muted: HashSet<i32>,
     pub voice_server_id: String,
-    pub deaf: HashSet<String>,
+    pub deaf: HashSet<i32>,
     pub user_ids: HashSet<i32>,
     pub public: bool,
     pub auto_speaker: bool,
