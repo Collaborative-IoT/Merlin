@@ -20,6 +20,7 @@ use super::permission_configs;
 
 pub type AllPermissionsResult = (bool, HashMap<i32, RoomPermissions>);
 pub type EncounteredError = bool;
+pub type ListenerOrSpeaker = String;
 
 //managing rooms happens in a pub-sub fashion
 //the client waits on the response from this server
@@ -283,8 +284,6 @@ async fn insert_initial_permissions_if_needed(
         let mut permissions_inner = permissions.1;
         //if the user already has permissions just return them
         if permissions_inner.contains_key(requester_id) {
-            let requester_permissions: RoomPermissions =
-                permissions_inner.remove(requester_id).unwrap();
             return false;
         }
         //if the user doesn't have permissions insert them
