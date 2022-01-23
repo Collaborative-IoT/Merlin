@@ -1,7 +1,7 @@
 use crate::communication::communication_types::{
     BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, VoiceServerAddSpeaker,
-    VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRequest,
-    VoiceServerRemoveSpeaker
+    VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRemoveSpeaker,
+    VoiceServerRequest,
 };
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::{data_capturer, data_fetcher};
@@ -246,9 +246,7 @@ pub async fn add_speaker(
     );
 }
 
-pub async fn remove_speaker(request_to_voice_server: VoiceServerRemoveSpeaker){
-
-}
+pub async fn remove_speaker(request_to_voice_server: VoiceServerRemoveSpeaker) {}
 
 //This function handles the following requests
 //1.sending tracks
