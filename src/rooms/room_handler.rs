@@ -281,10 +281,19 @@ async fn insert_initial_permissions_if_needed(
     handler: &mut ExecutionHandler,
 ) -> EncounteredError {
     if permissions.0 == false {
-        let mut permissions_inner = permissions.1;
         //if the user already has permissions just return them
-        if permissions_inner.contains_key(requester_id) {
-            return false;
+        if permissions.1.contains_key(requester_id) {
+            let current_user_permissions = permissions.1.get(&requester_id).unwrap();
+
+            //if the user is requesting to join as speaker but isn't
+            //a speaker in the database and the room is auto speaker
+            //allow this request because the user could have been a peer
+            //previously and now they are joining as a speaker in an
+            //auto speaker set room.
+            if join_as == "speaker" && current_user_permissions.is_speaker == false && room.auto_speaker == false{ 
+                return false;
+            }
+            return true;
         }
         //if the user doesn't have permissions insert them
         else {
