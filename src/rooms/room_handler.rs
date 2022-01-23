@@ -1,6 +1,7 @@
 use crate::communication::communication_types::{
     BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, VoiceServerAddSpeaker,
     VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRequest,
+    VoiceServerRemoveSpeaker
 };
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::{data_capturer, data_fetcher};
@@ -197,6 +198,11 @@ pub async fn join_room(
     return None;
 }
 
+// adds a speaker that is already an existing peer in a room
+// this happens and is only allowed for users who have already
+// requested to speak. This method is called when:
+//1.Mods who are listeners want to come to the stage.
+//2.Mods accept other user's request to come to the stage.
 pub async fn add_speaker(
     request_to_voice_server: VoiceServerAddSpeaker,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
@@ -238,6 +244,10 @@ pub async fn add_speaker(
         server_state,
         "issue_adding_speaker".to_string(),
     );
+}
+
+pub async fn remove_speaker(request_to_voice_server: VoiceServerRemoveSpeaker){
+
 }
 
 //This function handles the following requests
