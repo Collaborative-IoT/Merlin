@@ -1,10 +1,10 @@
 use crate::communication::communication_types::{
-    BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, VoiceServerClosePeer,
-    VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRequest,
+    BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, VoiceServerAddSpeaker,
+    VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRequest,
 };
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::{data_capturer, data_fetcher};
-use crate::data_store::db_models::{DBRoom, DBRoomBlock, DBRoomPermissions};
+use crate::data_store::db_models::{DBRoom, DBRoomBlock};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
@@ -197,6 +197,49 @@ pub async fn join_room(
     return None;
 }
 
+pub async fn add_speaker(
+    request_to_voice_server: VoiceServerAddSpeaker,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    requester_id: &i32,
+    server_state: &mut ServerState,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
+    let mut handler = execution_handler.lock().await;
+    let room_id: i32 = request_to_voice_server.roomId.parse().unwrap();
+    let user_id: i32 = request_to_voice_server.peerId.parse().unwrap();
+    let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
+        data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
+
+    if all_room_permissions.0 == false {
+        let requester_permissions: &RoomPermissions =
+            all_room_permissions.1.get(requester_id).unwrap();
+        let requestee_permissions: &RoomPermissions = all_room_permissions.1.get(&user_id).unwrap();
+
+        //you can only be added as a speaker if you requested.
+        if requester_permissions.is_mod && requestee_permissions.asked_to_speak {
+            let new_permission_config = permission_configs::regular_speaker(room_id, user_id);
+            data_capturer::capture_new_room_permissions_update(
+                &new_permission_config,
+                &mut handler,
+            )
+            .await;
+            let request_str = create_voice_server_request(
+                "add-speaker",
+                &user_id.to_string(),
+                request_to_voice_server,
+            );
+            let channel = publish_channel.lock().await;
+            rabbit::publish_message(&channel, request_str).await;
+        }
+    }
+    send_error_to_requester_channel(
+        user_id.to_string(),
+        requester_id.clone(),
+        server_state,
+        "issue_adding_speaker".to_string(),
+    );
+}
+
 //This function handles the following requests
 //1.sending tracks
 //2.connection transports
@@ -209,7 +252,7 @@ pub async fn join_room(
 pub async fn handle_web_rtc_specific_requests(
     request_to_voice_server: serde_json::Value,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
-    op_code:&str
+    op_code: &str,
 ) {
     let user_id = request_to_voice_server["peerId"].to_string();
     let request_str = create_voice_server_request(op_code, &user_id, request_to_voice_server);
@@ -246,17 +289,17 @@ fn send_error_to_requester_channel(
     requester_id: i32,
     server_state: &mut ServerState,
     op_code: String,
-){
+) {
     let response = BasicResponse {
         response_op_code: op_code,
         response_containing_data: response_data,
     };
     //TODO:handle error
-    let gather_result = server_state
-        .peer_map
-        .get(&requester_id);
-    if gather_result.is_some(){
-        gather_result.unwrap().send(Message::text(serde_json::to_string(&response).unwrap()));
+    let gather_result = server_state.peer_map.get(&requester_id);
+    if gather_result.is_some() {
+        gather_result
+            .unwrap()
+            .send(Message::text(serde_json::to_string(&response).unwrap()));
     }
 }
 
