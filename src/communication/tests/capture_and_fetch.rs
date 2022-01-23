@@ -3,11 +3,11 @@ use crate::communication::data_capturer;
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::data_fetcher;
 
-use crate::communication::permission_configs;
 use crate::data_store::db_models::{
     DBFollower, DBRoom, DBRoomBlock, DBRoomPermissions, DBScheduledRoom, DBUser, DBUserBlock,
 };
 use crate::data_store::sql_execution_handler::ExecutionHandler;
+use crate::rooms::permission_configs;
 use chrono::Utc;
 use std::collections::HashSet;
 use tokio_postgres::{Error, NoTls};

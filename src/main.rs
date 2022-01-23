@@ -32,7 +32,6 @@ pub mod communication {
     pub mod communication_types;
     pub mod data_capturer;
     pub mod data_fetcher;
-    pub mod permission_configs;
     pub mod test;
     pub mod tests {
         pub mod capture_and_fetch;
@@ -54,6 +53,7 @@ pub mod rabbitmq {
     pub mod test;
 }
 pub mod rooms {
+    pub mod permission_configs;
     pub mod room_handler;
 }
 #[tokio::main]

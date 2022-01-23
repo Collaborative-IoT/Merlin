@@ -1,10 +1,10 @@
 use crate::communication::communication_types::{
     BasicResponse, RoomPermissions, VoiceServerClosePeer, VoiceServerCreateRoom,
-    VoiceServerDestroyRoom, VoiceServerJoinAsSpeaker, VoiceServerJoinAsNewPeer
+    VoiceServerDestroyRoom, VoiceServerJoinAsNewPeer, VoiceServerJoinAsSpeaker,
 };
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::{data_capturer, data_fetcher};
-use crate::data_store::db_models::{DBRoom, DBRoomBlock};
+use crate::data_store::db_models::{DBRoom, DBRoomBlock, DBRoomPermissions};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
@@ -15,6 +15,11 @@ use std::collections::{HashMap, HashSet};
 use std::mem::drop;
 use std::sync::Arc;
 use warp::ws::Message;
+
+use super::permission_configs;
+
+pub type AllPermissionsResult = (bool, HashMap<i32, RoomPermissions>);
+pub type EncounteredError = bool;
 
 //managing rooms happens in a pub-sub fashion
 //the client waits on the response from this server
@@ -28,6 +33,11 @@ use warp::ws::Message;
 //3. once the voice server responds, if it is success
 //the user is removes from the state of the server
 //and this update is fanned/brodcasted across all users in the room.
+
+//HOW DOES USERS KNOW WHAT REQUEST TO JOIN TO MAKE?:
+//Users will request their permissions for a room
+//and based on their permissions they will know what
+//request to make, for example joining as a speaker/peer.
 
 pub async fn block_user_from_room(
     user_id: i32,
@@ -164,7 +174,7 @@ pub async fn join_room_as_speaker(
     let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
         data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
     //if no errors gathering data
-    if all_room_permissions.0 == false && all_room_permissions.1.contains_key(&user_id){
+    if all_room_permissions.0 == false && all_room_permissions.1.contains_key(&user_id) {
         let current_user_permissions: &RoomPermissions =
             all_room_permissions.1.get(&user_id).unwrap();
         if current_user_permissions.is_speaker {
@@ -181,13 +191,6 @@ pub async fn join_room_as_speaker(
         server_state,
         "issue_joining_room_as_speaker".to_string(),
     );
-}
-
-pub async fn join_room_as_peer(    
-    request_to_voice_server: VoiceServerJoinAsNewPeer,
-    server_state: &mut ServerState,
-    publish_channel: &Arc<Mutex<lapin::Channel>>){
-    
 }
 
 async fn handle_user_block_capture_result(
@@ -267,4 +270,55 @@ async fn continue_with_successful_room_creation(
     rabbit::publish_message(channel, request_str).await;
     let new_room_state: Room = construct_basic_room_for_state(room_id.clone(), public);
     server_state.rooms.insert(room_id, new_room_state);
+}
+
+async fn insert_initial_permissions_if_needed(
+    room: &Room,
+    join_as: &str,
+    requester_id: &i32,
+    permissions: AllPermissionsResult,
+    handler: &mut ExecutionHandler,
+) -> EncounteredError {
+    if permissions.0 == false {
+        let mut permissions_inner = permissions.1;
+        //if the user already has permissions just return them
+        if permissions_inner.contains_key(requester_id) {
+            let requester_permissions: RoomPermissions =
+                permissions_inner.remove(requester_id).unwrap();
+            return false;
+        }
+        //if the user doesn't have permissions insert them
+        else {
+            let result: EncounteredError =
+                create_initial_user_permissions(handler, join_as, room, requester_id).await;
+            return result;
+        }
+    }
+    return true;
+}
+
+async fn create_initial_user_permissions(
+    handler: &mut ExecutionHandler,
+    join_as: &str,
+    room: &Room,
+    requester_id: &i32,
+) -> EncounteredError {
+    if join_as == "speaker" {
+        //rooms that are auto speaker
+        //doesn't require hand raising
+        if room.auto_speaker {
+            let init_permissions =
+                permission_configs::regular_speaker(requester_id.clone(), room.room_id.clone());
+            let result =
+                data_capturer::capture_new_room_permissions(&init_permissions, handler).await;
+            return result;
+        } else {
+            return true; //can't join as speaker initially if auto speaker is off
+        }
+    } else {
+        let init_permissions =
+            permission_configs::regular_listener(requester_id.clone(), room.room_id.clone());
+        let result = data_capturer::capture_new_room_permissions(&init_permissions, handler).await;
+        return result;
+    }
 }
