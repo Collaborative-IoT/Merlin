@@ -23,7 +23,7 @@ pub type AllPermissionsResult = (bool, HashMap<i32, RoomPermissions>);
 pub type EncounteredError = bool;
 pub type ListenerOrSpeaker = String;
 
-//managing rooms happens in a pub-sub fashion
+//Managing rooms happens in a pub-sub fashion
 //the client waits on the response from this server
 //and this server waits on the response from the
 //voice server via rabbitMQ(spawned in another task)
@@ -36,62 +36,44 @@ pub type ListenerOrSpeaker = String;
 //the user is removes from the state of the server
 //and this update is fanned/brodcasted across all users in the room.
 
-//HOW DOES USERS KNOW WHAT REQUEST TO JOIN TO MAKE?:
-//Users will request their permissions for a room
-//and based on their permissions they will know what
-//request to make, for example joining as a speaker/peer.
-
 pub async fn block_user_from_room(
     user_id: i32,
     room_id: i32,
     requester_id: i32,
-    server_state: &Arc<Mutex<ServerState>>,
+    server_state: &mut ServerState,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) {
-    let mut state = server_state.lock().await;
+    let mut handler = execution_handler.lock().await;
+    let owner_gather: (bool, i32, String) =
+        data_fetcher::get_room_owner_and_settings(&mut handler, &room_id).await;
 
-    //this room exist and the user is inside of the room
-    if state.rooms.contains_key(&room_id)
-        && state
-            .rooms
-            .get(&room_id)
-            .unwrap()
-            .user_ids
-            .contains(&user_id)
-    {
-        let mut handler = execution_handler.lock().await;
-        let owner_gather: (bool, i32, String) =
-            data_fetcher::get_room_owner_and_settings(&mut handler, &room_id).await;
-
-        //ensure the requester is the owner.
-        //no errors were encountered gathering the owner
-        if owner_gather.0 == false && owner_gather.1 == requester_id {
-            //capture new block and send request to voice server
-            let new_block = DBRoomBlock {
-                id: -1,
-                owner_room_id: room_id.clone(),
-                blocked_user_id: user_id.clone(),
-            };
-            let capture_result =
-                data_capturer::capture_new_room_block(&mut handler, &new_block).await;
-            drop(handler); //don't hold guard longer than needed
-            handle_user_block_capture_result(
-                capture_result,
-                requester_id,
-                user_id.clone(),
-                &mut state,
-                room_id,
-                publish_channel,
-            )
-            .await;
-            return;
-        }
+    //ensure the requester is the owner.
+    //no errors were encountered gathering the owner
+    if owner_gather.0 == false && owner_gather.1 == requester_id {
+        //capture new block and send request to voice server
+        let new_block = DBRoomBlock {
+            id: -1,
+            owner_room_id: room_id.clone(),
+            blocked_user_id: user_id.clone(),
+        };
+        let capture_result = data_capturer::capture_new_room_block(&mut handler, &new_block).await;
+        drop(handler); //don't hold guard longer than needed
+        handle_user_block_capture_result(
+            capture_result,
+            requester_id,
+            user_id.clone(),
+            server_state,
+            room_id,
+            publish_channel,
+        )
+        .await;
+        return;
     }
     send_error_to_requester_channel(
         user_id.to_string(),
         requester_id,
-        &mut state,
+        server_state,
         "issue_blocking_user".to_string(),
     );
 }
@@ -167,10 +149,10 @@ pub async fn remove_user_from_room_basic(
     rabbit::publish_message(&channel, request_str).await;
 }
 
-//- Works for both speaker join and peer join
+//- Handles both speaker join and peer join
 //- peer join-> Only consumes audio from other speakers
 //- speaker join-> Consumes audio and produces
-//block checks are handled outside of this function's scope
+//Block checks are handled outside of this function's scope
 pub async fn join_room(
     request_to_voice_server: GenericRoomIdAndPeerId,
     server_state: &mut ServerState,
@@ -182,11 +164,10 @@ pub async fn join_room(
     let mut handler = execution_handler.lock().await;
     let room_id: i32 = request_to_voice_server.roomId.parse().unwrap();
     let user_id: i32 = request_to_voice_server.peerId.parse().unwrap();
-    //could be more efficient by only selecting single row
     let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
         data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
     let state_room: &Room = server_state.rooms.get(&room_id)?;
-    //ensure the user has the permissions to even do this
+    //ensure the user has the permissions to join
     let result: EncounteredError = check_or_insert_initial_permissions(
         state_room,
         type_of_join,
@@ -214,6 +195,22 @@ pub async fn join_room(
         "issue_joining_room".to_string(),
     );
     return None;
+}
+
+//This function handles the following requests
+//1.sending tracks
+//2.connection transports
+//3.getting recv tracks
+//This method is using a Json::Value
+//which is a dynamic in order to remove
+//the need to create types for all of the
+//cascading webRTC types which are already
+//handled by the voice server
+pub async fn handle_web_rtc_specific_requests(
+    request_to_voice_server: serde_json::Value,
+    server_state: &mut ServerState,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+) {
 }
 
 async fn handle_user_block_capture_result(
