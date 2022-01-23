@@ -199,20 +199,21 @@ pub struct VoiceServerAddSpeaker {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct VoiceServerJoinAsSpeaker {
-    pub roomId: String,
-    pub peerId: String,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct VoiceServerJoinAsNewPeer {
-    pub roomId: String,
-    pub peerId: String,
-}
-
-#[derive(Deserialize, Serialize)]
 pub struct VoiceServerClosePeer {
     pub roomId: String,
     pub peerId: String,
     pub kicked: bool,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct GenericRoomIdAndPeerId {
+    pub roomId: String,
+    pub peerId: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct VoiceServerRequest<T: Serialize> {
+    pub op: String,
+    pub d: T,
+    pub uid: String,
 }
