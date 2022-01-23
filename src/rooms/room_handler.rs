@@ -202,15 +202,19 @@ pub async fn join_room(
 //2.connection transports
 //3.getting recv tracks
 //This method is using a Json::Value
-//which is a dynamic in order to remove
+//which is dynamic in order to remove
 //the need to create types for all of the
 //cascading webRTC types which are already
 //handled by the voice server
 pub async fn handle_web_rtc_specific_requests(
     request_to_voice_server: serde_json::Value,
-    server_state: &mut ServerState,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
+    op_code:&str
 ) {
+    let user_id = request_to_voice_server["peerId"].to_string();
+    let request_str = create_voice_server_request(op_code, &user_id, request_to_voice_server);
+    let channel = publish_channel.lock().await;
+    rabbit::publish_message(&channel, request_str).await;
 }
 
 async fn handle_user_block_capture_result(
@@ -242,17 +246,18 @@ fn send_error_to_requester_channel(
     requester_id: i32,
     server_state: &mut ServerState,
     op_code: String,
-) {
+){
     let response = BasicResponse {
         response_op_code: op_code,
         response_containing_data: response_data,
     };
     //TODO:handle error
-    server_state
+    let gather_result = server_state
         .peer_map
-        .get(&requester_id)
-        .unwrap()
-        .send(Message::text(serde_json::to_string(&response).unwrap()));
+        .get(&requester_id);
+    if gather_result.is_some(){
+        gather_result.unwrap().send(Message::text(serde_json::to_string(&response).unwrap()));
+    }
 }
 
 fn add_user_to_room_state(room_id: &i32, user_id: i32, state: &mut ServerState) {
