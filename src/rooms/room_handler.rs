@@ -164,7 +164,7 @@ pub async fn join_room_as_speaker(
     let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
         data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
     //if no errors gathering data
-    if all_room_permissions.0 == false {
+    if all_room_permissions.0 == false && all_room_permissions.contains_keys(&user_id){
         let current_user_permissions: &RoomPermissions =
             all_room_permissions.1.get(&user_id).unwrap();
         if current_user_permissions.is_speaker {
@@ -181,6 +181,13 @@ pub async fn join_room_as_speaker(
         server_state,
         "issue_joining_room_as_speaker".to_string(),
     );
+}
+
+pub async fn join_room_as_peer(    
+    request_to_voice_server: VoiceServerJoinAsNewPeer,
+    server_state: &mut ServerState,
+    publish_channel: &Arc<Mutex<lapin::Channel>>){
+    
 }
 
 async fn handle_user_block_capture_result(
