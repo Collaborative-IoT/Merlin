@@ -22,24 +22,24 @@ pub struct CaptureResult {
 }
 
 pub async fn capture_new_user(execution_handler: &mut ExecutionHandler, user: &DBUser) -> i32 {
-    //no user has both a github id and discord id
-    //we use -1 for which ever doesn't exist(which is already set in the DBUser)
+    // No user has both a github id and discord id
+    // We use -1 for which ever doesn't exist(which is already set in the DBUser)
     let user_already_exist_result = execution_handler
         .select_user_by_discord_or_github_id(user.discord_id.to_owned(), user.github_id.to_owned())
         .await;
 
-    // we haven't ran into db issues and our user doesn't exist
+    //  we haven't ran into db issues and our user doesn't exist
     if user_already_exist_result.is_ok() && user_already_exist_result.unwrap().len() == 0 {
         let insert_result = execution_handler.insert_user(user).await;
         if insert_result.is_ok() {
             let user_id: i32 = insert_result.unwrap();
             return user_id;
         } else {
-            //unexpected error
+            // unexpected error
             return -2 as i32;
         }
     } else {
-        //duplicate
+        // duplicate
         return -1 as i32;
     }
 }
@@ -78,7 +78,7 @@ pub async fn capture_new_scheduled_room_attendance(
     execution_handler: &mut ExecutionHandler,
     attendance: &DBScheduledRoomAttendance,
 ) -> CaptureResult {
-    //we know the attender exist but we don't know the scheduled room exist, so check
+    // we know the attender exist but we don't know the scheduled room exist, so check
     if row_exists(execution_handler.select_scheduled_room_by_id(&attendance.scheduled_room_id))
         .await
     {
@@ -106,7 +106,7 @@ pub async fn capture_new_follower(
     execution_handler: &mut ExecutionHandler,
     follower: &DBFollower,
 ) -> CaptureResult {
-    //we know the follower exist but we don't know the followee exist, so check
+    // we know the follower exist but we don't know the followee exist, so check
     if row_exists(execution_handler.select_user_by_id(&follower.user_id)).await {
         let select_future =
             execution_handler.select_single_follow(&follower.follower_id, &follower.user_id);
@@ -128,7 +128,7 @@ pub async fn capture_new_user_block(
     execution_handler: &mut ExecutionHandler,
     user_block: &DBUserBlock,
 ) -> CaptureResult {
-    //we know the blocker exists, but we don't know the blockee exist, so check
+    // we know the blocker exists, but we don't know the blockee exist, so check
     if row_exists(execution_handler.select_user_by_id(&user_block.blocked_user_id)).await {
         let select_future = execution_handler
             .select_single_user_block(&user_block.owner_user_id, &user_block.blocked_user_id);
@@ -260,7 +260,7 @@ pub async fn capture_scheduled_room_update(
     if owned_rooms_result.is_ok() {
         let selected_rows = owned_rooms_result.unwrap();
 
-        //go through owned rooms, find the match and update.
+        // go through owned rooms, find the match and update.
         for row in selected_rows {
             let room_id: i32 = row.get(2);
             if room_id == update.room_id {
@@ -309,8 +309,8 @@ pub async fn capture_new_room_permissions(
 ) -> bool {
     let permissions_for_user =
         data_fetcher::get_room_permissions_for_users(&permissions.room_id, execution_handler).await;
-    //we didn't run into an error grabbing permissions and
-    //we didn't find any for this room user.
+    // We didn't run into an error grabbing permissions and
+    // We didn't find any for this room user.
     if permissions_for_user.0 == false && !permissions_for_user.1.contains_key(&permissions.user_id)
     {
         let insert_result = execution_handler.insert_room_permission(permissions).await;
@@ -339,7 +339,7 @@ pub async fn capture_new_room_permissions_update(
     );
 }
 
-//makes sure a x amount of row were successfully deleted/updated
+/// Makes sure a x amount of row were successfully deleted/updated
 fn handle_removal_or_update_capture(
     success_msg: String,
     error_msg: String,
@@ -359,9 +359,9 @@ fn handle_removal_or_update_capture(
     }
 }
 
-//checks to see if a select future execution has rows or not
-//useful for checking if a user exist before trying to
-//follow them etc.
+/// Checks to see if a select future execution has rows or not
+///     useful for checking if a user exist before trying to
+///     follow them etc.
 async fn row_exists(select_future: impl Future<Output = Result<Vec<Row>, Error>>) -> bool {
     let select_result = select_future.await;
     if select_result.is_ok() && select_result.unwrap().len() == 1 {
@@ -371,9 +371,8 @@ async fn row_exists(select_future: impl Future<Output = Result<Vec<Row>, Error>>
     }
 }
 
-//used for limiting the amount of
-//entries a user can make to a specific
-//table.
+/// Used for limiting the amount of
+///     entries a user can make to a specific table.
 async fn less_than_x_row_exists(
     select_future: impl Future<Output = Result<Vec<Row>, Error>>,
     x: usize,
@@ -386,8 +385,8 @@ async fn less_than_x_row_exists(
     }
 }
 
-//only executes insert future if the insertion
-//won't be a duplicate.
+/// only executes insert future if the insertion
+/// won't be a duplicate.
 async fn ensure_no_duplicates_exist_and_capture(
     will_be_duplicate: bool,
     insert_future: impl Future<Output = Result<(), Error>>,
@@ -402,10 +401,11 @@ async fn ensure_no_duplicates_exist_and_capture(
     return handle_basic_insert_with_no_returning(insert_future).await;
 }
 
-//handles logic for room capture
-//takes in future generated by room insert methods
-//in the sql_execution_handler.
-//could be more generic to handle other similar cases.
+/// Handles logic for room capture
+///     takes in future generated by room insert methods
+///     in the sql_execution_handler.
+/// 
+/// Could be more generic to handle other similar cases.
 async fn capture_room(future_exc: impl Future<Output = Result<i32, Error>>) -> i32 {
     let insert_result = future_exc.await;
     if insert_result.is_ok() {
@@ -416,9 +416,10 @@ async fn capture_room(future_exc: impl Future<Output = Result<i32, Error>>) -> i
     }
 }
 
-//handles captures that doesn't require
-//any data to be returned from it
-//returns whether or not issues occured
+/// Handles captures that doesn't require
+///     any data to be returned from it.
+/// 
+/// returns whether or not issues occured
 async fn handle_basic_insert_with_no_returning(
     future_exc: impl Future<Output = Result<(), Error>>,
 ) -> CaptureResult {
@@ -436,9 +437,9 @@ async fn handle_basic_insert_with_no_returning(
     }
 }
 
-//checks select future to determine if there is
-//a row with the same credentials already present
-//before insertion
+/// Checks select future to determine if there is
+///     a row with the same credentials already present
+///     before insertion.
 async fn insert_will_be_duplicate(
     future_exc: impl Future<Output = Result<Vec<Row>, Error>>,
 ) -> bool {
@@ -451,8 +452,8 @@ async fn insert_will_be_duplicate(
             return false;
         }
     } else {
-        //return will be duplicate to signify
-        //issue with future execution
+        // Return will be duplicate to signify
+        // issue with future execution
         return true;
     }
 }
@@ -509,8 +510,8 @@ async fn merge_updates_with_current_user(
     }
 }
 
-// non fatal operation, if failure occurs no big deal since it only captures how
-// many users will attend
+///  Non fatal operation, if failure occurs no big deal since it only captures how
+///  many users will attend.
 async fn try_to_increase_num_attending_for_sch_room(
     room_id: &i32,
     execution_handler: &mut ExecutionHandler,
@@ -555,8 +556,8 @@ async fn username_already_exist(
     }
 }
 
-//atempts to insert the room creator's attendance as the owner
-//and increases the sch room attendance number(apart od sch room attendance)
+/// Atempts to insert the room creator's attendance as the owner
+///     and increases the sch room attendance number(apart od sch room attendance).
 async fn handle_scheduled_room_capture_reqs(
     execution_handler: &mut ExecutionHandler,
     room_id: &i32,

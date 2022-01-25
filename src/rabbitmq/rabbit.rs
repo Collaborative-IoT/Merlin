@@ -14,9 +14,9 @@ use crate::state::state::ServerState;
 
 pub async fn setup_rabbit_connection() -> Result<Connection> {
     let addr =
-        std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp://guest:guest@localhost:5672".into());
+        std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp:/// guest:guest@localhost:5672".into());
     let conn: Connection =
-        Connection::connect(&addr, ConnectionProperties::default().with_tokio()).await?; // Note the `with_tokio()` here
+        Connection::connect(&addr, ConnectionProperties::default().with_tokio()).await?; ///  Note the `with_tokio()` here
     return Ok(conn);
 }
 
@@ -25,7 +25,7 @@ pub async fn setup_consume_task(
     server_state: Arc<Mutex<ServerState>>,
 ) -> Result<()> {
     let channel = conn.create_channel().await?;
-    //declare/create new main queue
+    /// declare/create new main queue
     channel
         .queue_declare(
             "main",
@@ -43,7 +43,7 @@ pub async fn setup_consume_task(
         )
         .await?;
 
-    //listen for messages forever and handle messages
+    /// listen for messages forever and handle messages
     tokio::task::spawn(async move {
         let mut state = server_state.lock().await;
         while let Some(delivery) = consumer.next().await {
@@ -79,9 +79,9 @@ fn convert_string_to_vec_u8(data: String) -> Vec<u8> {
 async fn handle_message(message: String, server_state: &mut ServerState) {
     let data: serde_json::Value = serde_json::from_str(&message).unwrap();
     let request_type = type_of_request(&data);
-    //all room messages(events from voice server) need to be brodcasted across the room
-    //all user messages(events from voice server) need to be brodcasted to the user alone
-    //*NOTE*-> error for sending to websocket channels are handled in a different task
+    /// - All room messages(events from voice server) need to be brodcasted across the room
+    /// - All user messages(events from voice server) need to be brodcasted to the user alone
+    /// *NOTE*-> error for sending to websocket channels are handled in a different task
     let message_for_user = BasicResponse {
         response_op_code: "voice_server_msg".to_owned(),
         response_containing_data: message,
@@ -97,11 +97,10 @@ async fn handle_message(message: String, server_state: &mut ServerState) {
     }
 }
 
-//this gives us the type of request that is
-//sent by the voice server which is actually
-//either an update for all users of a room
-//or one user a room
-//"room" or "user"
+/// This gives us the type of request that is
+///     sent by the voice server which is actually
+///     either an update for all users of a room
+///     or one user a room.
 pub fn type_of_request(data: &serde_json::Value) -> String {
     if data["uid"] == serde_json::Value::Null {
         return "room".to_string();
