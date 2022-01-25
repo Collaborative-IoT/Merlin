@@ -28,14 +28,14 @@ pub type RoomOwnerAndSettings = (bool, i32, String);
 //Managing rooms happens in a pub-sub fashion
 //the client waits on the response from this server
 //and this server waits on the response from the
-//voice server via rabbitMQ(spawned in another task)
+//voice server via rabbitMQ(spawned in separate task)
 //once this server gathers a response, it fans it
 //to all involved parties(usually everyone in the room)
 //For Example, kicking someone:
-//1. admin requests user x to be kicked
-//2. this server sends the request to the voice server
-//3. once the voice server responds, if it is success
-//the user is removes from the state of the server
+//1. Admin/Mod requests user x to be kicked
+//2. This server sends the request to the voice server
+//3. Once the voice server responds, if it is successful
+//the user is removed from the state of the server
 //and this update is fanned/brodcasted across all users in the room.
 
 pub async fn block_user_from_room(
@@ -288,7 +288,6 @@ pub async fn remove_speaker(
                 &user_id.to_string(),
                 request_to_voice_server,
             );
-            //send the message to the voice server
             let channel = publish_channel.lock().await;
             rabbit::publish_message(&channel, request_str).await;
             return;
