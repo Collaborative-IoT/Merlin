@@ -30,7 +30,7 @@ pub type RoomOwnerAndSettings = (bool, i32, String);
 ///  - This server waits on the response from the voice server.
 ///  - We gather voice server messages in a separate task.
 ///  - Once this server gathers a response, it fans it to all targets.
-/// 
+///
 /// For Example, kicking someone:
 ///  - Admin/Mod requests user x to be kicked
 ///  - This server sends the request to the voice server
@@ -50,10 +50,10 @@ pub async fn block_user_from_room(
     let owner_gather: (bool, i32, String) =
         data_fetcher::get_room_owner_and_settings(&mut handler, &room_id).await;
 
-    /// ensure the requester is the owner.
-    /// no errors were encountered gathering the owner
+    // ensure the requester is the owner.
+    // no errors were encountered gathering the owner
     if owner_gather.0 == false && owner_gather.1 == requester_id {
-        /// capture new block and send request to voice server
+        //capture new block and send request to voice server
         let new_block = DBRoomBlock {
             id: -1,
             owner_room_id: room_id.clone(),
@@ -113,15 +113,15 @@ pub async fn destroy_room(
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     room_id: &i32,
 ) {
-    /// remove from db
+    // remove from db
     let mut handler = execution_handler.lock().await;
     data_capturer::capture_room_removal(&mut handler, room_id).await;
     drop(handler);
 
-    /// remove from state
+    // remove from state
     server_state.rooms.remove(room_id);
 
-    /// remove from voice server
+    // remove from voice server
     let request_to_voice_server = VoiceServerDestroyRoom {
         roomId: room_id.to_string(),
     };
@@ -151,10 +151,10 @@ pub async fn remove_user_from_room_basic(
     rabbit::publish_message(&channel, request_str).await;
 }
 
-///  - Handles both speaker join and peer join
-///  - peer join-> Only consumes audio from other speakers
-///  - speaker join-> Consumes audio and produces
-///  - Block checks are handled outside of this function's scope
+/// - Handles both speaker join and peer join
+/// - peer join-> Only consumes audio from other speakers
+/// - speaker join-> Consumes audio and produces
+/// - Block checks are handled outside of this function's scope
 pub async fn join_room(
     request_to_voice_server: GenericRoomIdAndPeerId,
     server_state: &mut ServerState,
@@ -170,7 +170,7 @@ pub async fn join_room(
         data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
     let state_room: &Room = server_state.rooms.get(&room_id)?;
 
-    /// ensure the user has the permissions to join
+    // ensure the user has the permissions to join
     let result: EncounteredError = check_or_insert_initial_permissions(
         state_room,
         type_of_join,
@@ -181,7 +181,7 @@ pub async fn join_room(
     .await;
     drop(handler);
 
-    /// if the user has this permission
+    // if the user has this permission
     if result == false {
         let channel = publish_channel.lock().await;
         let request_str = create_voice_server_request(
@@ -205,7 +205,7 @@ pub async fn join_room(
 ///  Adds a speaker that is already an existing peer in a room
 ///  this happens and is only allowed for users who have already
 ///  requested to speak.
-/// 
+///
 ///  - Mods who are listeners want to come to the stage.
 ///  - Mods accept other user's request to come to the stage.
 pub async fn add_speaker(
@@ -226,7 +226,7 @@ pub async fn add_speaker(
             all_room_permissions.1.get(requester_id).unwrap();
         let requestee_permissions: &RoomPermissions = all_room_permissions.1.get(&user_id).unwrap();
 
-        /// you can only be added as a speaker if you requested.
+        // you can only be added as a speaker if you requested.
         if requester_permissions.is_mod && requestee_permissions.asked_to_speak {
             let new_permission_config = permission_configs::regular_speaker(room_id, user_id);
             data_capturer::capture_new_room_permissions_update(
@@ -267,7 +267,7 @@ pub async fn remove_speaker(
         data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
     let room_owner_data: RoomOwnerAndSettings =
         data_fetcher::get_room_owner_and_settings(&mut handler, &room_id).await;
-    /// make sure we didn't encounter errors getting essential information
+    // make sure we didn't encounter errors getting essential information
     if room_owner_data.0 == false && all_room_permissions.0 == false {
         let requester_permissions: &RoomPermissions =
             all_room_permissions.1.get(requester_id).unwrap();
@@ -277,7 +277,7 @@ pub async fn remove_speaker(
             (&user_id, &requestee_permissions),
             &room_owner_data.1,
         ) {
-            /// modify the database with the new permissions(no longer a speaker)
+            // modify the database with the new permissions(no longer a speaker)
             let new_permissions = get_new_removed_speaker_permission_config(
                 requestee_permissions,
                 &user_id,
@@ -308,10 +308,10 @@ pub async fn remove_speaker(
 ///  - Sending tracks
 ///  - Connection transports
 ///  - Getting recv tracks
-/// 
+///
 ///  We make usage of the dynamic json value
-///  to remove the need to create 
-///  types for all of the media soup objects 
+///  to remove the need to create
+///  types for all of the media soup objects
 ///  being transfered to the voice server.
 pub async fn handle_web_rtc_specific_requests(
     request_to_voice_server: serde_json::Value,
@@ -359,7 +359,7 @@ fn send_error_to_requester_channel(
         response_op_code: op_code,
         response_containing_data: response_data,
     };
-    /// TODO:handle error
+    // TODO:handle error
     let gather_result = server_state.peer_map.get(&requester_id);
     if gather_result.is_some() {
         gather_result
@@ -381,7 +381,8 @@ fn construct_basic_room_for_state(room_id: i32, public: bool) -> Room {
     return Room {
         room_id: room_id,
         muted: HashSet::new(),
-        voice_server_id: 0.to_string(), /// not yet implemented(feature)
+        voice_server_id: 0.to_string(),
+        /// not yet implemented(feature)
         deaf: HashSet::new(),
         user_ids: HashSet::new(),
         public: public,
@@ -413,13 +414,13 @@ async fn check_or_insert_initial_permissions(
     handler: &mut ExecutionHandler,
 ) -> EncounteredError {
     if permissions.0 == false {
-        ///  if the user already has permissions just return them
+        // if the user already has permissions just return them
         if permissions.1.contains_key(requester_id) {
             let current_user_permissions = permissions.1.get(&requester_id).unwrap();
-            ///  If the user is requesting to join as speaker:
-            ///   - But isn't a speaker in the database and the room is auto speaker
-            ///     we accept this request because the user could have been a peer
-            ///     previously and now they are joining as a speaker.
+            // If the user is requesting to join as speaker:
+            // - But isn't a speaker in the database and the room is auto speaker
+            //    we accept this request because the user could have been a peer
+            //    previously and now they are joining as a speaker.
             if join_as == "speaker"
                 && current_user_permissions.is_speaker == false
                 && room.auto_speaker == false
@@ -445,8 +446,8 @@ async fn create_initial_user_permissions(
     requester_id: &i32,
 ) -> EncounteredError {
     if type_of_join == "join-as-speaker" {
-        /// rooms that are auto speaker
-        /// doesn't require hand raising
+        // rooms that are auto speaker
+        // doesn't require hand raising
         if room.auto_speaker {
             let init_permissions =
                 permission_configs::regular_speaker(requester_id.clone(), room.room_id.clone());
@@ -473,17 +474,17 @@ fn create_voice_server_request<T: Serialize>(op_code: &str, uid: &String, data: 
     return serde_json::to_string(&voice_server_req).unwrap();
 }
 
+/// When Users can only be removed from speaker:
+/// - If the owner requests(doesn't matter if the user is a mod)
+/// - If the person being removed is not a mod and the requester is a mod
+///     and the person being removed is a speaker.
+///
+/// If none of these conditions are met, it is an invalid request.
 fn requester_can_remove_speaker(
     remover_permissions: (&i32, &RoomPermissions),
     removee_permissions: (&i32, &RoomPermissions),
     owner_id: &i32,
 ) -> bool {
-    ///  When Users can only be removed from speaker:
-    ///   - If the owner requests(doesn't matter if the user is a mod)
-    ///   - If the person being removed is not a mod and the requester is a mod
-    ///       and the person being removed is a speaker.
-    /// 
-    ///  If none of these conditions are met, it is an invalid request.
     if remover_permissions.0 == owner_id && removee_permissions.0 != remover_permissions.0 {
         return true;
     }
