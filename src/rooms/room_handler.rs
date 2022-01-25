@@ -25,18 +25,18 @@ pub type EncounteredError = bool;
 pub type ListenerOrSpeaker = String;
 pub type RoomOwnerAndSettings = (bool, i32, String);
 
-/// Managing rooms happens in a pub-sub fashion:
-///  - The client waits on the response from this server.
-///  - This server waits on the response from the voice server.
-///  - We gather voice server messages in a separate task.
-///  - Once this server gathers a response, it fans it to all targets.
-///
-/// For Example, kicking someone:
-///  - Admin/Mod requests user x to be kicked
-///  - This server sends the request to the voice server
-///  - Once the voice server responds, if it is successful
-///       the user is removed from the state of the server
-///       and this update is fanned/brodcasted across all users in the room.
+// Managing rooms happens in a pub-sub fashion:
+//  - The client waits on the response from this server.
+//  - This server waits on the response from the voice server.
+//  - We gather voice server messages in a separate task.
+//  - Once this server gathers a response, it fans it to all targets.
+//
+// For Example, kicking someone:
+//  - Admin/Mod requests user x to be kicked
+//  - This server sends the request to the voice server
+//  - Once the voice server responds, if it is successful
+//       the user is removed from the state of the server
+//       and this update is fanned/brodcasted across all users in the room.
 
 pub async fn block_user_from_room(
     user_id: i32,
