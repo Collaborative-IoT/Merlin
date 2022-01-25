@@ -510,8 +510,8 @@ async fn merge_updates_with_current_user(
     }
 }
 
-///  Non fatal operation, if failure occurs no big deal since it only captures how
-///  many users will attend.
+// Non fatal operation, if failure occurs no big deal since it only captures how
+// many users will attend.
 async fn try_to_increase_num_attending_for_sch_room(
     room_id: &i32,
     execution_handler: &mut ExecutionHandler,

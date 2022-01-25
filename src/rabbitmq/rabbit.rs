@@ -28,7 +28,7 @@ pub async fn setup_consume_task(
     // declare/create new main queue
     channel
         .queue_declare(
-            "main",
+            "voice_server_publish",
             QueueDeclareOptions::default(),
             FieldTable::default(),
         )
@@ -36,7 +36,7 @@ pub async fn setup_consume_task(
 
     let mut consumer = channel
         .basic_consume(
-            "main",
+            "voice_server_publish",
             "my_consumer",
             BasicConsumeOptions::default(),
             FieldTable::default(),
@@ -57,10 +57,11 @@ pub async fn setup_consume_task(
 }
 
 pub async fn publish_message(publish_channel: &Channel, data: String) -> Result<bool> {
+    //voice server consume must be created prior aka queue declare.
     let confirm = publish_channel
         .basic_publish(
             "",
-            "main",
+            "voice_server_consume",
             BasicPublishOptions::default(),
             convert_string_to_vec_u8(data),
             BasicProperties::default(),

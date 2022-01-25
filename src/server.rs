@@ -57,8 +57,6 @@ async fn user_connected(ws: WebSocket, server_state: Arc<RwLock<ServerState>>) {
             .peer_map
             .insert(current_user_id, tx);
 
-        // Every time the user sends a message, broadcast it to
-        // all other users...
         while let Some(result) = user_ws_rx.next().await {
             let msg = match result {
                 Ok(msg) => msg,
