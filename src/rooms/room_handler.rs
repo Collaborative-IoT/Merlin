@@ -5,7 +5,7 @@ use crate::communication::communication_types::{
 };
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::{data_capturer, data_fetcher};
-use crate::data_store::db_models::{DBRoom, DBRoomBlock};
+use crate::data_store::db_models::{DBRoom, DBRoomBlock, DBRoomPermissions};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
@@ -23,6 +23,7 @@ use super::permission_configs;
 pub type AllPermissionsResult = (bool, HashMap<i32, RoomPermissions>);
 pub type EncounteredError = bool;
 pub type ListenerOrSpeaker = String;
+pub type RoomOwnerAndSettings = (bool, i32, String);
 
 //Managing rooms happens in a pub-sub fashion
 //the client waits on the response from this server
@@ -59,7 +60,7 @@ pub async fn block_user_from_room(
             blocked_user_id: user_id.clone(),
         };
         let capture_result = data_capturer::capture_new_room_block(&mut handler, &new_block).await;
-        drop(handler); //don't hold guard longer than needed
+        drop(handler);
         handle_user_block_capture_result(
             capture_result,
             requester_id,
@@ -177,6 +178,7 @@ pub async fn join_room(
         &mut handler,
     )
     .await;
+    drop(handler);
     //if the user has this permission
     if result == false {
         let channel = publish_channel.lock().await;
@@ -198,7 +200,7 @@ pub async fn join_room(
     return None;
 }
 
-// adds a speaker that is already an existing peer in a room
+// Adds a speaker that is already an existing peer in a room
 // this happens and is only allowed for users who have already
 // requested to speak. This method is called when:
 //1.Mods who are listeners want to come to the stage.
@@ -213,7 +215,7 @@ pub async fn add_speaker(
     let mut handler = execution_handler.lock().await;
     let room_id: i32 = request_to_voice_server.roomId.parse().unwrap();
     let user_id: i32 = request_to_voice_server.peerId.parse().unwrap();
-    let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
+    let all_room_permissions: AllPermissionsResult =
         data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
 
     if all_room_permissions.0 == false {
@@ -229,6 +231,7 @@ pub async fn add_speaker(
                 &mut handler,
             )
             .await;
+            drop(handler);
             let request_str = create_voice_server_request(
                 "add-speaker",
                 &user_id.to_string(),
@@ -236,6 +239,7 @@ pub async fn add_speaker(
             );
             let channel = publish_channel.lock().await;
             rabbit::publish_message(&channel, request_str).await;
+            return;
         }
     }
     send_error_to_requester_channel(
@@ -246,7 +250,57 @@ pub async fn add_speaker(
     );
 }
 
-pub async fn remove_speaker(request_to_voice_server: VoiceServerRemoveSpeaker) {}
+pub async fn remove_speaker(
+    request_to_voice_server: VoiceServerRemoveSpeaker,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    requester_id: &i32,
+    server_state: &mut ServerState,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
+    let mut handler = execution_handler.lock().await;
+    let room_id: i32 = request_to_voice_server.roomId.parse().unwrap();
+    let user_id: i32 = request_to_voice_server.peerId.parse().unwrap();
+    let all_room_permissions: AllPermissionsResult =
+        data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
+    let room_owner_data: RoomOwnerAndSettings =
+        data_fetcher::get_room_owner_and_settings(&mut handler, &room_id).await;
+    //make sure we didn't encounter errors getting essential information
+    if room_owner_data.0 == false && all_room_permissions.0 == false {
+        let requester_permissions: &RoomPermissions =
+            all_room_permissions.1.get(requester_id).unwrap();
+        let requestee_permissions: &RoomPermissions = all_room_permissions.1.get(&user_id).unwrap();
+        if requester_can_remove_speaker(
+            (requester_id, &requester_permissions),
+            (&user_id, &requestee_permissions),
+            &room_owner_data.1,
+        ) {
+            //modify the database with the new permissions(no longer a speaker)
+            let new_permissions = get_new_removed_speaker_permission_config(
+                requestee_permissions,
+                &user_id,
+                &room_id,
+            );
+            data_capturer::capture_new_room_permissions_update(&new_permissions, &mut handler)
+                .await;
+            drop(handler);
+            let request_str = create_voice_server_request(
+                "remove-speaker",
+                &user_id.to_string(),
+                request_to_voice_server,
+            );
+            //send the message to the voice server
+            let channel = publish_channel.lock().await;
+            rabbit::publish_message(&channel, request_str).await;
+            return;
+        }
+    }
+    send_error_to_requester_channel(
+        user_id.to_string(),
+        requester_id.clone(),
+        server_state,
+        "issue_removing_speaker".to_string(),
+    );
+}
 
 //This function handles the following requests
 //1.sending tracks
@@ -283,6 +337,7 @@ async fn handle_user_block_capture_result(
             kicked: true,
         };
         remove_user_from_room_basic(request, server_state, publish_channel).await;
+        return;
     }
     send_error_to_requester_channel(
         user_id.to_string(),
@@ -415,4 +470,43 @@ fn create_voice_server_request<T: Serialize>(op_code: &str, uid: &String, data: 
         d: data,
     };
     return serde_json::to_string(&voice_server_req).unwrap();
+}
+
+fn requester_can_remove_speaker(
+    remover_permissions: (&i32, &RoomPermissions),
+    removee_permissions: (&i32, &RoomPermissions),
+    owner_id: &i32,
+) -> bool {
+    //users can only be removed from speaker
+    //1. if the owner requests(doesn't matter if the user is a mod)
+    //2. if the person being removed is not a mod and the requester is a mod
+    //and the person being removed is a speaker.
+    //if none of these conditions are met, it is an invalid request
+    if remover_permissions.0 == owner_id && removee_permissions.0 != remover_permissions.0 {
+        return true;
+    }
+    if remover_permissions.1.is_mod
+        && removee_permissions.1.is_mod == false
+        && removee_permissions.1.is_speaker
+    {
+        return true;
+    }
+    return false;
+}
+
+//we know that the speaker was removed
+//so we just need to gather the config
+//that represents the old version of the config
+//for this user, with the "is_speaker" field set
+//to false.
+fn get_new_removed_speaker_permission_config(
+    current_permissions: &RoomPermissions,
+    user_id: &i32,
+    room_id: &i32,
+) -> DBRoomPermissions {
+    if current_permissions.is_mod {
+        return permission_configs::modded_non_speaker(room_id.clone(), user_id.clone());
+    } else {
+        return permission_configs::regular_listener(room_id.clone(), user_id.clone());
+    }
 }
