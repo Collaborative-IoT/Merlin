@@ -1,4 +1,5 @@
 use crate::common::common_error_logic::send_error_to_requester_channel;
+use crate::communication::communication_handler_helpers;
 use crate::communication::communication_types::{
     BasicRequest, BlockUserFromRoom, GenericRoomIdAndPeerId,
 };
@@ -231,8 +232,10 @@ pub async fn add_or_remove_speaker(
     return Ok(());
 }
 
-
-
-pub async fn handle_web_rtc_request(){
-    
+pub async fn handle_web_rtc_request(
+    request: BasicRequest,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    op_code: &str,
+) -> Result<()> {
+    let request_data: serde_json::Value = serde_json::from_str(&request.request_containing_data)?;
 }
