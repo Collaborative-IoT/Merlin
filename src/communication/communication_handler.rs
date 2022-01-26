@@ -33,7 +33,7 @@ pub async fn create_room(
     public: bool,
 ) {
     let read_state = server_state.read().await;
-    //make sure the user exist and they aren't in a room
+    //Make sure the user exist and they aren't in a room
     if read_state.active_users.contains_key(&requester_id)
         && read_state
             .active_users
@@ -54,7 +54,7 @@ pub async fn create_room(
         .await;
         return;
     }
-    //if the request is invalid
+    // If the request is invalid
     drop(read_state);
     let mut write_state = server_state.write().await;
     send_error_to_requester_channel(
@@ -75,12 +75,12 @@ pub async fn block_user_from_room(
     let request_data: BlockUserFromRoom = serde_json::from_str(&request.request_containing_data)?;
     let read_state = server_state.read().await;
 
-    //Make sure this room actually exists
+    // Make sure this room actually exists
     if read_state.rooms.contains_key(&request_data.room_id) {
         let room = read_state.rooms.get(&request_data.room_id).unwrap();
 
-        //Make sure both users are in the room
-        //The owner checking happens in the room handler
+        // Make sure both users are in the room
+        // The owner checking happens in the room handler
         if room.user_ids.contains(&requester_id) && room.user_ids.contains(&request_data.user_id) {
             drop(read_state);
             let mut write_state = server_state.write().await;
@@ -155,6 +155,68 @@ pub async fn join_room(
                 type_of_join,
             )
             .await;
+            return Ok(());
+        }
+    }
+    drop(read_state);
+    let mut write_state = server_state.write().await;
+    send_error_to_requester_channel(
+        "issue with request".to_owned(),
+        requester_id,
+        &mut write_state,
+        "invalid_request".to_owned(),
+    );
+    return Ok(());
+}
+
+pub async fn add_or_remove_speaker(
+    request: BasicRequest,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    requester_id: i32,
+    server_state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    add_or_remove: &str,
+) -> Result<()> {
+    let read_state = server_state.read().await;
+    //ensure request parsing is successful
+    let request_data: GenericRoomIdAndPeerId =
+        serde_json::from_str(&request.request_containing_data)?;
+    let requestee_user_id_parse_result = request_data.peerId.parse();
+    let room_id_parse_result = request_data.roomId.parse();
+    if !requestee_user_id_parse_result.is_ok() && !room_id_parse_result.is_ok() {
+        return Ok(());
+    }
+    let requestee_id: i32 = requestee_user_id_parse_result.unwrap();
+    let room_id: i32 = room_id_parse_result.unwrap();
+
+    // Make sure the room being requested exists
+    if read_state.rooms.contains_key(&room_id) {
+        let room = read_state.rooms.get(&room_id).unwrap();
+
+        // Make sure the requester and requestee is in the
+        // room that is being requested
+        if room.user_ids.contains(&requester_id) && room.user_ids.contains(&requestee_id) {
+            drop(read_state);
+            let mut write_state = server_state.write().await;
+            if add_or_remove == "add" {
+                rooms::room_handler::add_speaker(
+                    request_data,
+                    publish_channel,
+                    &requester_id,
+                    &mut write_state,
+                    execution_handler,
+                )
+                .await;
+            } else {
+                rooms::room_handler::remove_speaker(
+                    request_data,
+                    publish_channel,
+                    &requester_id,
+                    &mut write_state,
+                    execution_handler,
+                )
+                .await;
+            }
             return Ok(());
         }
     }

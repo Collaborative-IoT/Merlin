@@ -1,8 +1,7 @@
 use crate::common::common_error_logic::send_error_to_requester_channel;
 use crate::communication::communication_types::{
-    BasicResponse, GenericRoomIdAndPeerId, RoomPermissions,
-    VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom,
-    VoiceServerRequest,
+    BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, VoiceServerClosePeer,
+    VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRequest,
 };
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::{data_capturer, data_fetcher};
