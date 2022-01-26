@@ -235,7 +235,33 @@ pub async fn add_or_remove_speaker(
 pub async fn handle_web_rtc_request(
     request: BasicRequest,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
     op_code: &str,
 ) -> Result<()> {
     let request_data: serde_json::Value = serde_json::from_str(&request.request_containing_data)?;
+    let read_state = server_state.read().await;
+
+    if communication_handler_helpers::web_rtc_request_is_valid(
+        &read_state,
+        &request_data,
+        &requester_id,
+    ) {
+        rooms::room_handler::handle_web_rtc_specific_requests(
+            request_data,
+            publish_channel,
+            op_code,
+        )
+        .await;
+        return Ok(());
+    }
+    drop(read_state);
+    let mut write_state = server_state.write().await;
+    send_error_to_requester_channel(
+        "issue with request".to_owned(),
+        requester_id,
+        &mut write_state,
+        "invalid_request".to_owned(),
+    );
+    return Ok(());
 }

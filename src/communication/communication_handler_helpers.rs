@@ -2,7 +2,7 @@ use crate::state::state::ServerState;
 
 pub fn web_rtc_request_is_valid(
     server_state: &ServerState,
-    request_data: serde_json::Value,
+    request_data: &serde_json::Value,
     requester_id: &i32,
 ) -> bool {
     //make sure the user in the request value is the user requesting
