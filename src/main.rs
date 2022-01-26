@@ -9,6 +9,10 @@ pub mod state {
     pub mod state_types;
 }
 
+pub mod common {
+    pub mod common_error_logic;
+}
+
 pub mod data_store {
     pub mod creation_queries;
     pub mod db_models;

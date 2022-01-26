@@ -26,6 +26,7 @@ pub struct User {
     pub ip: String,
     pub bio: String,
     pub banner_url: String,
+    pub current_room_id: i32,
 }
 
 pub struct Room {
@@ -38,8 +39,8 @@ pub struct Room {
     pub auto_speaker: bool,
 }
 
-//IoTServerConnectionId -> Permissions for the connection(represented as the board)
-//Read the docs about the Board concept
+/// IoTServerConnectionId -> Permissions for the connection(represented as the board)
+/// Read the docs about the Board concept
 pub type IoTServerConnections = HashMap<String, Board>;
 
 //user id -> write connection.

@@ -1,3 +1,4 @@
+use crate::common::common_error_logic::send_error_to_requester_channel;
 use crate::communication::communication_types::{
     BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, VoiceServerAddSpeaker,
     VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRemoveSpeaker,
@@ -16,7 +17,6 @@ use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::mem::drop;
 use std::sync::Arc;
-use warp::ws::Message;
 
 use super::permission_configs;
 
@@ -347,25 +347,6 @@ async fn handle_user_block_capture_result(
         server_state,
         "issue_blocking_user".to_string(),
     );
-}
-
-fn send_error_to_requester_channel(
-    response_data: String,
-    requester_id: i32,
-    server_state: &mut ServerState,
-    op_code: String,
-) {
-    let response = BasicResponse {
-        response_op_code: op_code,
-        response_containing_data: response_data,
-    };
-    // TODO:handle error
-    let gather_result = server_state.peer_map.get(&requester_id);
-    if gather_result.is_some() {
-        gather_result
-            .unwrap()
-            .send(Message::text(serde_json::to_string(&response).unwrap()));
-    }
 }
 
 fn add_user_to_room_state(room_id: &i32, user_id: i32, state: &mut ServerState) {
