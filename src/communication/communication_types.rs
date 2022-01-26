@@ -95,6 +95,12 @@ pub struct RoomSettingsEditOrCreation {
     pub description: String,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct BlockUserFromRoom {
+    pub user_id: i32,
+    pub room_id: i32,
+}
+
 pub struct ScheduledRoomUpdate {
     pub room_id: i32,
     pub name: String,
