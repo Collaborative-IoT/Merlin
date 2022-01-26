@@ -1,7 +1,7 @@
 use crate::common::common_error_logic::send_error_to_requester_channel;
 use crate::communication::communication_types::{
-    BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, VoiceServerAddSpeaker,
-    VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRemoveSpeaker,
+    BasicResponse, GenericRoomIdAndPeerId, RoomPermissions,
+    VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom,
     VoiceServerRequest,
 };
 use crate::communication::data_capturer::CaptureResult;
@@ -19,9 +19,8 @@ use std::mem::drop;
 use std::sync::Arc;
 
 use super::permission_configs;
-
-pub type AllPermissionsResult = (bool, HashMap<i32, RoomPermissions>);
 pub type EncounteredError = bool;
+pub type AllPermissionsResult = (EncounteredError, HashMap<i32, RoomPermissions>);
 pub type ListenerOrSpeaker = String;
 pub type RoomOwnerAndSettings = (bool, i32, String);
 
@@ -209,7 +208,7 @@ pub async fn join_room(
 ///  - Mods who are listeners want to come to the stage.
 ///  - Mods accept other user's request to come to the stage.
 pub async fn add_speaker(
-    request_to_voice_server: VoiceServerAddSpeaker,
+    request_to_voice_server: GenericRoomIdAndPeerId,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
     requester_id: &i32,
     server_state: &mut ServerState,
@@ -254,7 +253,7 @@ pub async fn add_speaker(
 }
 
 pub async fn remove_speaker(
-    request_to_voice_server: VoiceServerRemoveSpeaker,
+    request_to_voice_server: GenericRoomIdAndPeerId,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
     requester_id: &i32,
     server_state: &mut ServerState,

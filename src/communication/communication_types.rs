@@ -183,12 +183,6 @@ pub struct Message {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct VoiceServerRemoveSpeaker {
-    pub roomId: String,
-    pub peerId: String,
-}
-
-#[derive(Deserialize, Serialize)]
 pub struct VoiceServerDestroyRoom {
     pub roomId: String,
 }
@@ -196,12 +190,6 @@ pub struct VoiceServerDestroyRoom {
 #[derive(Deserialize, Serialize)]
 pub struct VoiceServerCreateRoom {
     pub roomId: String,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct VoiceServerAddSpeaker {
-    pub roomId: String,
-    pub peerId: String,
 }
 
 #[derive(Deserialize, Serialize)]
