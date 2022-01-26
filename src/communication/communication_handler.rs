@@ -230,3 +230,9 @@ pub async fn add_or_remove_speaker(
     );
     return Ok(());
 }
+
+
+
+pub async fn handle_web_rtc_request(){
+    
+}
