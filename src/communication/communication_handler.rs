@@ -1,5 +1,6 @@
 use crate::common::common_error_logic::send_error_to_requester_channel;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
+use crate::rooms;
 use crate::state::state::ServerState;
 use futures::lock::Mutex;
 use std::mem::drop;
@@ -35,14 +36,24 @@ pub async fn create_room(
             .current_room_id
             == -1
     {
+        let mut new_state = server_state.write().await;
+        rooms::room_handler::create_room(
+            &mut new_state,
+            publish_channel,
+            execution_handler,
+            requester_id,
+            public,
+        )
+        .await;
         return;
     }
+    //if the request is invalid
     drop(state);
     let mut new_state = server_state.write().await;
     send_error_to_requester_channel(
         "issue".to_owned(),
         requester_id,
         &mut new_state,
-        "issue_with_request".to_owned(),
+        "invalid_request".to_owned(),
     );
 }
