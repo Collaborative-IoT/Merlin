@@ -1,7 +1,8 @@
 use crate::common::common_response_logic::send_to_requester_channel;
 use crate::communication::communication_handler_helpers;
 use crate::communication::communication_types::{
-    BasicRequest, BlockUserFromRoom, CommunicationRoom, GenericRoomIdAndPeerId, GetFollowList,UserPreview
+    BasicRequest, BasicRoomCreation, BlockUserFromRoom, CommunicationRoom, GenericRoomIdAndPeerId,
+    GetFollowList, UserPreview,
 };
 use crate::communication::data_fetcher;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
@@ -10,7 +11,7 @@ use crate::state::state::ServerState;
 use crate::state::state_types::Room;
 use futures::lock::Mutex;
 use serde_json::Result;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::mem::drop;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -28,12 +29,13 @@ aren't included in the core logic of different modules.
 */
 
 pub async fn create_room(
+    request: BasicRequest,
     server_state: &Arc<RwLock<ServerState>>,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     requester_id: i32,
-    public: bool,
-) {
+) -> Result<()> {
+    let request_data: BasicRoomCreation = serde_json::from_str(&request.request_containing_data)?;
     let read_state = server_state.read().await;
     //Make sure the user exist and they aren't in a room
     if read_state.active_users.contains_key(&requester_id)
@@ -51,10 +53,12 @@ pub async fn create_room(
             publish_channel,
             execution_handler,
             requester_id,
-            public,
+            request_data.name,
+            request_data.desc,
+            request_data.public,
         )
         .await;
-        return;
+        return Ok(());
     }
     // If the request is invalid
     drop(read_state);
@@ -65,6 +69,7 @@ pub async fn create_room(
         &mut write_state,
         "invalid_request".to_owned(),
     );
+    return Ok(());
 }
 
 pub async fn block_user_from_room(
@@ -308,20 +313,45 @@ pub async fn get_followers_or_following_list(
 // In the future, top rooms will be user driven and
 // will need to be limited with pagination techniques.
 pub async fn get_top_rooms(
-    server_state: &Arc<RwLock<ServerState>>, 
+    server_state: &Arc<RwLock<ServerState>>,
     requester_id: i32,
-    execution_handler: &Arc<Mutex<ExecutionHandler>>,) {
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
     let read_state = server_state.read().await;
     let mut all_rooms: Vec<&Room> = read_state.rooms.values().into_iter().collect();
     all_rooms.sort_by_key(|room| room.amount_of_users);
     let mut handler = execution_handler.lock().await;
-    for room in all_rooms{
-        let all_room_user_ids:Vec<i32> = room.user_ids.iter().cloned().collect();
-        //(encountered_error, previews)
-        let previews:(bool, HashMap<i32, UserPreview>) = data_fetcher::get_user_previews_for_users(all_room_user_ids, &mut handler).await;
-        //if encountered error
-        if previews.0 {
-            break;
+    let mut communication_rooms: Vec<CommunicationRoom> = Vec::new();
+    for room in all_rooms {
+        let all_room_user_ids: Vec<i32> = room.user_ids.iter().cloned().collect();
+        //(encountered_error) is the first of the tuple values
+        let previews: (bool, HashMap<i32, UserPreview>) =
+            data_fetcher::get_user_previews_for_users(all_room_user_ids, &mut handler).await;
+        let owner_data_and_chat_mode: (bool, i32, String) =
+            data_fetcher::get_room_owner_and_settings(&mut handler, &room.room_id).await;
+
+        //if encountered errors getting data needed
+        if previews.0 || owner_data_and_chat_mode.0 {
+            continue;
         }
+
+        communication_handler_helpers::construct_communication_room(
+            previews.1,
+            room,
+            &mut communication_rooms,
+            owner_data_and_chat_mode.1,
+            owner_data_and_chat_mode.2,
+        );
     }
+    //clean up old mutexes and send the response
+    drop(handler);
+    drop(read_state);
+    let response_containing_data = serde_json::to_string(&communication_rooms).unwrap();
+    let mut write_state = server_state.write().await;
+    send_to_requester_channel(
+        response_containing_data,
+        requester_id,
+        &mut write_state,
+        "top_rooms".to_owned(),
+    );
 }

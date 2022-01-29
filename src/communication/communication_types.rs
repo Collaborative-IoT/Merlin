@@ -5,6 +5,7 @@ of the request/response(if there is any) will be the 'request_containing_data/re
 in json serialization.
 */
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use std::option::Option;
 
@@ -39,6 +40,13 @@ pub struct GetFollowListResponse {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct BasicRoomCreation {
+    pub name: String,
+    pub desc: String,
+    pub public: bool,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct UserRemovedFromRoom {
     pub user_id: i32,
     pub type_of_ban: String,
@@ -57,9 +65,9 @@ pub struct CommunicationRoom {
     pub details: RoomDetails,
     pub room_id: i32,
     pub num_of_people_in_room: i32,
-    pub voice_server_id: i32,
+    pub voice_server_id: String,
     pub creator_id: i32,
-    pub people_preview_data: Vec<UserPreview>,
+    pub people_preview_data: HashMap<i32, UserPreview>,
     pub auto_speaker_setting: bool,
     pub created_at: String,
     pub chat_mode: String,
@@ -68,10 +76,10 @@ pub struct CommunicationRoom {
 #[derive(Deserialize, Serialize)]
 
 pub struct RoomDetails {
-    name: bool,
-    chat_throttle: i32,
-    is_private: bool,
-    description: String,
+    pub name: String,
+    pub chat_throttle: i32,
+    pub is_private: bool,
+    pub description: String,
 }
 
 pub struct RoomPermissions {

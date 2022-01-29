@@ -1,3 +1,4 @@
+use super::permission_configs;
 use crate::common::common_response_logic::send_to_requester_channel;
 use crate::communication::communication_types::{
     BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, VoiceServerClosePeer,
@@ -10,14 +11,13 @@ use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
 use crate::state::state_types::Room;
+use chrono::Utc;
 use futures::lock::Mutex;
 use lapin::Channel;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::mem::drop;
 use std::sync::Arc;
-
-use super::permission_configs;
 pub type EncounteredError = bool;
 pub type AllPermissionsResult = (EncounteredError, HashMap<i32, RoomPermissions>);
 pub type ListenerOrSpeaker = String;
@@ -83,6 +83,8 @@ pub async fn create_room(
     publish_channel: &Arc<Mutex<lapin::Channel>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     requester_id: i32,
+    name: String,
+    desc: String,
     public: bool,
 ) {
     let mut handler = execution_handler.lock().await;
@@ -101,7 +103,8 @@ pub async fn create_room(
         );
     } else {
         let channel = publish_channel.lock().await;
-        continue_with_successful_room_creation(room_id, &channel, public, server_state).await;
+        continue_with_successful_room_creation(room_id, &channel, public, server_state, name, desc)
+            .await;
     }
 }
 
@@ -353,7 +356,7 @@ fn add_user_to_room_state(room_id: &i32, user_id: i32, state: &mut ServerState) 
     room.amount_of_users += 1;
 }
 
-fn construct_basic_room_for_state(room_id: i32, public: bool) -> Room {
+fn construct_basic_room_for_state(room_id: i32, public: bool, name: String, desc: String) -> Room {
     return Room {
         room_id: room_id,
         muted: HashSet::new(),
@@ -364,6 +367,10 @@ fn construct_basic_room_for_state(room_id: i32, public: bool) -> Room {
         public: public,
         auto_speaker: false,
         amount_of_users: 0,
+        name: name,
+        desc: desc,
+        chat_throttle: 1000,
+        created_at: Utc::now().to_string(),
     };
 }
 
@@ -373,13 +380,15 @@ async fn continue_with_successful_room_creation(
     channel: &Channel,
     public: bool,
     server_state: &mut ServerState,
+    name: String,
+    desc: String,
 ) {
     let request_to_voice_server = VoiceServerCreateRoom {
         roomId: room_id.clone().to_string(),
     };
     let request_str: String = serde_json::to_string(&request_to_voice_server).unwrap();
     rabbit::publish_message(channel, request_str).await;
-    let new_room_state: Room = construct_basic_room_for_state(room_id.clone(), public);
+    let new_room_state: Room = construct_basic_room_for_state(room_id.clone(), public, name, desc);
     server_state.rooms.insert(room_id, new_room_state);
 }
 

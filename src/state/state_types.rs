@@ -32,12 +32,16 @@ pub struct User {
 pub struct Room {
     pub room_id: i32,
     pub muted: HashSet<i32>,
+    pub name: String,
+    pub desc: String,
+    pub chat_throttle: i32,
     pub voice_server_id: String,
     pub deaf: HashSet<i32>,
     pub user_ids: HashSet<i32>,
-    pub amount_of_users: i64,
+    pub amount_of_users: i32,
     pub public: bool,
     pub auto_speaker: bool,
+    pub created_at: String, //datetime
 }
 
 /// IoTServerConnectionId -> Permissions for the connection(represented as the board)
