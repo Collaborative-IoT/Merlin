@@ -1,5 +1,9 @@
+use crate::common::common_response_logic::send_to_requester_channel;
+use crate::communication::communication_types::GetFollowListResponse;
 use crate::state::state::ServerState;
-
+use std::collections::HashSet;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 pub fn web_rtc_request_is_valid(
     server_state: &ServerState,
     request_data: &serde_json::Value,
@@ -37,4 +41,44 @@ pub fn web_rtc_request_is_valid(
     }
 
     return false;
+}
+
+pub fn parse_peer_and_room_id(
+    peer_id: &String,
+    room_id: &String,
+) -> Result<(i32, i32), std::num::ParseIntError> {
+    let peer: i32 = peer_id.parse()?;
+    let room: i32 = room_id.parse()?;
+    return Ok((peer, room));
+}
+
+pub async fn send_follow_list(
+    target: (bool, HashSet<i32>),
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+    peer_id: i32,
+) {
+    let mut write_state = server_state.write().await;
+    // if we encountered error getting the follow list from the db
+    if target.0 == true {
+        send_to_requester_channel(
+            "issue with request".to_owned(),
+            requester_id,
+            &mut write_state,
+            "invalid_request".to_owned(),
+        );
+    } else {
+        let vec_user_ids: Vec<i32> = target.1.into_iter().collect();
+        let response = GetFollowListResponse {
+            user_ids: vec_user_ids,
+            for_user: peer_id,
+        };
+        let response_str = serde_json::to_string(&response).unwrap();
+        send_to_requester_channel(
+            response_str,
+            requester_id,
+            &mut write_state,
+            "follow_list_response".to_owned(),
+        );
+    }
 }

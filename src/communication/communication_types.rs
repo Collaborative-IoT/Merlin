@@ -29,7 +29,13 @@ pub struct JoinRoomAndGetInfo {
 
 #[derive(Deserialize, Serialize)]
 pub struct GetFollowList {
-    pub user_id: i32,
+    pub user_id: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct GetFollowListResponse {
+    pub user_ids: Vec<i32>,
+    pub for_user: i32,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -120,6 +126,7 @@ pub struct GenericOnlyBool {
     value: bool,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct GenericOnlyUserId {
     user_id: i32,
 }

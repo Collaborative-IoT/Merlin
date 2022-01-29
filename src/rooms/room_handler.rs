@@ -1,4 +1,4 @@
-use crate::common::common_error_logic::send_error_to_requester_channel;
+use crate::common::common_response_logic::send_to_requester_channel;
 use crate::communication::communication_types::{
     BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, VoiceServerClosePeer,
     VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRequest,
@@ -70,7 +70,7 @@ pub async fn block_user_from_room(
         .await;
         return;
     }
-    send_error_to_requester_channel(
+    send_to_requester_channel(
         user_id.to_string(),
         requester_id,
         server_state,
@@ -93,7 +93,7 @@ pub async fn create_room(
     };
     let room_id = data_capturer::capture_new_room(&mut handler, &db_room).await;
     if room_id == -1 {
-        send_error_to_requester_channel(
+        send_to_requester_channel(
             "internal error".to_string(),
             requester_id,
             server_state,
@@ -191,7 +191,7 @@ pub async fn join_room(
         add_user_to_room_state(&room_id, user_id, server_state);
         return None;
     }
-    send_error_to_requester_channel(
+    send_to_requester_channel(
         user_id.to_string(),
         requester_id,
         server_state,
@@ -243,7 +243,7 @@ pub async fn add_speaker(
             return;
         }
     }
-    send_error_to_requester_channel(
+    send_to_requester_channel(
         user_id.to_string(),
         requester_id.clone(),
         server_state,
@@ -294,7 +294,7 @@ pub async fn remove_speaker(
             return;
         }
     }
-    send_error_to_requester_channel(
+    send_to_requester_channel(
         user_id.to_string(),
         requester_id.clone(),
         server_state,
@@ -339,7 +339,7 @@ async fn handle_user_block_capture_result(
         remove_user_from_room_basic(request, server_state, publish_channel).await;
         return;
     }
-    send_error_to_requester_channel(
+    send_to_requester_channel(
         user_id.to_string(),
         requester_id,
         server_state,

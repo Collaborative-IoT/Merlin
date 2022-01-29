@@ -10,7 +10,7 @@ pub mod state {
 }
 
 pub mod common {
-    pub mod common_error_logic;
+    pub mod common_response_logic;
 }
 
 pub mod data_store {

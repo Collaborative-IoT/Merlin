@@ -1,7 +1,7 @@
-use crate::common::common_error_logic::send_error_to_requester_channel;
+use crate::common::common_response_logic::send_to_requester_channel;
 use crate::communication::communication_handler_helpers;
 use crate::communication::communication_types::{
-    BasicRequest, BlockUserFromRoom, GenericRoomIdAndPeerId,
+    BasicRequest, BlockUserFromRoom, GenericRoomIdAndPeerId, GetFollowList, GetFollowListResponse,
 };
 use crate::communication::data_fetcher;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
@@ -58,7 +58,7 @@ pub async fn create_room(
     // If the request is invalid
     drop(read_state);
     let mut write_state = server_state.write().await;
-    send_error_to_requester_channel(
+    send_to_requester_channel(
         "issue with request".to_owned(),
         requester_id,
         &mut write_state,
@@ -99,7 +99,7 @@ pub async fn block_user_from_room(
     }
     drop(read_state);
     let mut write_state = server_state.write().await;
-    send_error_to_requester_channel(
+    send_to_requester_channel(
         "issue with request".to_owned(),
         requester_id,
         &mut write_state,
@@ -120,19 +120,21 @@ pub async fn join_room(
     let request_data: GenericRoomIdAndPeerId =
         serde_json::from_str(&request.request_containing_data)?;
 
-    //Return if the request data isn't parse-able
-    let room_id_parse_res = request_data.roomId.parse();
-    let user_id_parse_res = request_data.peerId.parse();
-    if !room_id_parse_res.is_ok() || !user_id_parse_res.is_ok() {
+    let room_and_peer_id_result = communication_handler_helpers::parse_peer_and_room_id(
+        &request_data.peerId,
+        &request_data.roomId,
+    );
+    if !room_and_peer_id_result.is_ok() {
         return Ok(());
     }
-    let room_id: i32 = room_id_parse_res.unwrap();
-    let user_id: i32 = user_id_parse_res.unwrap();
+    let room_and_peer_id = room_and_peer_id_result.unwrap();
+    let room_id: i32 = room_and_peer_id.1;
+    let peer_id: i32 = room_and_peer_id.0;
     //Ensure the room exist,the user isn't already in a room and this room is public
     if read_state.rooms.contains_key(&room_id)
         && read_state
             .active_users
-            .get(&user_id)
+            .get(&peer_id)
             .unwrap()
             .current_room_id
             == -1
@@ -144,7 +146,7 @@ pub async fn join_room(
             data_fetcher::get_blocked_user_ids_for_room(&mut handler, &room_id).await;
         // Nothing went wrong gathering blocked user ids
         // and user isn't blocked
-        if blocked_result.0 == false && !blocked_result.1.contains(&user_id) {
+        if blocked_result.0 == false && !blocked_result.1.contains(&peer_id) {
             drop(read_state);
             let mut write_state = server_state.write().await;
             rooms::room_handler::join_room(
@@ -161,7 +163,7 @@ pub async fn join_room(
     }
     drop(read_state);
     let mut write_state = server_state.write().await;
-    send_error_to_requester_channel(
+    send_to_requester_channel(
         "issue with request".to_owned(),
         requester_id,
         &mut write_state,
@@ -182,13 +184,16 @@ pub async fn add_or_remove_speaker(
     //ensure request parsing is successful
     let request_data: GenericRoomIdAndPeerId =
         serde_json::from_str(&request.request_containing_data)?;
-    let requestee_user_id_parse_result = request_data.peerId.parse();
-    let room_id_parse_result = request_data.roomId.parse();
-    if !requestee_user_id_parse_result.is_ok() && !room_id_parse_result.is_ok() {
+    let room_and_peer_id_result = communication_handler_helpers::parse_peer_and_room_id(
+        &request_data.peerId,
+        &request_data.roomId,
+    );
+    if !room_and_peer_id_result.is_ok() {
         return Ok(());
     }
-    let requestee_id: i32 = requestee_user_id_parse_result.unwrap();
-    let room_id: i32 = room_id_parse_result.unwrap();
+    let room_and_peer_id = room_and_peer_id_result.unwrap();
+    let room_id: i32 = room_and_peer_id.1;
+    let peer_id: i32 = room_and_peer_id.0;
 
     // Make sure the room being requested exists
     if read_state.rooms.contains_key(&room_id) {
@@ -196,7 +201,7 @@ pub async fn add_or_remove_speaker(
 
         // Make sure the requester and requestee is in the
         // room that is being requested
-        if room.user_ids.contains(&requester_id) && room.user_ids.contains(&requestee_id) {
+        if room.user_ids.contains(&requester_id) && room.user_ids.contains(&peer_id) {
             drop(read_state);
             let mut write_state = server_state.write().await;
             if add_or_remove == "add" {
@@ -223,7 +228,7 @@ pub async fn add_or_remove_speaker(
     }
     drop(read_state);
     let mut write_state = server_state.write().await;
-    send_error_to_requester_channel(
+    send_to_requester_channel(
         "issue with request".to_owned(),
         requester_id,
         &mut write_state,
@@ -257,11 +262,43 @@ pub async fn handle_web_rtc_request(
     }
     drop(read_state);
     let mut write_state = server_state.write().await;
-    send_error_to_requester_channel(
+    send_to_requester_channel(
         "issue with request".to_owned(),
         requester_id,
         &mut write_state,
         "invalid_request".to_owned(),
     );
+    return Ok(());
+}
+
+pub async fn get_followers_or_following_list(
+    request: BasicRequest,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+    type_of_request: &str,
+) -> Result<()> {
+    //gather all
+    let mut handler = execution_handler.lock().await;
+    let mut target: (bool, HashSet<i32>) = (true, HashSet::new());
+    let request_data: GetFollowList = serde_json::from_str(&request.request_containing_data)?;
+    let room_and_peer_id_result = communication_handler_helpers::parse_peer_and_room_id(
+        &request_data.user_id,
+        &"-1".to_string(),
+    );
+    if !room_and_peer_id_result.is_ok() {
+        return Ok(());
+    }
+    let room_and_peer_id = room_and_peer_id_result.unwrap();
+    let peer_id: i32 = room_and_peer_id.0;
+
+    if type_of_request == "followers" {
+        //(encountered_error, user_ids)
+        target = data_fetcher::get_follower_user_ids_for_user(&mut handler, &peer_id).await;
+    } else {
+        target = data_fetcher::get_following_user_ids_for_user(&mut handler, &peer_id).await;
+    }
+    communication_handler_helpers::send_follow_list(target, server_state, requester_id, peer_id)
+        .await;
     return Ok(());
 }
