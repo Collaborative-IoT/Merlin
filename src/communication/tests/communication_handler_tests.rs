@@ -10,7 +10,7 @@ persisted to the voice server via RabbitMq.
 
 This test isn't integration based, so we manually
 grab the messages intended for the voice server after
-publish.
+publish and assert them.
 
 */
 
