@@ -380,6 +380,47 @@ pub async fn lower_hand(
     requester_id: &i32,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) {
+    let mut handler = execution_handler.lock().await;
+    let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
+        data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
+    if all_room_permissions.0 {
+        return;
+    }
+    let requester_user_permissions: &RoomPermissions =
+        all_room_permissions.1.get(requester_id).unwrap();
+    let requestee_user_permissions: &RoomPermissions =
+        all_room_permissions.1.get(requestee_id).unwrap();
+    //A hand cannot be lowered if you are a speaker,
+    //or you aren't requesting to speak.
+    if requestee_user_permissions.is_speaker == true
+        || requestee_user_permissions.asked_to_speak == false
+    {
+        return;
+    }
+    //- Mods can accept/lower any hand requests
+    //the assumption being, there should never
+    //be a situation where a person with mod permissions
+    //is requesting to speak, because they will
+    //automatically request to add themselves
+    //and skip the ask stage.
+    //
+    //- Anyone can lower their own hand.
+    if requester_user_permissions.is_mod || requester_id == requestee_id {
+        let new_db_permissions = permission_configs::create_non_preset(
+            room_id.clone(),
+            requester_id.clone(),
+            false,
+            false,
+            requestee_user_permissions.is_mod,
+        );
+        data_capturer::capture_new_room_permissions_update(&new_db_permissions, &mut handler).await;
+        let basic_response = BasicResponse {
+            response_op_code: "user_hand_lowered".to_owned(),
+            response_containing_data: requester_id.to_string(),
+        };
+        let basic_response_str = serde_json::to_string(&basic_response).unwrap();
+        fan::broadcast_message_to_room(basic_response_str, server_state, room_id.clone()).await;
+    }
 }
 
 async fn handle_user_block_capture_result(
@@ -457,7 +498,7 @@ async fn check_or_insert_initial_permissions(
     handler: &mut ExecutionHandler,
 ) -> EncounteredError {
     if permissions.0 == false {
-        // if the user already has permissions just return them
+        // if the user already has permissions
         if permissions.1.contains_key(requester_id) {
             let current_user_permissions = permissions.1.get(&requester_id).unwrap();
             // If the user is requesting to join as speaker:
