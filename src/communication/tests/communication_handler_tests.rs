@@ -2,6 +2,10 @@
 The communication handler tests aims at
 testing the logic that the handler enforces.
 
+The testing is done through usage of the communication
+router, which is responsible for routing requests to 
+the handler.
+
 It doesn't test its consuming modules like the 
 execution handler, it makes sure
 requests fail under certain circumstances,
