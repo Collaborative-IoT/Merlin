@@ -355,3 +355,10 @@ pub async fn get_top_rooms(
         "top_rooms".to_owned(),
     );
 }
+
+pub async fn raise_hand(    
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,){
+        
+}
