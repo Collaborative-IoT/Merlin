@@ -1,7 +1,7 @@
 use crate::common::common_response_logic::send_to_requester_channel;
 use crate::communication::communication_handler_helpers;
 use crate::communication::communication_types::{
-    BasicRequest, BlockUserFromRoom, CommunicationRoom, GenericRoomIdAndPeerId, GetFollowList,
+    BasicRequest, BlockUserFromRoom, CommunicationRoom, GenericRoomIdAndPeerId, GetFollowList,UserPreview
 };
 use crate::communication::data_fetcher;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
@@ -10,7 +10,7 @@ use crate::state::state::ServerState;
 use crate::state::state_types::Room;
 use futures::lock::Mutex;
 use serde_json::Result;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::mem::drop;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -307,8 +307,21 @@ pub async fn get_followers_or_following_list(
 // Currently top rooms are rooms with the most people.
 // In the future, top rooms will be user driven and
 // will need to be limited with pagination techniques.
-pub async fn get_top_rooms(server_state: &Arc<RwLock<ServerState>>, requester_id: i32) {
+pub async fn get_top_rooms(
+    server_state: &Arc<RwLock<ServerState>>, 
+    requester_id: i32,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,) {
     let read_state = server_state.read().await;
     let mut all_rooms: Vec<&Room> = read_state.rooms.values().into_iter().collect();
     all_rooms.sort_by_key(|room| room.amount_of_users);
+    let mut handler = execution_handler.lock().await;
+    for room in all_rooms{
+        let all_room_user_ids:Vec<i32> = room.user_ids.iter().cloned().collect();
+        //(encountered_error, previews)
+        let previews:(bool, HashMap<i32, UserPreview>) = data_fetcher::get_user_previews_for_users(all_room_user_ids, &mut handler).await;
+        //if encountered error
+        if previews.0 {
+            break;
+        }
+    }
 }

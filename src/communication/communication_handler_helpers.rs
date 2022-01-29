@@ -1,9 +1,13 @@
 use crate::common::common_response_logic::send_to_requester_channel;
-use crate::communication::communication_types::GetFollowListResponse;
+use crate::communication::communication_types::{GetFollowListResponse,BasicResponse};
 use crate::state::state::ServerState;
-use std::collections::HashSet;
+use std::collections::{HashSet,HashMap};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use crate::communication::communication_types::{ CommunicationRoom,UserPreview
+};
+use crate::state::state_types::Room;
+
 pub fn web_rtc_request_is_valid(
     server_state: &ServerState,
     request_data: &serde_json::Value,
@@ -74,8 +78,10 @@ pub async fn send_follow_list(
             for_user: peer_id,
         };
         let response_str = serde_json::to_string(&response).unwrap();
+        let basic_response = BasicResponse{response_op_code:"follow_list".to_owned(),response_containing_data:response_str};
+        let basic_response_str = serde_json::to_string(&basic_response).unwrap();
         send_to_requester_channel(
-            response_str,
+            basic_response_str,
             requester_id,
             &mut write_state,
             "follow_list_response".to_owned(),
@@ -83,4 +89,6 @@ pub async fn send_follow_list(
     }
 }
 
-pub fn construct_communication_room() {}
+pub fn construct_communication_room(previews:HashMap<i32, UserPreview>, room_state:&Room, holder:&mut Vec<CommunicationRoom>){
+
+}
