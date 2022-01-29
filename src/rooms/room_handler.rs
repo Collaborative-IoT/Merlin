@@ -348,12 +348,9 @@ async fn handle_user_block_capture_result(
 }
 
 fn add_user_to_room_state(room_id: &i32, user_id: i32, state: &mut ServerState) {
-    state
-        .rooms
-        .get_mut(&room_id)
-        .unwrap()
-        .user_ids
-        .insert(user_id);
+    let room = state.rooms.get_mut(&room_id).unwrap();
+    room.user_ids.insert(user_id);
+    room.amount_of_users += 1;
 }
 
 fn construct_basic_room_for_state(room_id: i32, public: bool) -> Room {
@@ -366,6 +363,7 @@ fn construct_basic_room_for_state(room_id: i32, public: bool) -> Room {
         user_ids: HashSet::new(),
         public: public,
         auto_speaker: false,
+        amount_of_users: 0,
     };
 }
 

@@ -52,17 +52,20 @@ pub struct GetUserProfile {
 }
 
 //basic types
-pub struct Room {
-    details: RoomDetails,
-    room_id: i32,
-    num_of_people_in_room: i32,
-    voice_server_id: i32,
-    creator_id: i32,
-    people_preview_data: Vec<UserPreview>,
-    auto_speaker_setting: bool,
-    created_at: String,
-    chat_mode: String,
+#[derive(Deserialize, Serialize)]
+pub struct CommunicationRoom {
+    pub details: RoomDetails,
+    pub room_id: i32,
+    pub num_of_people_in_room: i32,
+    pub voice_server_id: i32,
+    pub creator_id: i32,
+    pub people_preview_data: Vec<UserPreview>,
+    pub auto_speaker_setting: bool,
+    pub created_at: String,
+    pub chat_mode: String,
 }
+
+#[derive(Deserialize, Serialize)]
 
 pub struct RoomDetails {
     name: bool,
@@ -81,6 +84,8 @@ pub struct MessageToken {
     type_of_token: String,
     value: String,
 }
+
+#[derive(Deserialize, Serialize)]
 
 pub struct UserPreview {
     pub display_name: String,

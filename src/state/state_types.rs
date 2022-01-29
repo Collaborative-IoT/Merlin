@@ -35,6 +35,7 @@ pub struct Room {
     pub voice_server_id: String,
     pub deaf: HashSet<i32>,
     pub user_ids: HashSet<i32>,
+    pub amount_of_users: i64,
     pub public: bool,
     pub auto_speaker: bool,
 }

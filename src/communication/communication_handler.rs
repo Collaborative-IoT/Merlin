@@ -1,12 +1,13 @@
 use crate::common::common_response_logic::send_to_requester_channel;
 use crate::communication::communication_handler_helpers;
 use crate::communication::communication_types::{
-    BasicRequest, BlockUserFromRoom, GenericRoomIdAndPeerId, GetFollowList, GetFollowListResponse,
+    BasicRequest, BlockUserFromRoom, CommunicationRoom, GenericRoomIdAndPeerId, GetFollowList,
 };
 use crate::communication::data_fetcher;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rooms;
 use crate::state::state::ServerState;
+use crate::state::state_types::Room;
 use futures::lock::Mutex;
 use serde_json::Result;
 use std::collections::HashSet;
@@ -301,4 +302,13 @@ pub async fn get_followers_or_following_list(
     communication_handler_helpers::send_follow_list(target, server_state, requester_id, peer_id)
         .await;
     return Ok(());
+}
+
+// Currently top rooms are rooms with the most people.
+// In the future, top rooms will be user driven and
+// will need to be limited with pagination techniques.
+pub async fn get_top_rooms(server_state: &Arc<RwLock<ServerState>>, requester_id: i32) {
+    let read_state = server_state.read().await;
+    let mut all_rooms: Vec<&Room> = read_state.rooms.values().into_iter().collect();
+    all_rooms.sort_by_key(|room| room.amount_of_users);
 }

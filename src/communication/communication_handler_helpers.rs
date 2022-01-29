@@ -82,3 +82,5 @@ pub async fn send_follow_list(
         );
     }
 }
+
+pub fn construct_communication_room() {}
