@@ -47,3 +47,20 @@ pub fn regular_listener(room_id: i32, user_id: i32) -> DBRoomPermissions {
         user_id: user_id,
     };
 }
+
+pub fn create_non_preset(
+    room_id: i32,
+    user_id: i32,
+    asked: bool,
+    is_speaker: bool,
+    is_mod: bool,
+) -> DBRoomPermissions {
+    return DBRoomPermissions {
+        id: -1,
+        is_mod: is_mod,
+        is_speaker: is_speaker,
+        asked_to_speak: asked,
+        room_id: room_id,
+        user_id: user_id,
+    };
+}

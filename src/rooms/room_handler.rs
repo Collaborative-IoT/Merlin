@@ -11,6 +11,7 @@ use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
 use crate::state::state_types::Room;
+use crate::ws_fan::fan;
 use chrono::Utc;
 use futures::lock::Mutex;
 use lapin::Channel;
@@ -170,11 +171,10 @@ pub async fn join_room(
     let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
         data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
     let state_room_option = server_state.rooms.get(&room_id);
-    if !state_room_option.is_some(){
+    if !state_room_option.is_some() {
         return Ok(());
     }
     let state_room = state_room_option.unwrap();
-    
 
     // ensure the user has the permissions to join
     let result: EncounteredError = check_or_insert_initial_permissions(
@@ -220,7 +220,7 @@ pub async fn add_speaker(
     requester_id: &i32,
     server_state: &mut ServerState,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
-)-> Result<(), std::num::ParseIntError> {
+) -> Result<(), std::num::ParseIntError> {
     let mut handler = execution_handler.lock().await;
     let room_id: i32 = request_to_voice_server.roomId.parse()?;
     let user_id: i32 = request_to_voice_server.peerId.parse()?;
@@ -266,7 +266,7 @@ pub async fn remove_speaker(
     requester_id: &i32,
     server_state: &mut ServerState,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
-)-> Result<(), std::num::ParseIntError> {
+) -> Result<(), std::num::ParseIntError> {
     let mut handler = execution_handler.lock().await;
     let room_id: i32 = request_to_voice_server.roomId.parse()?;
     let user_id: i32 = request_to_voice_server.peerId.parse()?;
@@ -333,22 +333,53 @@ pub async fn handle_web_rtc_specific_requests(
 }
 
 // A user can only raise a hand if:
-// They aren't a speaker
-pub async fn raise_hand(    
-    server_state:&mut ServerState,
-    room_id:&i32,
+// They aren't a speaker. If they do, it is a
+// clear illegal request, no need to
+// respond.
+pub async fn raise_hand(
+    server_state: &mut ServerState,
+    room_id: &i32,
     requester_id: &i32,
-    execution_handler: &Arc<Mutex<ExecutionHandler>>){
-        
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
+    let mut handler = execution_handler.lock().await;
+    let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
+        data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
+    if all_room_permissions.0 {
+        return;
+    }
+    let current_user_permissions: &RoomPermissions =
+        all_room_permissions.1.get(requester_id).unwrap();
+    if current_user_permissions.is_speaker {
+        return;
+    }
+    //no one should ever ask to speak if they are mods, because
+    //the frontend will make the add speaker request on
+    //the mod's behalf automatically which will be accepted
+    //by the server. Mods can add themselves as a speaker.
+    let new_db_permissions = permission_configs::create_non_preset(
+        room_id.clone(),
+        requester_id.clone(),
+        true,
+        false,
+        current_user_permissions.is_mod,
+    );
+    data_capturer::capture_new_room_permissions_update(&new_db_permissions, &mut handler).await;
+    let basic_response = BasicResponse {
+        response_op_code: "user_asking_to_speak".to_owned(),
+        response_containing_data: requester_id.to_string(),
+    };
+    let basic_response_str = serde_json::to_string(&basic_response).unwrap();
+    fan::broadcast_message_to_room(basic_response_str, server_state, room_id.clone()).await;
 }
 
-pub async fn lower_hand(    
-    server_state:&mut ServerState,
-    room_id:&i32,
-    requestee_id:&i32,
-    requester_id:&i32,
-    execution_handler: &Arc<Mutex<ExecutionHandler>>){
-    
+pub async fn lower_hand(
+    server_state: &mut ServerState,
+    room_id: &i32,
+    requestee_id: &i32,
+    requester_id: &i32,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
 }
 
 async fn handle_user_block_capture_result(

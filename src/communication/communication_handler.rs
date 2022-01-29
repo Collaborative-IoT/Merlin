@@ -356,9 +356,9 @@ pub async fn get_top_rooms(
     );
 }
 
-pub async fn raise_hand(    
+pub async fn raise_hand(
     server_state: &Arc<RwLock<ServerState>>,
     requester_id: i32,
-    execution_handler: &Arc<Mutex<ExecutionHandler>>,){
-        
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
 }
