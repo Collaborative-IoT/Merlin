@@ -20,11 +20,11 @@ pub async fn route_msg(
 ) -> Result<()> {
     let basic_request: BasicRequest = serde_json::from_str(&msg)?;
 
-    //route the request
+    //Route the request
     //We could use the basic_request op code for checking
     //different requests like add/remove user inside of the method
     //instead of using a different parameter, but this way it is
-    //cleaner and opcodes are abstracted away from function implementation
+    //cleaner and opcodes are abstracted away from function implementation.
     match basic_request.request_op_code.as_str() {
         "create_room" => {
             communication_handler::create_room(
@@ -136,6 +136,15 @@ pub async fn route_msg(
             )
             .await
         }
-        _ => Ok(())
+        "gather_all_users_in_room" => {
+            communication_handler::gather_all_users_in_room(
+                basic_request,
+                server_state,
+                user_id,
+                execution_handler,
+            )
+            .await
+        }
+        _ => Ok(()),
     }
 }

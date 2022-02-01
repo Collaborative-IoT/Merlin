@@ -1,8 +1,8 @@
 use crate::common::common_response_logic::send_to_requester_channel;
 use crate::communication::communication_handler_helpers;
 use crate::communication::communication_types::{
-    BasicRequest, BasicRoomCreation, BlockUserFromRoom, CommunicationRoom, GenericRoomIdAndPeerId,
-    GetFollowList, UserPreview,
+    AllUsersInRoomResponse, BasicRequest, BasicRoomCreation, BlockUserFromRoom, CommunicationRoom,
+    GenericRoomId, GenericRoomIdAndPeerId, GetFollowList, User, UserPreview,
 };
 use crate::communication::data_fetcher;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
@@ -342,6 +342,52 @@ pub async fn raise_hand_or_lower_hand(
                 )
                 .await;
             }
+            return Ok(());
+        }
+    }
+    send_error_response_to_requester(read_state, requester_id, server_state).await;
+    return Ok(());
+}
+
+// Gathering all users in a specific room
+// doesn't require you to be in that room,
+// any public room can be queried by outside
+// users even banned ones. The banned ones
+// can't join, but they can query it.
+pub async fn gather_all_users_in_room(
+    request: BasicRequest,
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) -> Result<()> {
+    let room_id_obj: GenericRoomId = serde_json::from_str(&request.request_containing_data)?;
+    let room_id = room_id_obj.room_id;
+    let read_state = server_state.read().await;
+    //if the room exist
+    if read_state.rooms.contains_key(&room_id) {
+        let room = read_state.rooms.get(&room_id).unwrap();
+        let all_room_user_ids: Vec<i32> = room.user_ids.iter().cloned().collect();
+        let mut handler = execution_handler.lock().await;
+        let users: (bool, Vec<User>) =
+            data_fetcher::get_users_for_user(requester_id.clone(), all_room_user_ids, &mut handler)
+                .await;
+        //no error was encountered
+        if users.0 == false {
+            //remove old lock for state and get users
+            drop(read_state);
+            let mut write_state = server_state.write().await;
+            //generate response with all users and send
+            let response = AllUsersInRoomResponse {
+                room_id: room_id,
+                users: users.1,
+            };
+            let response_str = serde_json::to_string(&response).unwrap();
+            send_to_requester_channel(
+                response_str,
+                requester_id.clone(),
+                &mut write_state,
+                "all_users_for_room".to_owned(),
+            );
             return Ok(());
         }
     }

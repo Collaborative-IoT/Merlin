@@ -3,6 +3,9 @@ All of the types that will come from or go with a specific request/response.
 All requests/responses will start as a BasicRequest/BasicResponse, the true data
 of the request/response(if there is any) will be the 'request_containing_data/response_containing_data'
 in json serialization.
+
+We try to follow snake case when possible in this document,
+but our voice server requires camelcase json fields.
 */
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -74,6 +77,12 @@ pub struct CommunicationRoom {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct AllUsersInRoomResponse {
+    pub room_id: i32,
+    pub users: Vec<User>,
+}
+
+#[derive(Deserialize, Serialize)]
 
 pub struct RoomDetails {
     pub name: String,
@@ -82,6 +91,7 @@ pub struct RoomDetails {
     pub description: String,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct RoomPermissions {
     pub asked_to_speak: bool,
     pub is_speaker: bool,
@@ -153,6 +163,7 @@ pub struct ScheduledRoomGather {
     user_id: i32,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct User {
     pub you_are_following: bool,
     pub username: String,
@@ -223,6 +234,11 @@ pub struct VoiceServerClosePeer {
 pub struct GenericRoomIdAndPeerId {
     pub roomId: i32,
     pub peerId: i32,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct GenericRoomId {
+    pub room_id: i32,
 }
 
 #[derive(Deserialize, Serialize)]
