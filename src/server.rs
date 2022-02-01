@@ -85,7 +85,7 @@ async fn user_message(
     } else {
         return;
     };
-    communication_router::route_msg(msg.to_string(), current_user_id).await;
+    //communication_router::route_msg(msg.to_string(), current_user_id).await; - in dev
 }
 
 async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<ServerState>>) {
