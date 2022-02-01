@@ -136,5 +136,6 @@ pub async fn route_msg(
             )
             .await
         }
+        _ => Ok(())
     }
 }
