@@ -187,7 +187,7 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
     warp::serve(routes).run(addr).await;
 }
 
-async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
+pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
     //"host=localhost user=postgres port=5432 password=password"
     let host = env::var("PG_HOST").unwrap();
     let user = env::var("PG_USER").unwrap();
