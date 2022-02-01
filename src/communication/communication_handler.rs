@@ -61,7 +61,7 @@ pub async fn create_room(
         return Ok(());
     }
     // If the request is invalid
-    send_error_response_to_requester(read_state,requester_id,server_state).await;
+    send_error_response_to_requester(read_state, requester_id, server_state).await;
     return Ok(());
 }
 
@@ -96,7 +96,7 @@ pub async fn block_user_from_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(read_state,requester_id,server_state).await;
+    send_error_response_to_requester(read_state, requester_id, server_state).await;
     return Ok(());
 }
 
@@ -145,7 +145,7 @@ pub async fn join_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(read_state,requester_id,server_state).await;
+    send_error_response_to_requester(read_state, requester_id, server_state).await;
     return Ok(());
 }
 
@@ -195,7 +195,7 @@ pub async fn add_or_remove_speaker(
             return Ok(());
         }
     }
-    send_error_response_to_requester(read_state,requester_id,server_state).await;
+    send_error_response_to_requester(read_state, requester_id, server_state).await;
     return Ok(());
 }
 
@@ -222,7 +222,7 @@ pub async fn handle_web_rtc_request(
         .await;
         return Ok(());
     }
-    send_error_response_to_requester(read_state,requester_id,server_state).await;
+    send_error_response_to_requester(read_state, requester_id, server_state).await;
     return Ok(());
 }
 
@@ -345,11 +345,15 @@ pub async fn raise_hand_or_lower_hand(
             return Ok(());
         }
     }
-    send_error_response_to_requester(read_state,requester_id,server_state).await;
+    send_error_response_to_requester(read_state, requester_id, server_state).await;
     return Ok(());
 }
 
-async fn send_error_response_to_requester(read_state:tokio::sync::RwLockReadGuard<'_, ServerState>, requester_id: i32, server_state: &Arc<RwLock<ServerState>>){
+async fn send_error_response_to_requester(
+    read_state: tokio::sync::RwLockReadGuard<'_, ServerState>,
+    requester_id: i32,
+    server_state: &Arc<RwLock<ServerState>>,
+) {
     drop(read_state);
     let mut write_state = server_state.write().await;
     send_to_requester_channel(
