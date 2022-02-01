@@ -12,54 +12,84 @@ requests fail under certain circumstances,
 state is being modified and messages are being
 persisted to the voice server via RabbitMq.
 
-This test isn't integration based, so we manually
+This test isn't fully integration based, so we manually
 grab the messages intended for the voice server after
 publish and assert them.
 
 */
-
-use crate::common::common_response_logic::send_to_requester_channel;
-use crate::communication::communication_handler_helpers;
-use crate::communication::communication_types::{
-    AllUsersInRoomResponse, BasicRequest, BasicRoomCreation, BlockUserFromRoom, CommunicationRoom,
-    GenericRoomId, GenericRoomIdAndPeerId, GetFollowList, User, UserPreview,
-};
-use crate::communication::data_fetcher;
+use crate::communication::data_capturer;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
-use crate::rooms;
+use crate::rabbitmq::rabbit;
+use crate::rooms::permission_configs;
+use crate::server::setup_execution_handler;
 use crate::state::state::ServerState;
-use crate::state::state_types::Room;
+use crate::state::state_types::{Room, User};
+use chrono::{DateTime, Utc};
 use futures::lock::Mutex;
-use futures_util::stream::StreamExt;
-use lapin::{
-    message::Delivery, options::*, publisher_confirm::Confirmation, types::FieldTable,
-    BasicProperties, Channel, Connection, ConnectionProperties, Consumer, Error, Result,
-};
-use std::collections::{HashMap, HashSet};
-use std::mem::drop;
+use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
+use lapin::{options::*, types::FieldTable, Channel, Connection, Consumer};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use warp::ws::Message;
 
-use crate::rabbitmq::rabbit;
-use crate::server::setup_execution_handler;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
 pub async fn tests() {
+    //setup rabbit channels
     let connection = rabbit::setup_rabbit_connection().await.unwrap();
     let publish_channel: Arc<Mutex<lapin::Channel>> =
         Arc::new(Mutex::new(setup_channel(&connection).await));
     let consume_channel: lapin::Channel = setup_channel(&connection).await;
     let consumer = consume_channel
         .basic_consume(
-            "main",
+            "voice_server_consume",
             "my_consumer",
             BasicConsumeOptions::default(),
             FieldTable::default(),
         )
         .await
         .unwrap();
+    //setup mock state/execution handler
     let mock_state: Arc<RwLock<ServerState>> = Arc::new(RwLock::new(ServerState::new()));
     let execution_handler: Arc<Mutex<ExecutionHandler>> =
         Arc::new(Mutex::new(setup_execution_handler().await.unwrap()));
+    //Setup mock inner user channels
+    //
+    //We use channels to direct messages
+    //to tasks, after the message is
+    //gathered by the task it is
+    //forwarded to the user via
+    //websocket connection.
+    //
+    //So we will exclude the forwarding portion
+    //and act as though this channel belongs
+    //to a real user.
+    let rx_user_one = create_and_add_new_user_channel_to_peer_map(33, &mock_state);
+    let rx_user_two = create_and_add_new_user_channel_to_peer_map(34, &mock_state);
+    insert_starting_user_state(&mock_state).await;
+}
+
+//All users must be present in memory before operation
+async fn insert_starting_user_state(server_state: &Arc<RwLock<ServerState>>) {
+    let mut state = server_state.write().await;
+    let user_one = User {
+        last_online: Utc::now(),
+        muted: true,
+        deaf: true,
+        ip: "test".to_string(),
+        current_room_id: -1,
+    };
+
+    let user_two = User {
+        last_online: Utc::now(),
+        muted: true,
+        deaf: false,
+        ip: "test".to_string(),
+        current_room_id: -1,
+    };
+    state.active_users.insert(33, user_one);
+    state.active_users.insert(34, user_two);
 }
 
 //starts rabbitmq connection channel
@@ -81,4 +111,16 @@ async fn consume_message(consumer: &mut Consumer) -> String {
     delivery.ack(BasicAckOptions::default()).await.expect("ack");
     let parsed_msg = rabbit::parse_message(delivery);
     return parsed_msg;
+}
+
+async fn create_and_add_new_user_channel_to_peer_map(
+    mock_id: i32,
+    mock_state: &Arc<RwLock<ServerState>>,
+) -> UnboundedReceiverStream<Message> {
+    let (tx, rx) = mpsc::unbounded_channel();
+    let mut rx = UnboundedReceiverStream::new(rx);
+    //add initial peer state to state
+    //we will use th
+    mock_state.write().await.peer_map.insert(mock_id, tx);
+    return rx;
 }

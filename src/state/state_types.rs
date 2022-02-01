@@ -17,15 +17,10 @@ pub struct Board {
 }
 
 pub struct User {
-    pub avatar_url: String,
-    pub display_name: String,
-    pub user_name: String,
     pub last_online: DateTime<Utc>,
     pub muted: bool,
     pub deaf: bool,
     pub ip: String,
-    pub bio: String,
-    pub banner_url: String,
     pub current_room_id: i32,
 }
 
