@@ -221,8 +221,8 @@ pub struct VoiceServerClosePeer {
 
 #[derive(Deserialize, Serialize)]
 pub struct GenericRoomIdAndPeerId {
-    pub roomId: String,
-    pub peerId: String,
+    pub roomId: i32,
+    pub peerId: i32,
 }
 
 #[derive(Deserialize, Serialize)]

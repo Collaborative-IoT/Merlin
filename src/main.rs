@@ -61,6 +61,7 @@ pub mod rooms {
     pub mod permission_configs;
     pub mod room_handler;
 }
+
 #[tokio::main]
 async fn main() {
     print_start();

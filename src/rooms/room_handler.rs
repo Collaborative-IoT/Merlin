@@ -164,15 +164,15 @@ pub async fn join_room(
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     requester_id: i32,
     type_of_join: &str,
-) -> Result<(), std::num::ParseIntError> {
+) {
     let mut handler = execution_handler.lock().await;
-    let room_id: i32 = request_to_voice_server.roomId.parse()?;
-    let user_id: i32 = request_to_voice_server.peerId.parse()?;
+    let room_id: i32 = request_to_voice_server.roomId;
+    let user_id: i32 = request_to_voice_server.peerId;
     let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
         data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
     let state_room_option = server_state.rooms.get(&room_id);
     if !state_room_option.is_some() {
-        return Ok(());
+        return;
     }
     let state_room = state_room_option.unwrap();
 
@@ -192,12 +192,12 @@ pub async fn join_room(
         let channel = publish_channel.lock().await;
         let request_str = create_voice_server_request(
             type_of_join,
-            &request_to_voice_server.peerId.clone(),
+            &request_to_voice_server.peerId.to_string(),
             request_to_voice_server,
         );
         rabbit::publish_message(&channel, request_str).await;
         add_user_to_room_state(&room_id, user_id, server_state);
-        return Ok(());
+        return;
     }
     send_to_requester_channel(
         user_id.to_string(),
@@ -205,7 +205,6 @@ pub async fn join_room(
         server_state,
         "issue_joining_room".to_string(),
     );
-    return Ok(());
 }
 
 ///  Adds a speaker that is already an existing peer in a room
@@ -220,10 +219,10 @@ pub async fn add_speaker(
     requester_id: &i32,
     server_state: &mut ServerState,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
-) -> Result<(), std::num::ParseIntError> {
+) {
     let mut handler = execution_handler.lock().await;
-    let room_id: i32 = request_to_voice_server.roomId.parse()?;
-    let user_id: i32 = request_to_voice_server.peerId.parse()?;
+    let room_id: i32 = request_to_voice_server.roomId;
+    let user_id: i32 = request_to_voice_server.peerId;
     let all_room_permissions: AllPermissionsResult =
         data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
 
@@ -248,7 +247,7 @@ pub async fn add_speaker(
             );
             let channel = publish_channel.lock().await;
             rabbit::publish_message(&channel, request_str).await;
-            return Ok(());
+            return;
         }
     }
     send_to_requester_channel(
@@ -257,7 +256,6 @@ pub async fn add_speaker(
         server_state,
         "issue_adding_speaker".to_string(),
     );
-    return Ok(());
 }
 
 pub async fn remove_speaker(
@@ -266,10 +264,10 @@ pub async fn remove_speaker(
     requester_id: &i32,
     server_state: &mut ServerState,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
-) -> Result<(), std::num::ParseIntError> {
+) {
     let mut handler = execution_handler.lock().await;
-    let room_id: i32 = request_to_voice_server.roomId.parse()?;
-    let user_id: i32 = request_to_voice_server.peerId.parse()?;
+    let room_id: i32 = request_to_voice_server.roomId;
+    let user_id: i32 = request_to_voice_server.peerId;
     let all_room_permissions: AllPermissionsResult =
         data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
     let room_owner_data: RoomOwnerAndSettings =
@@ -300,7 +298,7 @@ pub async fn remove_speaker(
             );
             let channel = publish_channel.lock().await;
             rabbit::publish_message(&channel, request_str).await;
-            return Ok(());
+            return;
         }
     }
     send_to_requester_channel(
@@ -309,7 +307,6 @@ pub async fn remove_speaker(
         server_state,
         "issue_removing_speaker".to_string(),
     );
-    return Ok(());
 }
 
 ///  This function handles the following requests

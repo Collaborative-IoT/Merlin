@@ -61,14 +61,7 @@ pub async fn create_room(
         return Ok(());
     }
     // If the request is invalid
-    drop(read_state);
-    let mut write_state = server_state.write().await;
-    send_to_requester_channel(
-        "issue with request".to_owned(),
-        requester_id,
-        &mut write_state,
-        "invalid_request".to_owned(),
-    );
+    send_error_response_to_requester(read_state,requester_id,server_state).await;
     return Ok(());
 }
 
@@ -103,14 +96,7 @@ pub async fn block_user_from_room(
             return Ok(());
         }
     }
-    drop(read_state);
-    let mut write_state = server_state.write().await;
-    send_to_requester_channel(
-        "issue with request".to_owned(),
-        requester_id,
-        &mut write_state,
-        "invalid_request".to_owned(),
-    );
+    send_error_response_to_requester(read_state,requester_id,server_state).await;
     return Ok(());
 }
 
@@ -126,16 +112,8 @@ pub async fn join_room(
     let request_data: GenericRoomIdAndPeerId =
         serde_json::from_str(&request.request_containing_data)?;
 
-    let room_and_peer_id_result = communication_handler_helpers::parse_peer_and_room_id(
-        &request_data.peerId,
-        &request_data.roomId,
-    );
-    if !room_and_peer_id_result.is_ok() {
-        return Ok(());
-    }
-    let room_and_peer_id = room_and_peer_id_result.unwrap();
-    let room_id: i32 = room_and_peer_id.1;
-    let peer_id: i32 = room_and_peer_id.0;
+    let room_id: i32 = request_data.roomId;
+    let peer_id: i32 = request_data.peerId;
     //Ensure the room exist,the user isn't already in a room and this room is public
     if read_state.rooms.contains_key(&room_id)
         && read_state
@@ -167,14 +145,7 @@ pub async fn join_room(
             return Ok(());
         }
     }
-    drop(read_state);
-    let mut write_state = server_state.write().await;
-    send_to_requester_channel(
-        "issue with request".to_owned(),
-        requester_id,
-        &mut write_state,
-        "invalid_request".to_owned(),
-    );
+    send_error_response_to_requester(read_state,requester_id,server_state).await;
     return Ok(());
 }
 
@@ -190,16 +161,8 @@ pub async fn add_or_remove_speaker(
     //ensure request parsing is successful
     let request_data: GenericRoomIdAndPeerId =
         serde_json::from_str(&request.request_containing_data)?;
-    let room_and_peer_id_result = communication_handler_helpers::parse_peer_and_room_id(
-        &request_data.peerId,
-        &request_data.roomId,
-    );
-    if !room_and_peer_id_result.is_ok() {
-        return Ok(());
-    }
-    let room_and_peer_id = room_and_peer_id_result.unwrap();
-    let room_id: i32 = room_and_peer_id.1;
-    let peer_id: i32 = room_and_peer_id.0;
+    let room_id: i32 = request_data.roomId;
+    let peer_id: i32 = request_data.peerId;
 
     // Make sure the room being requested exists
     if read_state.rooms.contains_key(&room_id) {
@@ -232,14 +195,7 @@ pub async fn add_or_remove_speaker(
             return Ok(());
         }
     }
-    drop(read_state);
-    let mut write_state = server_state.write().await;
-    send_to_requester_channel(
-        "issue with request".to_owned(),
-        requester_id,
-        &mut write_state,
-        "invalid_request".to_owned(),
-    );
+    send_error_response_to_requester(read_state,requester_id,server_state).await;
     return Ok(());
 }
 
@@ -266,14 +222,7 @@ pub async fn handle_web_rtc_request(
         .await;
         return Ok(());
     }
-    drop(read_state);
-    let mut write_state = server_state.write().await;
-    send_to_requester_channel(
-        "issue with request".to_owned(),
-        requester_id,
-        &mut write_state,
-        "invalid_request".to_owned(),
-    );
+    send_error_response_to_requester(read_state,requester_id,server_state).await;
     return Ok(());
 }
 
@@ -356,9 +305,57 @@ pub async fn get_top_rooms(
     );
 }
 
-pub async fn raise_hand(
+pub async fn raise_hand_or_lower_hand(
+    request: BasicRequest,
     server_state: &Arc<RwLock<ServerState>>,
     requester_id: i32,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
-) {
+    type_of_hand_action: &str,
+) -> Result<()> {
+    let read_state = server_state.read().await;
+    let request_data: GenericRoomIdAndPeerId =
+        serde_json::from_str(&request.request_containing_data)?;
+    let room_id: i32 = request_data.roomId;
+    let peer_id: i32 = request_data.peerId;
+
+    //both users are in this room
+    if read_state.rooms.contains_key(&room_id) {
+        let room = read_state.rooms.get(&room_id).unwrap();
+        if room.user_ids.contains(&requester_id) && room.user_ids.contains(&peer_id) {
+            drop(read_state);
+            let mut write_state = server_state.write().await;
+            if type_of_hand_action == "lower" {
+                rooms::room_handler::lower_hand(
+                    &mut write_state,
+                    &room_id,
+                    &peer_id,
+                    &requester_id,
+                    execution_handler,
+                )
+                .await;
+            } else {
+                rooms::room_handler::raise_hand(
+                    &mut write_state,
+                    &room_id,
+                    &requester_id,
+                    execution_handler,
+                )
+                .await;
+            }
+            return Ok(());
+        }
+    }
+    send_error_response_to_requester(read_state,requester_id,server_state).await;
+    return Ok(());
+}
+
+async fn send_error_response_to_requester(read_state:tokio::sync::RwLockReadGuard<'_, ServerState>, requester_id: i32, server_state: &Arc<RwLock<ServerState>>){
+    drop(read_state);
+    let mut write_state = server_state.write().await;
+    send_to_requester_channel(
+        "issue with request".to_owned(),
+        requester_id,
+        &mut write_state,
+        "invalid_request".to_owned(),
+    );
 }
