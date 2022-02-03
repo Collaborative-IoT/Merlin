@@ -17,7 +17,7 @@ grab the messages intended for the voice server after
 publish and assert them.
 
 */
-use crate::communication::communication_types::{BasicResponse, BasicRequest, BasicRoomCreation};
+use crate::communication::communication_types::{BasicRequest, BasicResponse, BasicRoomCreation};
 use crate::communication::data_capturer;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
@@ -82,21 +82,23 @@ async fn test_creating_room(
     //
     // Each user has a current room id, which helps us
     // not have to search all rooms to find a user which
-    // is inefficent. If a user has a room value of -1, 
+    // is inefficent. If a user has a room value of -1,
     // they are not in a room, but if they have a non-negative
     // room number they are in a room. This is handled by the
     // communication handler internally.
 
     // Set the mock user's room as 2(even though room 2
-    // doesn't exist). 
+    // doesn't exist).
     //
-    // This should make the request to 
+    // This should make the request to
     // create a room fail.
     let mut server_state = state.write().await;
-    server_state.active_users.get_mut(&33).unwrap().current_room_id = 2;
+    server_state
+        .active_users
+        .get_mut(&33)
+        .unwrap()
+        .current_room_id = 2;
     drop(server_state);
-
-    
 }
 
 //All users must be present in memory before operation
@@ -165,16 +167,16 @@ async fn grab_and_assert_request_response(
     assert_eq!(parsed_json.response_containing_data, containing_data);
 }
 
-async fn basic_request_for_room_creation() -> String{
-    let room_creation = BasicRoomCreation{
-        name:"test".to_owned(),
-        desc:"test".to_owned(),
-        public:true
+async fn basic_request_for_room_creation() -> String {
+    let room_creation = BasicRoomCreation {
+        name: "test".to_owned(),
+        desc: "test".to_owned(),
+        public: true,
     };
 
-    let request = BasicRequest{
-        request_op_code:"create_room".to_owned(),
-        request_containing_data: serde_json::to_string(&room_creation).unwrap()
+    let request = BasicRequest {
+        request_op_code: "create_room".to_owned(),
+        request_containing_data: serde_json::to_string(&room_creation).unwrap(),
     };
     return serde_json::to_string(&request).unwrap();
 }
