@@ -17,6 +17,7 @@ grab the messages intended for the voice server after
 publish and assert them.
 
 */
+use crate::communication::communication_types::BasicResponse;
 use crate::communication::data_capturer;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
@@ -24,16 +25,15 @@ use crate::rooms::permission_configs;
 use crate::server::setup_execution_handler;
 use crate::state::state::ServerState;
 use crate::state::state_types::{Room, User};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use futures::lock::Mutex;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
 use lapin::{options::*, types::FieldTable, Channel, Connection, Consumer};
 use std::sync::Arc;
-use tokio::sync::RwLock;
-use warp::ws::Message;
-
 use tokio::sync::mpsc;
+use tokio::sync::RwLock;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use warp::ws::Message;
 
 pub async fn tests() {
     //setup rabbit channels
@@ -68,6 +68,17 @@ pub async fn tests() {
     let rx_user_one = create_and_add_new_user_channel_to_peer_map(33, &mock_state);
     let rx_user_two = create_and_add_new_user_channel_to_peer_map(34, &mock_state);
     insert_starting_user_state(&mock_state).await;
+}
+
+async fn test_creating_room(
+    consume_channel: &Consumer,
+    state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    user_one_rx: &mut UnboundedReceiverStream<Message>,
+    user_two_rx: &mut UnboundedReceiverStream<Message>,
+) {
+    //make sure users cannot create a room if they
+    //are currently in a room
 }
 
 //All users must be present in memory before operation
@@ -123,4 +134,15 @@ async fn create_and_add_new_user_channel_to_peer_map(
     //we will use th
     mock_state.write().await.peer_map.insert(mock_id, tx);
     return rx;
+}
+
+async fn grab_and_assert_request_response(
+    rx: &mut UnboundedReceiverStream<Message>,
+    op_code: &str,
+    containing_data: &str,
+) {
+    let message = rx.next().await.unwrap().to_str().unwrap().to_owned();
+    let parsed_json: BasicResponse = serde_json::from_str(&message).unwrap();
+    assert_eq!(parsed_json.response_op_code, op_code);
+    assert_eq!(parsed_json.response_containing_data, containing_data);
 }
