@@ -80,6 +80,27 @@ pub async fn tests() {
         &mut rx_user_one,
     )
     .await;
+    //speaker
+    test_joining_room(
+        &mut consumer,
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+        &mut rx_user_one,
+        "join-as-speaker",
+        33,
+    )
+    .await;
+    test_joining_room(
+        &mut consumer,
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+        &mut rx_user_one,
+        "join-as-new-peer",
+        34,
+    )
+    .await;
 }
 
 async fn test_creating_room(
@@ -151,13 +172,15 @@ async fn test_joining_room(
     state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     user_one_rx: &mut UnboundedReceiverStream<Message>,
+    type_of_join: &str,
+    user_id: i32,
 ) {
     // Based on the previous test we know
     // the room id->1 exists.
 
     // Set user to a fake room to test illegal requests,
     // no user can join a room if they are already in a room.
-    let create_room_msg = basic_request("join-as-speaker".to_owned(), basic_join_as_speaker());
+    let create_room_msg = basic_request(type_of_join.to_owned(), basic_join_as(user_id.clone()));
     send_create_or_join_room_request(
         state,
         create_room_msg.clone(),
@@ -181,9 +204,9 @@ async fn test_joining_room(
     // Ensure that we published the correct message
     grab_and_assert_message_to_voice_server::<GenericRoomIdAndPeerId>(
         consume_channel,
-        basic_join_as_speaker(),
-        "33".to_owned(),
-        "join-as-speaker".to_owned(),
+        basic_join_as(user_id),
+        user_id.to_string(),
+        type_of_join.to_owned(),
     )
     .await;
 
@@ -193,11 +216,20 @@ async fn test_joining_room(
     let server_state = state.read().await;
     assert_eq!(server_state.rooms.get(&1).unwrap().user_ids.len(), 1);
     assert_eq!(
-        server_state.rooms.get(&1).unwrap().user_ids.contains(&33),
+        server_state
+            .rooms
+            .get(&user_id)
+            .unwrap()
+            .user_ids
+            .contains(&user_id),
         true
     );
     assert_eq!(
-        server_state.active_users.get(&33).unwrap().current_room_id,
+        server_state
+            .active_users
+            .get(&user_id)
+            .unwrap()
+            .current_room_id,
         1
     );
 }
@@ -297,10 +329,10 @@ fn basic_room_creation() -> String {
     };
     return serde_json::to_string(&room_creation).unwrap();
 }
-fn basic_join_as_speaker() -> String {
+fn basic_join_as(user_id: i32) -> String {
     let join = GenericRoomIdAndPeerId {
         roomId: 1,
-        peerId: 33,
+        peerId: user_id,
     };
     return serde_json::to_string(&join).unwrap();
 }
