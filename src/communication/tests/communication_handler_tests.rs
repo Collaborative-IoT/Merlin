@@ -32,7 +32,7 @@ use chrono::Utc;
 use futures::lock::Mutex;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
 use lapin::{options::*, types::FieldTable, Channel, Connection, Consumer};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::RwLock;
@@ -91,14 +91,23 @@ pub async fn tests() {
         33,
     )
     .await;
+    //listener
     test_joining_room(
         &mut consumer,
         &publish_channel,
         &mock_state,
         &execution_handler,
-        &mut rx_user_one,
+        &mut &mut rx_user_two,
         "join-as-new-peer",
         34,
+    )
+    .await;
+    test_raising_and_lowering_hand(
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+        &mut rx_user_one,
+        &mut &mut rx_user_two,
     )
     .await;
 }
@@ -234,6 +243,124 @@ async fn test_joining_room(
     );
 }
 
+// Raising/lowering your
+// hand causes no interaction
+// with the voice server so we
+// just check the broadcasted
+// messages.
+async fn test_raising_and_lowering_hand(
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    speaker_rx: &mut UnboundedReceiverStream<Message>,
+    listener_rx: &mut UnboundedReceiverStream<Message>,
+) {
+    // Make sure no user not in the room
+    // can make a raise hand request.
+    // We create a new user that has no current room
+    // and make the request.
+    let raise_hand_message =
+        basic_request("raise_hand".to_owned(), basic_hand_raise_or_lower(1, 35));
+    let mut mock_temp_user_rx = create_and_add_new_user_channel_to_peer_map(35, state).await;
+    communication_router::route_msg(
+        raise_hand_message,
+        35,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    grab_and_assert_request_response(
+        &mut mock_temp_user_rx,
+        "invalid_request",
+        "issue with request",
+    )
+    .await;
+
+    // Make sure hand raising works for users in the room as listeners.
+    // From previous tests, we know user number 34 is a listener.
+    // The listener rx is user num 34.
+    let raise_hand_message =
+        basic_request("raise_hand".to_owned(), basic_hand_raise_or_lower(1, 34));
+    communication_router::route_msg(
+        raise_hand_message,
+        34,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    grab_and_assert_request_response(listener_rx, "user_asking_to_speak", "34").await;
+    clear_message_that_was_fanned(vec![speaker_rx]).await;
+
+    // Make sure no user not in the room
+    // can make a lower hand request.
+    let lower_hand_message =
+        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(1, 34));
+    let mut mock_temp_user_rx = create_and_add_new_user_channel_to_peer_map(35, state).await;
+    communication_router::route_msg(
+        lower_hand_message,
+        35,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    grab_and_assert_request_response(
+        &mut mock_temp_user_rx,
+        "invalid_request",
+        "issue with request",
+    )
+    .await;
+
+    // Make sure the room owner can lower the hand, the speaker rx is user num 33
+    let lower_hand_message =
+        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(1, 33));
+    communication_router::route_msg(
+        lower_hand_message,
+        33,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    grab_and_assert_request_response(speaker_rx, "user_hand_lowered", "34").await;
+    clear_message_that_was_fanned(vec![listener_rx]).await;
+
+    // Make sure user who was declined to speak can request again
+    // and lower their own hand.
+    let raise_hand_message =
+        basic_request("raise_hand".to_owned(), basic_hand_raise_or_lower(1, 34));
+    communication_router::route_msg(
+        raise_hand_message,
+        34,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    grab_and_assert_request_response(listener_rx, "user_asking_to_speak", "34").await;
+
+    let lower_hand_message =
+        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(1, 33));
+    communication_router::route_msg(
+        lower_hand_message,
+        34,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    grab_and_assert_request_response(listener_rx, "user_hand_lowered", "34").await;
+    clear_message_that_was_fanned(vec![speaker_rx]).await;
+}
+
 //All users must be present in memory before operation
 async fn insert_starting_user_state(server_state: &Arc<RwLock<ServerState>>) {
     let mut state = server_state.write().await;
@@ -321,6 +448,14 @@ fn basic_request(op: String, data: String) -> String {
     return serde_json::to_string(&request).unwrap();
 }
 
+fn basic_hand_raise_or_lower(room_id: i32, peer_id: i32) -> String {
+    let raise_or_lower = GenericRoomIdAndPeerId {
+        roomId: room_id,
+        peerId: peer_id,
+    };
+    return serde_json::to_string(&raise_or_lower).unwrap();
+}
+
 fn basic_room_creation() -> String {
     let room_creation = BasicRoomCreation {
         name: "test".to_owned(),
@@ -354,4 +489,15 @@ async fn send_create_or_join_room_request(
     communication_router::route_msg(msg, 33, state, publish_channel, execution_handler)
         .await
         .unwrap();
+}
+
+//This is used to clear the messages that get fanned
+// to other mock users in a room for our tests.
+//
+//The way we do our tests, requires the user's
+//channel to be completely clear.
+async fn clear_message_that_was_fanned(rxs: Vec<&mut UnboundedReceiverStream<Message>>) {
+    for rx in rxs {
+        rx.next().await.unwrap();
+    }
 }
