@@ -18,7 +18,7 @@ publish and assert them.
 
 */
 use crate::communication::communication_types::{
-    BasicRequest, BasicResponse, BasicRoomCreation, VoiceServerRequest,
+    BasicRequest, BasicResponse, BasicRoomCreation, VoiceServerCreateRoom, VoiceServerRequest,
 };
 use crate::communication::{communication_router, data_capturer};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
@@ -44,7 +44,7 @@ pub async fn tests() {
     let publish_channel: Arc<Mutex<lapin::Channel>> =
         Arc::new(Mutex::new(setup_channel(&connection).await));
     let consume_channel: lapin::Channel = setup_channel(&connection).await;
-    let consumer = consume_channel
+    let mut consumer = consume_channel
         .basic_consume(
             "voice_server_consume",
             "my_consumer",
@@ -68,13 +68,21 @@ pub async fn tests() {
     //So we will exclude the forwarding portion
     //and act as though this channel belongs
     //to a real user.
-    let rx_user_one = create_and_add_new_user_channel_to_peer_map(33, &mock_state);
-    let rx_user_two = create_and_add_new_user_channel_to_peer_map(34, &mock_state);
+    let mut rx_user_one = create_and_add_new_user_channel_to_peer_map(33, &mock_state).await;
+    let mut rx_user_two = create_and_add_new_user_channel_to_peer_map(34, &mock_state).await;
     insert_starting_user_state(&mock_state).await;
+    test_creating_room(
+        &mut consumer,
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+        &mut rx_user_one,
+    )
+    .await;
 }
 
 async fn test_creating_room(
-    consume_channel: &Consumer,
+    consume_channel: &mut Consumer,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
     state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
@@ -89,29 +97,14 @@ async fn test_creating_room(
     // they are not in a room, but if they have a non-negative
     // room number they are in a room. This is handled by the
     // communication handler internally.
-
+    
     // Set the mock user's room as 2(even though room 2
     // doesn't exist).
     //
     // This should make the request to
     // create a room fail.
-    let mut server_state = state.write().await;
-    server_state
-        .active_users
-        .get_mut(&33)
-        .unwrap()
-        .current_room_id = 2;
-    drop(server_state);
     let create_room_msg = basic_request_for_room_creation().await;
-    communication_router::route_msg(
-        create_room_msg.clone(),
-        33,
-        state,
-        publish_channel,
-        execution_handler,
-    )
-    .await;
-
+    send_create_room_request(state, create_room_msg.clone(), publish_channel, execution_handler).await;
     // Check that user is getting an error response
     // to their task channel.
     grab_and_assert_request_response(user_one_rx, "invalid_request", "issue with request").await;
@@ -119,23 +112,26 @@ async fn test_creating_room(
     // Set the user's room state back to -1, signifying
     // that they aren't in a room, which means they
     // can successfully create a room
-    let mut server_state = state.write().await;
-    server_state
-        .active_users
-        .get_mut(&33)
-        .unwrap()
-        .current_room_id = -1;
-    communication_router::route_msg(
-        create_room_msg,
-        33,
-        state,
-        publish_channel,
-        execution_handler,
-    )
-    .await;
+    send_create_room_request(state, create_room_msg, publish_channel, execution_handler).await;
     // The second attempt for room creation should be successful,
     // resulting in a new room in state and a message to the voice
     // server via RabbitMQ. So, we can check these side effects.
+    grab_and_assert_message_to_voice_server::<VoiceServerCreateRoom>(
+        consume_channel,
+        basic_room_creation().await,
+        "33".to_owned(),
+        "create_room".to_owned(),
+    )
+    .await;
+
+    //Check the server state after the successful creations etc.
+    let server_state = state.read().await;
+    assert_eq!(server_state.rooms.len(), 1);
+    assert_eq!(server_state.rooms.get(&1).unwrap().amount_of_users, 1);
+    assert_eq!(
+        server_state.rooms.get(&1).unwrap().user_ids.contains(&33),
+        true
+    );
 }
 
 //All users must be present in memory before operation
@@ -218,15 +214,37 @@ async fn grab_and_assert_message_to_voice_server<T: serde::de::DeserializeOwned 
 }
 
 async fn basic_request_for_room_creation() -> String {
+    let request = BasicRequest {
+        request_op_code: "create_room".to_owned(),
+        request_containing_data: basic_room_creation().await,
+    };
+    return serde_json::to_string(&request).unwrap();
+}
+
+async fn basic_room_creation() -> String {
     let room_creation = BasicRoomCreation {
         name: "test".to_owned(),
         desc: "test".to_owned(),
         public: true,
     };
+    return serde_json::to_string(&room_creation).unwrap();
+}
 
-    let request = BasicRequest {
-        request_op_code: "create_room".to_owned(),
-        request_containing_data: serde_json::to_string(&room_creation).unwrap(),
-    };
-    return serde_json::to_string(&request).unwrap();
+async fn send_create_room_request(state: &Arc<RwLock<ServerState>>,create_room_msg:String, publish_channel: &Arc<Mutex<lapin::Channel>>, execution_handler: &Arc<Mutex<ExecutionHandler>>){
+    let mut server_state = state.write().await;
+    server_state
+        .active_users
+        .get_mut(&33)
+        .unwrap()
+        .current_room_id = -1;
+    drop(server_state);
+    communication_router::route_msg(
+        create_room_msg,
+        33,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
 }

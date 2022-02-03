@@ -1,6 +1,7 @@
 extern crate chrono;
 extern crate reqwest;
 extern crate warp;
+#[allow(dead_code)]
 mod test;
 
 pub mod state {
