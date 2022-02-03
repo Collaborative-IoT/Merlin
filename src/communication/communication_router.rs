@@ -88,25 +88,25 @@ pub async fn route_msg(
             )
             .await
         }
-        "join_room_as_speaker" => {
+        "join-as-speaker" => {
             communication_handler::join_room(
                 basic_request,
                 server_state,
                 publish_channel,
                 execution_handler,
                 user_id,
-                "speaker",
+                "join-as-speaker",
             )
             .await
         }
-        "join_room_as_listener" => {
+        "join-as-new-peer" => {
             communication_handler::join_room(
                 basic_request,
                 server_state,
                 publish_channel,
                 execution_handler,
                 user_id,
-                "listener",
+                "join-as-new-peer",
             )
             .await
         }

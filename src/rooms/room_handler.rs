@@ -502,7 +502,7 @@ async fn check_or_insert_initial_permissions(
             // - But isn't a speaker in the database and the room is auto speaker
             //    we accept this request because the user could have been a peer
             //    previously and now they are joining as a speaker.
-            if join_as == "speaker"
+            if join_as == "join-as-speaker"
                 && current_user_permissions.is_speaker == false
                 && room.auto_speaker == false
             {

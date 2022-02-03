@@ -18,7 +18,8 @@ publish and assert them.
 
 */
 use crate::communication::communication_types::{
-    BasicRequest, BasicResponse, BasicRoomCreation, VoiceServerCreateRoom, VoiceServerRequest,
+    BasicRequest, BasicResponse, BasicRoomCreation, GenericRoomIdAndPeerId, VoiceServerCreateRoom,
+    VoiceServerRequest,
 };
 use crate::communication::{communication_router, data_capturer};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
@@ -97,14 +98,21 @@ async fn test_creating_room(
     // they are not in a room, but if they have a non-negative
     // room number they are in a room. This is handled by the
     // communication handler internally.
-    
+
     // Set the mock user's room as 2(even though room 2
     // doesn't exist).
     //
     // This should make the request to
     // create a room fail.
-    let create_room_msg = basic_request_for_room_creation().await;
-    send_create_room_request(state, create_room_msg.clone(), publish_channel, execution_handler).await;
+    let create_room_msg = basic_request("create_room".to_owned(), basic_room_creation());
+    send_create_or_join_room_request(
+        state,
+        create_room_msg.clone(),
+        publish_channel,
+        execution_handler,
+        2,
+    )
+    .await;
     // Check that user is getting an error response
     // to their task channel.
     grab_and_assert_request_response(user_one_rx, "invalid_request", "issue with request").await;
@@ -112,13 +120,20 @@ async fn test_creating_room(
     // Set the user's room state back to -1, signifying
     // that they aren't in a room, which means they
     // can successfully create a room
-    send_create_room_request(state, create_room_msg, publish_channel, execution_handler).await;
+    send_create_or_join_room_request(
+        state,
+        create_room_msg,
+        publish_channel,
+        execution_handler,
+        -1,
+    )
+    .await;
     // The second attempt for room creation should be successful,
     // resulting in a new room in state and a message to the voice
     // server via RabbitMQ. So, we can check these side effects.
     grab_and_assert_message_to_voice_server::<VoiceServerCreateRoom>(
         consume_channel,
-        basic_room_creation().await,
+        basic_room_creation(),
         "33".to_owned(),
         "create_room".to_owned(),
     )
@@ -127,10 +142,63 @@ async fn test_creating_room(
     //Check the server state after the successful creations etc.
     let server_state = state.read().await;
     assert_eq!(server_state.rooms.len(), 1);
-    assert_eq!(server_state.rooms.get(&1).unwrap().amount_of_users, 1);
+    assert_eq!(server_state.rooms.contains_key(&1), true);
+}
+
+async fn test_joining_room(
+    consume_channel: &mut Consumer,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    user_one_rx: &mut UnboundedReceiverStream<Message>,
+) {
+    // Based on the previous test we know
+    // the room id->1 exists.
+
+    // Set user to a fake room to test illegal requests,
+    // no user can join a room if they are already in a room.
+    let create_room_msg = basic_request("join-as-speaker".to_owned(), basic_join_as_speaker());
+    send_create_or_join_room_request(
+        state,
+        create_room_msg.clone(),
+        publish_channel,
+        execution_handler,
+        2,
+    )
+    .await;
+    // Check the channel and make sure there is an error.
+    grab_and_assert_request_response(user_one_rx, "invalid_request", "issue with request").await;
+    // The second attempt should pass due to the room being changed to -1
+    // which means the user isn't in a room.
+    send_create_or_join_room_request(
+        state,
+        create_room_msg.clone(),
+        publish_channel,
+        execution_handler,
+        -1,
+    )
+    .await;
+    // Ensure that we published the correct message
+    grab_and_assert_message_to_voice_server::<GenericRoomIdAndPeerId>(
+        consume_channel,
+        basic_join_as_speaker(),
+        "33".to_owned(),
+        "join-as-speaker".to_owned(),
+    )
+    .await;
+
+    //Check:The user in the room?
+    //Check:There only one user in the room?
+    //Check:The user's current room state is updated?
+    let server_state = state.read().await;
+    assert_eq!(server_state.rooms.get(&1).unwrap().user_ids.len(), 1);
     assert_eq!(
         server_state.rooms.get(&1).unwrap().user_ids.contains(&33),
         true
+    );
+    assert_eq!(
+        server_state.active_users.get(&33).unwrap().current_room_id,
+        1
     );
 }
 
@@ -213,15 +281,15 @@ async fn grab_and_assert_message_to_voice_server<T: serde::de::DeserializeOwned 
     assert_eq!(uid, vs_message.uid);
 }
 
-async fn basic_request_for_room_creation() -> String {
+fn basic_request(op: String, data: String) -> String {
     let request = BasicRequest {
-        request_op_code: "create_room".to_owned(),
-        request_containing_data: basic_room_creation().await,
+        request_op_code: op,
+        request_containing_data: data,
     };
     return serde_json::to_string(&request).unwrap();
 }
 
-async fn basic_room_creation() -> String {
+fn basic_room_creation() -> String {
     let room_creation = BasicRoomCreation {
         name: "test".to_owned(),
         desc: "test".to_owned(),
@@ -229,22 +297,29 @@ async fn basic_room_creation() -> String {
     };
     return serde_json::to_string(&room_creation).unwrap();
 }
+fn basic_join_as_speaker() -> String {
+    let join = GenericRoomIdAndPeerId {
+        roomId: 1,
+        peerId: 33,
+    };
+    return serde_json::to_string(&join).unwrap();
+}
 
-async fn send_create_room_request(state: &Arc<RwLock<ServerState>>,create_room_msg:String, publish_channel: &Arc<Mutex<lapin::Channel>>, execution_handler: &Arc<Mutex<ExecutionHandler>>){
+async fn send_create_or_join_room_request(
+    state: &Arc<RwLock<ServerState>>,
+    msg: String,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    curr_room: i32,
+) {
     let mut server_state = state.write().await;
     server_state
         .active_users
         .get_mut(&33)
         .unwrap()
-        .current_room_id = -1;
+        .current_room_id = curr_room;
     drop(server_state);
-    communication_router::route_msg(
-        create_room_msg,
-        33,
-        state,
-        publish_channel,
-        execution_handler,
-    )
-    .await
-    .unwrap();
+    communication_router::route_msg(msg, 33, state, publish_channel, execution_handler)
+        .await
+        .unwrap();
 }
