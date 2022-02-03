@@ -17,8 +17,10 @@ grab the messages intended for the voice server after
 publish and assert them.
 
 */
-use crate::communication::communication_types::{VoiceServerRequest,BasicRequest, BasicResponse, BasicRoomCreation};
-use crate::communication::{data_capturer, communication_router};
+use crate::communication::communication_types::{
+    BasicRequest, BasicResponse, BasicRoomCreation, VoiceServerRequest,
+};
+use crate::communication::{communication_router, data_capturer};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::rooms::permission_configs;
@@ -29,7 +31,7 @@ use chrono::Utc;
 use futures::lock::Mutex;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
 use lapin::{options::*, types::FieldTable, Channel, Connection, Consumer};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::RwLock;
@@ -73,10 +75,10 @@ pub async fn tests() {
 
 async fn test_creating_room(
     consume_channel: &Consumer,
-    publish_channel :&Arc<Mutex<lapin::Channel>>,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
     state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
-    user_one_rx: &mut UnboundedReceiverStream<Message>
+    user_one_rx: &mut UnboundedReceiverStream<Message>,
 ) {
     // Make sure users cannot create a room if they
     // are currently in a room.
@@ -101,29 +103,40 @@ async fn test_creating_room(
         .current_room_id = 2;
     drop(server_state);
     let create_room_msg = basic_request_for_room_creation().await;
-    communication_router::route_msg(create_room_msg.clone(), 33, state, publish_channel, execution_handler).await;
+    communication_router::route_msg(
+        create_room_msg.clone(),
+        33,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await;
 
     // Check that user is getting an error response
     // to their task channel.
-    grab_and_assert_request_response(user_one_rx,"invalid_request","issue with request").await;
-    
+    grab_and_assert_request_response(user_one_rx, "invalid_request", "issue with request").await;
+
     // Set the user's room state back to -1, signifying
-    // that they aren't in a room, which means they 
+    // that they aren't in a room, which means they
     // can successfully create a room
     let mut server_state = state.write().await;
     server_state
-    .active_users
-    .get_mut(&33)
-    .unwrap()
-    .current_room_id = -1;
-    communication_router::route_msg(create_room_msg, 33, state, publish_channel, execution_handler).await;
+        .active_users
+        .get_mut(&33)
+        .unwrap()
+        .current_room_id = -1;
+    communication_router::route_msg(
+        create_room_msg,
+        33,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await;
     // The second attempt for room creation should be successful,
     // resulting in a new room in state and a message to the voice
     // server via RabbitMQ. So, we can check these side effects.
-    
-
 }
-
 
 //All users must be present in memory before operation
 async fn insert_starting_user_state(server_state: &Arc<RwLock<ServerState>>) {
@@ -191,9 +204,14 @@ async fn grab_and_assert_request_response(
     assert_eq!(parsed_json.response_containing_data, containing_data);
 }
 
-async fn grab_and_assert_message_to_voice_server<T:serde::de::DeserializeOwned+Serialize>(consume_channel: &mut Consumer ,d:String, uid:String,op:String){
+async fn grab_and_assert_message_to_voice_server<T: serde::de::DeserializeOwned + Serialize>(
+    consume_channel: &mut Consumer,
+    d: String,
+    uid: String,
+    op: String,
+) {
     let message = consume_message(consume_channel).await;
-    let vs_message:VoiceServerRequest<T> = serde_json::from_str(&message).unwrap();
+    let vs_message: VoiceServerRequest<T> = serde_json::from_str(&message).unwrap();
     assert_eq!(serde_json::to_string(&vs_message.d).unwrap(), d);
     assert_eq!(op, vs_message.op);
     assert_eq!(uid, vs_message.uid);
