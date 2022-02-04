@@ -316,7 +316,6 @@ async fn test_raising_and_lowering_hand(
     .unwrap();
     grab_and_assert_request_response(listener_rx, "user_asking_to_speak", "34").await;
     clear_message_that_was_fanned(vec![speaker_rx]).await;
-
     // Make sure no user not in the room
     // can make a lower hand request.
     let lower_hand_message =
@@ -338,9 +337,10 @@ async fn test_raising_and_lowering_hand(
     )
     .await;
 
-    // Make sure the room owner can lower the hand, the speaker rx is user num 33
+    // Make sure the room owner can lower the hand of 34 ,
+    // the speaker rx is user num 33 aka the owner
     let lower_hand_message =
-        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(3, 33));
+        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(3, 34));
     communication_router::route_msg(
         lower_hand_message,
         33,
@@ -369,7 +369,7 @@ async fn test_raising_and_lowering_hand(
     grab_and_assert_request_response(listener_rx, "user_asking_to_speak", "34").await;
 
     let lower_hand_message =
-        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(3, 33));
+        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(3, 34));
     communication_router::route_msg(
         lower_hand_message,
         34,

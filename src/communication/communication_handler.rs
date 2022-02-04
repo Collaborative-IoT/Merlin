@@ -320,9 +320,15 @@ pub async fn raise_hand_or_lower_hand(
     let room_id: i32 = request_data.roomId;
     let peer_id: i32 = request_data.peerId;
 
-    //both users are in this room
+    //you can only raise your own hand
+    if type_of_hand_action == "raise" && requester_id != peer_id {
+        return Ok(());
+    }
+
+    //room exist
     if read_state.rooms.contains_key(&room_id) {
         let room = read_state.rooms.get(&room_id).unwrap();
+        //both users are in this room
         if room.user_ids.contains(&requester_id) && room.user_ids.contains(&peer_id) {
             drop(read_state);
             let mut write_state = server_state.write().await;

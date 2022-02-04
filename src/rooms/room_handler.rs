@@ -353,6 +353,7 @@ pub async fn raise_hand(
     if all_room_permissions.0 {
         return;
     }
+
     let current_user_permissions: &RoomPermissions =
         all_room_permissions.1.get(requester_id).unwrap();
     if current_user_permissions.is_speaker {
@@ -413,7 +414,7 @@ pub async fn lower_hand(
     if requester_user_permissions.is_mod || requester_id == requestee_id {
         let new_db_permissions = permission_configs::create_non_preset(
             room_id.clone(),
-            requester_id.clone(),
+            requestee_id.clone(),
             false,
             false,
             requestee_user_permissions.is_mod,
@@ -421,7 +422,7 @@ pub async fn lower_hand(
         data_capturer::capture_new_room_permissions_update(&new_db_permissions, &mut handler).await;
         let basic_response = BasicResponse {
             response_op_code: "user_hand_lowered".to_owned(),
-            response_containing_data: requester_id.to_string(),
+            response_containing_data: requestee_id.to_string(),
         };
         let basic_response_str = serde_json::to_string(&basic_response).unwrap();
         fan::broadcast_message_to_room(basic_response_str, server_state, room_id.clone()).await;
@@ -541,12 +542,22 @@ async fn create_initial_user_permissions(
     room: &Room,
     requester_id: &i32,
 ) -> EncounteredError {
+    //this is the first person in the room
+    //aka the owner so they must have mod
+    //permissions
+    if room.user_ids.len() == 0 {
+        let init_permissions =
+            permission_configs::modded_speaker(room.room_id.clone(), requester_id.clone());
+        let result = data_capturer::capture_new_room_permissions(&init_permissions, handler).await;
+        return result;
+    }
+
     if type_of_join == "join-as-speaker" {
         // rooms that are auto speaker
         // doesn't require hand raising
         if room.auto_speaker {
             let init_permissions =
-                permission_configs::regular_speaker(requester_id.clone(), room.room_id.clone());
+                permission_configs::regular_speaker(room.room_id.clone(), requester_id.clone());
             let result =
                 data_capturer::capture_new_room_permissions(&init_permissions, handler).await;
             return result;
@@ -555,7 +566,7 @@ async fn create_initial_user_permissions(
         }
     } else {
         let init_permissions =
-            permission_configs::regular_listener(requester_id.clone(), room.room_id.clone());
+            permission_configs::regular_listener(room.room_id.clone(), requester_id.clone());
         let result = data_capturer::capture_new_room_permissions(&init_permissions, handler).await;
         return result;
     }
