@@ -17,17 +17,17 @@ grab the messages intended for the voice server after
 publish and assert them.
 
 */
+use crate::communication::communication_router;
 use crate::communication::communication_types::{
     BasicRequest, BasicResponse, BasicRoomCreation, GenericRoomIdAndPeerId, VoiceServerCreateRoom,
     VoiceServerRequest,
 };
-use crate::communication::{communication_router, data_capturer};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::rooms::permission_configs;
 use crate::server::setup_execution_handler;
 use crate::state::state::ServerState;
-use crate::state::state_types::{Room, User};
+use crate::state::state_types::User;
 use chrono::Utc;
 use futures::lock::Mutex;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
@@ -134,6 +134,7 @@ async fn test_creating_room(
     //
     // This should make the request to
     // create a room fail.
+    println!("testing creating room");
     let create_room_msg = basic_request("create_room".to_owned(), basic_room_creation());
     send_create_or_join_room_request(
         state,
@@ -184,6 +185,7 @@ async fn test_joining_room(
     type_of_join: &str,
     user_id: i32,
 ) {
+    println!("testing joining room");
     // Based on the previous test we know
     // the room id->1 exists.
 
@@ -259,6 +261,7 @@ async fn test_raising_and_lowering_hand(
     // can make a raise hand request.
     // We create a new user that has no current room
     // and make the request.
+    println!("Testing raising/lowering hand");
     let raise_hand_message =
         basic_request("raise_hand".to_owned(), basic_hand_raise_or_lower(1, 35));
     let mut mock_temp_user_rx = create_and_add_new_user_channel_to_peer_map(35, state).await;
@@ -434,6 +437,7 @@ async fn grab_and_assert_message_to_voice_server<T: serde::de::DeserializeOwned 
     op: String,
 ) {
     let message = consume_message(consume_channel).await;
+    println!("{}", message);
     let vs_message: VoiceServerRequest<T> = serde_json::from_str(&message).unwrap();
     assert_eq!(serde_json::to_string(&vs_message.d).unwrap(), d);
     assert_eq!(op, vs_message.op);

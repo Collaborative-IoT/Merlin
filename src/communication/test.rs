@@ -1,5 +1,5 @@
 use crate::communication::tests::capture_and_fetch;
-
+use crate::communication::tests::communication_handler_tests;
 /*
 Tests aren't executed in a isolated pattern
 due to the nature of the tests. These tests
@@ -11,6 +11,7 @@ other tests that come before them.
 
 pub async fn test() {
     test_capture_and_fetch().await;
+    communication_handler_tests::tests().await;
 }
 
 async fn test_capture_and_fetch() {

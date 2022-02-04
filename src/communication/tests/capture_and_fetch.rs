@@ -163,7 +163,6 @@ pub async fn test_room_block_and_gather(
         ),
     )
     .await;
-    println!("{},{}", first_user_id, second_user_id);
 
     let room_block: DBRoomBlock = generate_room_block(room_id, first_user_id.clone());
     let second_room_block: DBRoomBlock = generate_different_room_block(room_id, second_user_id);

@@ -104,8 +104,16 @@ pub async fn create_room(
         );
     } else {
         let channel = publish_channel.lock().await;
-        continue_with_successful_room_creation(room_id, &channel, public, server_state, name, desc)
-            .await;
+        continue_with_successful_room_creation(
+            room_id,
+            &channel,
+            public,
+            server_state,
+            name,
+            desc,
+            requester_id,
+        )
+        .await;
     }
 }
 
@@ -477,11 +485,13 @@ async fn continue_with_successful_room_creation(
     server_state: &mut ServerState,
     name: String,
     desc: String,
+    user_id: i32,
 ) {
     let request_to_voice_server = VoiceServerCreateRoom {
         roomId: room_id.clone().to_string(),
     };
-    let request_str: String = serde_json::to_string(&request_to_voice_server).unwrap();
+    let request_str =
+        create_voice_server_request("create-room", &user_id.to_string(), request_to_voice_server);
     rabbit::publish_message(channel, request_str).await;
     let new_room_state: Room = construct_basic_room_for_state(room_id.clone(), public, name, desc);
     server_state.rooms.insert(room_id, new_room_state);

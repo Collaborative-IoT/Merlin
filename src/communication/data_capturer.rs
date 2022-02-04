@@ -111,7 +111,6 @@ pub async fn capture_new_follower(
         let select_future =
             execution_handler.select_single_follow(&follower.follower_id, &follower.user_id);
         let will_be_duplicate = insert_will_be_duplicate(select_future).await;
-        println!("{}", will_be_duplicate);
         let insert_future = execution_handler.insert_follower(follower);
         return ensure_no_duplicates_exist_and_capture(
             will_be_duplicate,

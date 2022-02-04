@@ -14,7 +14,7 @@ use crate::state::state::ServerState;
 
 pub async fn setup_rabbit_connection() -> Result<Connection> {
     let addr =
-        std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp:/// guest:guest@localhost:5672".into());
+        std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp://guest:guest@localhost:5672".into());
     let conn: Connection =
         Connection::connect(&addr, ConnectionProperties::default().with_tokio()).await?; //  Note the `with_tokio()` here
     return Ok(conn);
