@@ -255,6 +255,8 @@ pub async fn add_speaker(
             );
             let channel = publish_channel.lock().await;
             rabbit::publish_message(&channel, request_str).await;
+            fan::broadcast_message_to_room("new_speaker_added".to_owned(), server_state, room_id)
+                .await;
             return;
         }
     }
@@ -306,6 +308,8 @@ pub async fn remove_speaker(
             );
             let channel = publish_channel.lock().await;
             rabbit::publish_message(&channel, request_str).await;
+            fan::broadcast_message_to_room("old_speaker_removed".to_owned(), server_state, room_id)
+                .await;
             return;
         }
     }
