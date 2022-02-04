@@ -426,7 +426,14 @@ pub async fn lower_hand(
         };
         let basic_response_str = serde_json::to_string(&basic_response).unwrap();
         fan::broadcast_message_to_room(basic_response_str, server_state, room_id.clone()).await;
+        return;
     }
+    send_to_requester_channel(
+        "issue with request".to_owned(),
+        requester_id.clone(),
+        server_state,
+        "invalid_request".to_owned(),
+    );
 }
 
 async fn handle_user_block_capture_result(

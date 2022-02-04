@@ -276,6 +276,7 @@ async fn test_raising_and_lowering_hand(
     speaker_rx: &mut UnboundedReceiverStream<Message>,
     listener_rx: &mut UnboundedReceiverStream<Message>,
 ) {
+    // TESTCASE - USERS NOT IN THE ROOM CAN'T MAKE LOWER/RAISE REQUESTS
     // Make sure no user not in the room
     // can make a raise hand request.
     // We create a new user that has no current room
@@ -300,6 +301,27 @@ async fn test_raising_and_lowering_hand(
     )
     .await;
 
+    //make sure no one not in the room can
+    //make a lower hand request
+    let raise_hand_message =
+        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(3, 35));
+    communication_router::route_msg(
+        raise_hand_message,
+        35,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    grab_and_assert_request_response(
+        &mut mock_temp_user_rx,
+        "invalid_request",
+        "issue with request",
+    )
+    .await;
+
+    // TESTCASE - USERS IN THE ROOM AS A LISTENER CAN REQUEST TO SPEAK
     // Make sure hand raising works for users in the room as listeners.
     // From previous tests, we know user number 34 is a listener.
     // The listener rx is user num 34.
@@ -316,14 +338,29 @@ async fn test_raising_and_lowering_hand(
     .unwrap();
     grab_and_assert_request_response(listener_rx, "user_asking_to_speak", "34").await;
     clear_message_that_was_fanned(vec![speaker_rx]).await;
-    // Make sure no user not in the room
-    // can make a lower hand request.
-    let lower_hand_message =
+
+    // TESTCASE - NON MODS CAN'T LOWER HANDS
+    // Make sure a non-mod user can't lower another user's hand
+    // Make another user join as a listenr
+    // and try to lower user 34's hand who is requesting.
+    let mut mock_temp_user_rx_two = create_and_add_new_user_channel_to_peer_map(36, state).await;
+    insert_user_state(state, 36).await;
+    let create_room_msg = basic_request("join-as-new-peer".to_owned(), basic_join_as(36));
+    send_create_or_join_room_request(
+        state,
+        create_room_msg.clone(),
+        publish_channel,
+        execution_handler,
+        -1,
+        &36,
+    )
+    .await;
+    //try to lower 34's hand(non mod) as 36(non mod)
+    let raise_hand_message =
         basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(3, 34));
-    let mut mock_temp_user_rx = create_and_add_new_user_channel_to_peer_map(35, state).await;
     communication_router::route_msg(
-        lower_hand_message,
-        35,
+        raise_hand_message,
+        36,
         state,
         publish_channel,
         execution_handler,
@@ -331,12 +368,13 @@ async fn test_raising_and_lowering_hand(
     .await
     .unwrap();
     grab_and_assert_request_response(
-        &mut mock_temp_user_rx,
+        &mut mock_temp_user_rx_two,
         "invalid_request",
         "issue with request",
     )
     .await;
 
+    // TESTCASE - MODS CAN LOWER HANDS
     // Make sure the room owner can lower the hand of 34 ,
     // the speaker rx is user num 33 aka the owner
     let lower_hand_message =
@@ -353,6 +391,7 @@ async fn test_raising_and_lowering_hand(
     grab_and_assert_request_response(speaker_rx, "user_hand_lowered", "34").await;
     clear_message_that_was_fanned(vec![listener_rx]).await;
 
+    // TESTCASE - USERS CAN LOWER THEIR OWN HAND
     // Make sure user who was declined to speak can request again
     // and lower their own hand.
     let raise_hand_message =
@@ -385,24 +424,20 @@ async fn test_raising_and_lowering_hand(
 
 //All users must be present in memory before operation
 async fn insert_starting_user_state(server_state: &Arc<RwLock<ServerState>>) {
+    insert_user_state(server_state, 33).await;
+    insert_user_state(server_state, 34).await;
+}
+
+async fn insert_user_state(server_state: &Arc<RwLock<ServerState>>, user_id: i32) {
     let mut state = server_state.write().await;
-    let user_one = User {
+    let user = User {
         last_online: Utc::now(),
         muted: true,
         deaf: true,
         ip: "test".to_string(),
         current_room_id: -1,
     };
-
-    let user_two = User {
-        last_online: Utc::now(),
-        muted: true,
-        deaf: false,
-        ip: "test".to_string(),
-        current_room_id: -1,
-    };
-    state.active_users.insert(33, user_one);
-    state.active_users.insert(34, user_two);
+    state.active_users.insert(user_id, user);
 }
 
 //starts rabbitmq connection channel
