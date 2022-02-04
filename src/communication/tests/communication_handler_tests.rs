@@ -142,6 +142,7 @@ async fn test_creating_room(
         publish_channel,
         execution_handler,
         2,
+        &33,
     )
     .await;
     // Check that user is getting an error response
@@ -157,6 +158,7 @@ async fn test_creating_room(
         publish_channel,
         execution_handler,
         -1,
+        &33,
     )
     .await;
     // The second attempt for room creation should be successful,
@@ -164,16 +166,16 @@ async fn test_creating_room(
     // server via RabbitMQ. So, we can check these side effects.
     grab_and_assert_message_to_voice_server::<VoiceServerCreateRoom>(
         consume_channel,
-        basic_room_creation(),
+        basic_voice_server_creation(),
         "33".to_owned(),
-        "create_room".to_owned(),
+        "create-room".to_owned(),
     )
     .await;
 
     //Check the server state after the successful creations etc.
     let server_state = state.read().await;
     assert_eq!(server_state.rooms.len(), 1);
-    assert_eq!(server_state.rooms.contains_key(&1), true);
+    assert_eq!(server_state.rooms.contains_key(&3), true);
 }
 
 async fn test_joining_room(
@@ -186,11 +188,11 @@ async fn test_joining_room(
     user_id: i32,
 ) {
     println!("testing joining room");
-    // Based on the previous test we know
-    // the room id->1 exists.
-
+    // Based on the previous tests for data capture/execution handler we know
+    // the room id->3 exists.
     // Set user to a fake room to test illegal requests,
     // no user can join a room if they are already in a room.
+
     let create_room_msg = basic_request(type_of_join.to_owned(), basic_join_as(user_id.clone()));
     send_create_or_join_room_request(
         state,
@@ -198,10 +200,13 @@ async fn test_joining_room(
         publish_channel,
         execution_handler,
         2,
+        &user_id,
     )
     .await;
+
     // Check the channel and make sure there is an error.
     grab_and_assert_request_response(user_one_rx, "invalid_request", "issue with request").await;
+
     // The second attempt should pass due to the room being changed to -1
     // which means the user isn't in a room.
     send_create_or_join_room_request(
@@ -210,8 +215,10 @@ async fn test_joining_room(
         publish_channel,
         execution_handler,
         -1,
+        &user_id,
     )
     .await;
+
     // Ensure that we published the correct message
     grab_and_assert_message_to_voice_server::<GenericRoomIdAndPeerId>(
         consume_channel,
@@ -225,11 +232,23 @@ async fn test_joining_room(
     //Check:There only one user in the room?
     //Check:The user's current room state is updated?
     let server_state = state.read().await;
-    assert_eq!(server_state.rooms.get(&1).unwrap().user_ids.len(), 1);
+
+    // We know there is no one in the room when we pass in
+    // join as speaker from this test
+    //
+    // After the speaker joins there should be one
+    // then when the listner join it should be 2
+    let num;
+    if type_of_join == "join-as-speaker" {
+        num = 1;
+    } else {
+        num = 2
+    }
+    assert_eq!(server_state.rooms.get(&3).unwrap().user_ids.len(), num);
     assert_eq!(
         server_state
             .rooms
-            .get(&user_id)
+            .get(&3)
             .unwrap()
             .user_ids
             .contains(&user_id),
@@ -241,7 +260,7 @@ async fn test_joining_room(
             .get(&user_id)
             .unwrap()
             .current_room_id,
-        1
+        3
     );
 }
 
@@ -263,7 +282,7 @@ async fn test_raising_and_lowering_hand(
     // and make the request.
     println!("Testing raising/lowering hand");
     let raise_hand_message =
-        basic_request("raise_hand".to_owned(), basic_hand_raise_or_lower(1, 35));
+        basic_request("raise_hand".to_owned(), basic_hand_raise_or_lower(3, 35));
     let mut mock_temp_user_rx = create_and_add_new_user_channel_to_peer_map(35, state).await;
     communication_router::route_msg(
         raise_hand_message,
@@ -285,7 +304,7 @@ async fn test_raising_and_lowering_hand(
     // From previous tests, we know user number 34 is a listener.
     // The listener rx is user num 34.
     let raise_hand_message =
-        basic_request("raise_hand".to_owned(), basic_hand_raise_or_lower(1, 34));
+        basic_request("raise_hand".to_owned(), basic_hand_raise_or_lower(3, 34));
     communication_router::route_msg(
         raise_hand_message,
         34,
@@ -301,7 +320,7 @@ async fn test_raising_and_lowering_hand(
     // Make sure no user not in the room
     // can make a lower hand request.
     let lower_hand_message =
-        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(1, 34));
+        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(3, 34));
     let mut mock_temp_user_rx = create_and_add_new_user_channel_to_peer_map(35, state).await;
     communication_router::route_msg(
         lower_hand_message,
@@ -321,7 +340,7 @@ async fn test_raising_and_lowering_hand(
 
     // Make sure the room owner can lower the hand, the speaker rx is user num 33
     let lower_hand_message =
-        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(1, 33));
+        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(3, 33));
     communication_router::route_msg(
         lower_hand_message,
         33,
@@ -337,7 +356,7 @@ async fn test_raising_and_lowering_hand(
     // Make sure user who was declined to speak can request again
     // and lower their own hand.
     let raise_hand_message =
-        basic_request("raise_hand".to_owned(), basic_hand_raise_or_lower(1, 34));
+        basic_request("raise_hand".to_owned(), basic_hand_raise_or_lower(3, 34));
     communication_router::route_msg(
         raise_hand_message,
         34,
@@ -350,7 +369,7 @@ async fn test_raising_and_lowering_hand(
     grab_and_assert_request_response(listener_rx, "user_asking_to_speak", "34").await;
 
     let lower_hand_message =
-        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(1, 33));
+        basic_request("lower_hand".to_owned(), basic_hand_raise_or_lower(3, 33));
     communication_router::route_msg(
         lower_hand_message,
         34,
@@ -437,7 +456,6 @@ async fn grab_and_assert_message_to_voice_server<T: serde::de::DeserializeOwned 
     op: String,
 ) {
     let message = consume_message(consume_channel).await;
-    println!("{}", message);
     let vs_message: VoiceServerRequest<T> = serde_json::from_str(&message).unwrap();
     assert_eq!(serde_json::to_string(&vs_message.d).unwrap(), d);
     assert_eq!(op, vs_message.op);
@@ -468,9 +486,17 @@ fn basic_room_creation() -> String {
     };
     return serde_json::to_string(&room_creation).unwrap();
 }
+
+fn basic_voice_server_creation() -> String {
+    let room_creation = VoiceServerCreateRoom {
+        roomId: 3.to_string(),
+    };
+    return serde_json::to_string(&room_creation).unwrap();
+}
+
 fn basic_join_as(user_id: i32) -> String {
     let join = GenericRoomIdAndPeerId {
-        roomId: 1,
+        roomId: 3,
         peerId: user_id,
     };
     return serde_json::to_string(&join).unwrap();
@@ -482,17 +508,24 @@ async fn send_create_or_join_room_request(
     publish_channel: &Arc<Mutex<lapin::Channel>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     curr_room: i32,
+    user_id: &i32,
 ) {
     let mut server_state = state.write().await;
     server_state
         .active_users
-        .get_mut(&33)
+        .get_mut(user_id)
         .unwrap()
         .current_room_id = curr_room;
     drop(server_state);
-    communication_router::route_msg(msg, 33, state, publish_channel, execution_handler)
-        .await
-        .unwrap();
+    communication_router::route_msg(
+        msg,
+        user_id.clone(),
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
 }
 
 //This is used to clear the messages that get fanned

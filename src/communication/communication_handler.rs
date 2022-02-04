@@ -123,6 +123,7 @@ pub async fn join_room(
             .current_room_id
             == -1
         && read_state.rooms.get(&room_id).unwrap().public
+        && peer_id == requester_id
     {
         //make sure the user isn't blocked from the room
         let mut handler = execution_handler.lock().await;
@@ -132,6 +133,7 @@ pub async fn join_room(
         // and user isn't blocked
         if blocked_result.0 == false && !blocked_result.1.contains(&peer_id) {
             drop(read_state);
+            drop(handler);
             let mut write_state = server_state.write().await;
             rooms::room_handler::join_room(
                 request_data,

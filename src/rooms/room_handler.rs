@@ -179,9 +179,10 @@ pub async fn join_room(
     let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
         data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
     let state_room_option = server_state.rooms.get(&room_id);
+
     if !state_room_option.is_some() {
         return;
-    }
+    };
     let state_room = state_room_option.unwrap();
 
     // ensure the user has the permissions to join
@@ -194,7 +195,6 @@ pub async fn join_room(
     )
     .await;
     drop(handler);
-
     // if the user has this permission
     if result == false {
         let channel = publish_channel.lock().await;
@@ -206,7 +206,7 @@ pub async fn join_room(
         rabbit::publish_message(&channel, request_str).await;
         add_user_to_room_state(&room_id, user_id, server_state);
         return;
-    }
+    };
     send_to_requester_channel(
         user_id.to_string(),
         requester_id,
@@ -455,8 +455,13 @@ async fn handle_user_block_capture_result(
 
 fn add_user_to_room_state(room_id: &i32, user_id: i32, state: &mut ServerState) {
     let room = state.rooms.get_mut(&room_id).unwrap();
-    room.user_ids.insert(user_id);
+    room.user_ids.insert(user_id.clone());
     room.amount_of_users += 1;
+    state
+        .active_users
+        .get_mut(&user_id)
+        .unwrap()
+        .current_room_id = room_id.clone();
 }
 
 fn construct_basic_room_for_state(room_id: i32, public: bool, name: String, desc: String) -> Room {
@@ -468,7 +473,7 @@ fn construct_basic_room_for_state(room_id: i32, public: bool, name: String, desc
         deaf: HashSet::new(),
         user_ids: HashSet::new(),
         public: public,
-        auto_speaker: false,
+        auto_speaker: true,
         amount_of_users: 0,
         name: name,
         desc: desc,
