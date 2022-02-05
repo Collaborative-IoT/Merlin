@@ -202,7 +202,7 @@ async fn test_joining_room(
     type_of_join: &str,
     user_id: i32,
 ) {
-    println!("testing joining room");
+    println!("testing joining room(type_op_code:{})",type_of_join);
     // Based on the previous tests for data capture/execution handler we know
     // the room id->3 exists.
     // Set user to a fake room to test illegal requests,
