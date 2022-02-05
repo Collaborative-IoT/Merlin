@@ -41,6 +41,7 @@ pub mod communication {
     pub mod test;
     pub mod tests {
         pub mod capture_and_fetch;
+        pub mod communication_handler_test_helpers;
         pub mod communication_handler_tests;
     }
 }
