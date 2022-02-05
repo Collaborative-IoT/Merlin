@@ -82,9 +82,9 @@ pub async fn tests() {
     //forwarded to the user via
     //websocket connection.
     //
-    //So we will exclude the forwarding portion
-    //and act as though this channel belongs
-    //to a real user.
+    //So we exclude the forwarding portion
+    //and check the message being sent to make sure
+    //our server is responding to requests correctly.
     let mut rx_user_one =
         helpers::create_and_add_new_user_channel_to_peer_map(33, &mock_state).await;
     let mut rx_user_two =
