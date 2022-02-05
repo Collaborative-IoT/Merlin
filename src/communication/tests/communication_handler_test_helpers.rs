@@ -1,3 +1,9 @@
+// These are helpers of the communication handler
+// tests, these helper methods handle queue message
+// gathering, server state manipulation(we use one global singleton),
+// request struct creation that will be serialized into json
+// and much more. None of the helpers deal with the test logic directly
+
 pub mod helpers {
     use crate::communication::communication_router;
     use crate::communication::communication_types::{
@@ -20,6 +26,42 @@ pub mod helpers {
     use warp::ws::Message;
     //All users must be present in memory before operation
     //unless they are spawned apart of a test
+    pub async fn spawn_new_user_and_join_room(
+        publish_channel: &Arc<Mutex<lapin::Channel>>,
+        execution_handler: &Arc<Mutex<ExecutionHandler>>,
+        state: &Arc<RwLock<ServerState>>,
+        user_id: i32,
+        consume_channel: &mut Consumer,
+    ) -> UnboundedReceiverStream<Message> {
+        let mock_temp_user = create_and_add_new_user_channel_to_peer_map(user_id, state).await;
+        insert_user_state(state, user_id).await;
+        let create_room_msg = basic_request(
+            "join-as-new-peer".to_owned(),
+            generic_room_and_peer_id(user_id, 3),
+        );
+        send_create_or_join_room_request(
+            state,
+            create_room_msg.clone(),
+            publish_channel,
+            execution_handler,
+            -1,
+            &user_id,
+        )
+        .await;
+
+        //we need to consume the message
+        //so the queue can be clear
+        //since we don't need to check
+        //the publish to the queue.
+        //
+        //Because the tests ran before
+        //this method's first call
+        //already confirmed this
+        //functionality is correct.
+        consume_message(consume_channel).await;
+        return mock_temp_user;
+    }
+
     pub async fn insert_starting_user_state(server_state: &Arc<RwLock<ServerState>>) {
         insert_user_state(server_state, 33).await;
         insert_user_state(server_state, 34).await;
@@ -128,12 +170,12 @@ pub mod helpers {
         return serde_json::to_string(&room_creation).unwrap();
     }
 
-    pub fn basic_join_as(user_id: i32) -> String {
-        let join = GenericRoomIdAndPeerId {
-            roomId: 3,
+    pub fn generic_room_and_peer_id(user_id: i32, room_id: i32) -> String {
+        return serde_json::to_string(&GenericRoomIdAndPeerId {
+            roomId: room_id,
             peerId: user_id,
-        };
-        return serde_json::to_string(&join).unwrap();
+        })
+        .unwrap();
     }
 
     pub async fn send_create_or_join_room_request(
