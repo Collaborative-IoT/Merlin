@@ -96,6 +96,7 @@ pub async fn block_user_from_room(
             return Ok(());
         }
     }
+    println!("issue");
     send_error_response_to_requester(read_state, requester_id, server_state).await;
     return Ok(());
 }

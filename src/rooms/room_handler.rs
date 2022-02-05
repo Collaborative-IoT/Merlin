@@ -50,8 +50,9 @@ pub async fn block_user_from_room(
         data_fetcher::get_room_owner_and_settings(&mut handler, &room_id).await;
 
     // ensure the requester is the owner.
+    // ensure the requester is not the requestee
     // no errors were encountered gathering the owner
-    if owner_gather.0 == false && owner_gather.1 == requester_id {
+    if owner_gather.0 == false && owner_gather.1 == requester_id && requester_id != user_id {
         //capture new block and send request to voice server
         let new_block = DBRoomBlock {
             id: -1,
@@ -453,6 +454,7 @@ async fn handle_user_block_capture_result(
         remove_user_from_room_basic(request, server_state, publish_channel).await;
         return;
     }
+    println!("issue1");
     send_to_requester_channel(
         user_id.to_string(),
         requester_id,

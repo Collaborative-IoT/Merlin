@@ -16,10 +16,32 @@ This test isn't fully integration based, so we manually
 grab the messages intended for the voice server after
 publish and assert them.
 
+As we get deeping into the tests we can no longer use
+"mock users", mock users are users that don't have any
+database user associated with it, and certain functionality
+requires real users, like being able to block someone,
+getting user previews and etc.
+
+So at a specific point you will see the all the mock
+users except for the owner will be removed and
+new real users will take their place. The only user
+that can remain a "mock user" is user 33 aka the owner of
+room 3. This is because the functions that we are calling
+assumes the requester is a real user, since technically
+you have to be authenticated first before the server will
+even hear your requests.
+
+Throughout the entire test chain, all we are doing is:
+
+1.spawning users and making them join a room
+2.making requests on behalf on those users
+3.we know if the tests should fail or not so we check
 */
 
 use crate::communication::communication_router;
-use crate::communication::communication_types::{GenericRoomIdAndPeerId, VoiceServerCreateRoom};
+use crate::communication::communication_types::{
+    BlockUserFromRoom, GenericRoomIdAndPeerId, VoiceServerClosePeer, VoiceServerCreateRoom,
+};
 use crate::communication::tests::communication_handler_test_helpers::helpers;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
@@ -123,6 +145,19 @@ pub async fn tests() {
         &mock_state,
     )
     .await;
+    //after this method there are no more
+    //mock users in the room, all users
+    //have a db user linked to it
+    //because all the following tests
+    //require real users.
+    test_blocking_from_room(
+        &publish_channel,
+        &execution_handler,
+        &mock_state,
+        &mut rx_user_two,
+        &mut consumer,
+    )
+    .await;
 }
 
 async fn test_creating_room(
@@ -202,7 +237,7 @@ async fn test_joining_room(
     type_of_join: &str,
     user_id: i32,
 ) {
-    println!("testing joining room(type_op_code:{})",type_of_join);
+    println!("testing joining room(type_op_code:{})", type_of_join);
     // Based on the previous tests for data capture/execution handler we know
     // the room id->3 exists.
     // Set user to a fake room to test illegal requests,
@@ -361,9 +396,76 @@ async fn test_removing_speaker(
     mods_can_remove_speaker(consume_channel, publish_channel, execution_handler, state).await;
 }
 
+async fn test_blocking_from_room(
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    state: &Arc<RwLock<ServerState>>,
+    listener_rx: &mut UnboundedReceiverStream<Message>,
+    consume_channel: &mut Consumer,
+) {
+    println!("testing room blocking");
+    non_owner_can_not_block_from_room(publish_channel, execution_handler, state, listener_rx).await;
+    owner_can_block_from_room(consume_channel, publish_channel, execution_handler, state).await;
+}
+
 //| INNER LOGIC/HELPERS FROM THIS POINT FORWARD|
 //
 //| INNER LOGIC/HELPERS FROM THIS POINT FORWARD|
+
+async fn owner_can_block_from_room(
+    consume_channel: &mut Consumer,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    state: &Arc<RwLock<ServerState>>,
+) {
+    //clear room and add new real user
+    //(see begining of file for real vs mock users)
+    helpers::clear_all_users_except_owner(state).await;
+    let new_real_user_id = helpers::spawn_new_real_user_and_join_room(
+        publish_channel,
+        execution_handler,
+        state,
+        consume_channel,
+    )
+    .await;
+
+    let data = serde_json::to_string(&BlockUserFromRoom {
+        user_id: new_real_user_id.clone(),
+        room_id: 3,
+    })
+    .unwrap();
+    let request = helpers::basic_request("block_user_from_room".to_string(), data.clone());
+    communication_router::route_msg(request, 33, state, publish_channel, execution_handler)
+        .await
+        .unwrap();
+    //check result
+    helpers::grab_and_assert_message_to_voice_server::<VoiceServerClosePeer>(
+        consume_channel,
+        helpers::generic_close_peer(new_real_user_id, 3),
+        new_real_user_id.to_string(),
+        "close-peer".to_owned(),
+    )
+    .await;
+}
+
+async fn non_owner_can_not_block_from_room(
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    state: &Arc<RwLock<ServerState>>,
+    listener_rx: &mut UnboundedReceiverStream<Message>,
+) {
+    //User 34 is not the owner, so this should fail
+    let data = serde_json::to_string(&BlockUserFromRoom {
+        user_id: 38,
+        room_id: 3,
+    })
+    .unwrap();
+    let request = helpers::basic_request("block_user_from_room".to_string(), data);
+    communication_router::route_msg(request, 34, state, publish_channel, execution_handler)
+        .await
+        .unwrap();
+    helpers::grab_and_assert_request_response(listener_rx, "issue_blocking_user", "38").await;
+}
 
 async fn mods_can_remove_speaker(
     consume_channel: &mut Consumer,
