@@ -5,18 +5,18 @@
 // and much more. None of the helpers deal with the test logic directly
 
 pub mod helpers {
-    use crate::communication::communication_types::{
-        BasicRequest, BasicResponse, BasicRoomCreation, GenericRoomIdAndPeerId,
-        VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerRequest,
-        UserPreview, CommunicationRoom
-    };
     use crate::communication::communication_handler_helpers;
+    use crate::communication::communication_types::{
+        AllUsersInRoomResponse, BasicRequest, BasicResponse, BasicRoomCreation, CommunicationRoom,
+        GenericRoomIdAndPeerId, User, UserPreview, VoiceServerClosePeer, VoiceServerCreateRoom,
+        VoiceServerRequest,
+    };
     use crate::communication::{communication_router, data_capturer};
     use crate::data_store::db_models::DBUser;
     use crate::data_store::sql_execution_handler::ExecutionHandler;
     use crate::rabbitmq::rabbit;
     use crate::state::state::ServerState;
-    use crate::state::state_types::User;
+    use crate::state::state_types;
     use chrono::Utc;
     use futures::lock::Mutex;
     use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
@@ -74,8 +74,7 @@ pub mod helpers {
 
     pub async fn insert_user_state(server_state: &Arc<RwLock<ServerState>>, user_id: i32) {
         let mut state = server_state.write().await;
-        let user = User {
-            last_online: Utc::now(),
+        let user = state_types::User {
             muted: true,
             deaf: true,
             ip: "test".to_string(),
@@ -235,7 +234,7 @@ pub mod helpers {
             display_name: "teseeeet12".to_string(),
             avatar_url: "test.cxexeeom/avatar2".to_string(),
             user_name: "ultimatxeeexe_tester2".to_string(),
-            last_online: Utc::now().to_string(),
+            last_online: "test".to_string(),
             github_id: gh_id,
             discord_id: dc_id,
             github_access_token: "23diudi2322".to_string(),
@@ -268,13 +267,13 @@ pub mod helpers {
         consume_channel: &mut Consumer,
         gh_id: String,
         dc_id: String,
-    ) -> i32 {
+    ) -> (i32, UnboundedReceiverStream<Message>) {
         let mut handler = execution_handler.lock().await;
         let user_id =
             data_capturer::capture_new_user(&mut handler, &generate_user_struct(gh_id, dc_id))
                 .await;
         drop(handler);
-        spawn_new_user_and_join_room(
+        let rx = spawn_new_user_and_join_room(
             publish_channel,
             execution_handler,
             state,
@@ -282,23 +281,55 @@ pub mod helpers {
             consume_channel,
         )
         .await;
-        return user_id;
+        return (user_id, rx);
     }
 
-    pub async fn construct_top_room_response_for_test(user_id:i32,state: &Arc<RwLock<ServerState>>)->Vec<CommunicationRoom>{
+    pub async fn construct_top_room_response_for_test(
+        user_id: i32,
+        state: &Arc<RwLock<ServerState>>,
+    ) -> Vec<CommunicationRoom> {
         //we know these values of the room construction
         //because we created the room/user manually
-        let preview = UserPreview{
-            display_name:"teseeeet12".to_string(),
-            avatar_url:"test.cxexeeom/avatar2".to_string()
+        let preview = UserPreview {
+            display_name: "teseeeet12".to_string(),
+            avatar_url: "test.cxexeeom/avatar2".to_string(),
         };
-        let mut mock_previews:HashMap<i32,UserPreview> = HashMap::new();
+        let mut mock_previews: HashMap<i32, UserPreview> = HashMap::new();
         mock_previews.insert(user_id, preview);
         let read_state = state.read().await;
         let room_state = read_state.rooms.get(&3).unwrap();
-        let mut holder:Vec<CommunicationRoom> = Vec::new();
-        communication_handler_helpers::construct_communication_room(mock_previews, room_state, &mut holder, 33, "fast".to_string());
+        let mut holder: Vec<CommunicationRoom> = Vec::new();
+        communication_handler_helpers::construct_communication_room(
+            mock_previews,
+            room_state,
+            &mut holder,
+            33,
+            "fast".to_string(),
+        );
         return holder;
     }
 
+    pub fn construct_user_response_for_test(user_id: i32) -> String {
+        let user = User {
+            you_are_following: false,
+            display_name: "teseeeet12".to_string(),
+            avatar_url: "test.cxexeeom/avatar2".to_string(),
+            they_blocked_you: false,
+            i_blocked_them: false,
+            username: "ultimatxeeexe_tester2".to_string(),
+            num_followers: 0,
+            num_following: 0,
+            last_online: "test".to_string(),
+            user_id: user_id,
+            follows_you: false,
+            contributions: 40,
+            bio: "teldmdst2".to_string(),
+            banner_url: "test.doijeoocom/test_banner2".to_string(),
+        };
+        let response = AllUsersInRoomResponse {
+            room_id: 3,
+            users: vec![user],
+        };
+        return serde_json::to_string(&response).unwrap();
+    }
 }

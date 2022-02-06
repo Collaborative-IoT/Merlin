@@ -17,7 +17,6 @@ pub struct Board {
 }
 
 pub struct User {
-    pub last_online: DateTime<Utc>,
     pub muted: bool,
     pub deaf: bool,
     pub ip: String,

@@ -242,12 +242,19 @@ pub async fn get_followers_or_following_list(
 
     if type_of_request == "followers" {
         //(encountered_error, user_ids)
-        target = data_fetcher::get_follower_user_ids_for_user(&mut handler, &request_data.user_id).await;
+        target =
+            data_fetcher::get_follower_user_ids_for_user(&mut handler, &request_data.user_id).await;
     } else {
-        target = data_fetcher::get_following_user_ids_for_user(&mut handler, &request_data.user_id).await;
+        target = data_fetcher::get_following_user_ids_for_user(&mut handler, &request_data.user_id)
+            .await;
     }
-    communication_handler_helpers::send_follow_list(target, server_state, requester_id, request_data.user_id)
-        .await;
+    communication_handler_helpers::send_follow_list(
+        target,
+        server_state,
+        requester_id,
+        request_data.user_id,
+    )
+    .await;
     return Ok(());
 }
 
@@ -366,7 +373,12 @@ pub async fn gather_all_users_in_room(
     //if the room exist
     if read_state.rooms.contains_key(&room_id) {
         let room = read_state.rooms.get(&room_id).unwrap();
-        let all_room_user_ids: Vec<i32> = room.user_ids.iter().cloned().collect();
+        let all_room_user_ids: Vec<i32> = room
+            .user_ids
+            .iter()
+            .filter(|x| x != &&requester_id)
+            .cloned()
+            .collect();
         let mut handler = execution_handler.lock().await;
         let users: (bool, Vec<User>) =
             data_fetcher::get_users_for_user(requester_id.clone(), all_room_user_ids, &mut handler)

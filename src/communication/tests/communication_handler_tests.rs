@@ -40,7 +40,8 @@ Throughout the entire test chain, all we are doing is:
 
 use crate::communication::communication_router;
 use crate::communication::communication_types::{
-    BlockUserFromRoom, GenericRoomIdAndPeerId, VoiceServerClosePeer, VoiceServerCreateRoom,
+    BlockUserFromRoom, GenericRoomId, GenericRoomIdAndPeerId, VoiceServerClosePeer,
+    VoiceServerCreateRoom,
 };
 use crate::communication::tests::communication_handler_test_helpers::helpers;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
@@ -164,6 +165,13 @@ pub async fn tests() {
         &execution_handler,
         &mock_state,
         &mut rx_user_one,
+        &publish_channel,
+        &mut consumer,
+    )
+    .await;
+    test_getting_all_users_in_room(
+        &execution_handler,
+        &mock_state,
         &publish_channel,
         &mut consumer,
     )
@@ -447,7 +455,8 @@ async fn test_users_can_get_top_rooms(
         "qopkqwepokqw1321241".to_string(),
         "fwieopjj29024nsdocikndv0".to_string(),
     )
-    .await;
+    .await
+    .0;
     state
         .write()
         .await
@@ -460,11 +469,31 @@ async fn test_users_can_get_top_rooms(
     communication_router::route_msg(request, 33, state, publish_channel, execution_handler)
         .await
         .unwrap();
-    
+
     //make sure the response is correct
-    let mock_communication_room = helpers::construct_top_room_response_for_test(new_user_id,state).await;
+    let mock_communication_room =
+        helpers::construct_top_room_response_for_test(new_user_id, state).await;
     let mock_communication_room_str = serde_json::to_string(&mock_communication_room).unwrap();
-    helpers::grab_and_assert_request_response(speaker_rx, "top_rooms", &mock_communication_room_str).await;
+    helpers::grab_and_assert_request_response(
+        speaker_rx,
+        "top_rooms",
+        &mock_communication_room_str,
+    )
+    .await;
+    //cleanup
+    let mut write_state = state.write().await;
+    let room = write_state.rooms.get_mut(&3).unwrap();
+    room.user_ids.insert(33);
+    room.user_ids.remove(&new_user_id);
+}
+
+async fn test_getting_all_users_in_room(
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    state: &Arc<RwLock<ServerState>>,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    consume_channel: &mut Consumer,
+) {
+    //clear the only mock user
     state
         .write()
         .await
@@ -472,7 +501,50 @@ async fn test_users_can_get_top_rooms(
         .get_mut(&3)
         .unwrap()
         .user_ids
-        .insert(33);
+        .remove(&33);
+    let mut new_user = helpers::spawn_new_real_user_and_join_room(
+        publish_channel,
+        execution_handler,
+        state,
+        consume_channel,
+        "qopk13414qwepo242345kqw1321241".to_string(),
+        "fwieopjj291323123234024nsdocikndv0".to_string(),
+    )
+    .await;
+
+    //we only need them to be in the room
+    //to check if we are getting their data.
+    let new_second_user = helpers::spawn_new_real_user_and_join_room(
+        publish_channel,
+        execution_handler,
+        state,
+        consume_channel,
+        "31123123qopk1231213414qwepo242345kqw1321241".to_string(),
+        "fwieopjj291323121231231233234024nsdocikndv0".to_string(),
+    )
+    .await;
+    let data_for_request = GenericRoomId { room_id: 3 };
+    let request = helpers::basic_request(
+        "gather_all_users_in_room".to_owned(),
+        serde_json::to_string(&data_for_request).unwrap(),
+    );
+    communication_router::route_msg(
+        request,
+        new_user.0,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    //the target user id is the first
+    let mock_response = helpers::construct_user_response_for_test(new_second_user.0);
+    helpers::grab_and_assert_request_response(
+        &mut new_user.1,
+        "all_users_for_room",
+        &mock_response,
+    )
+    .await;
 }
 
 //| INNER LOGIC FROM THIS POINT FORWARD|
@@ -496,7 +568,8 @@ async fn owner_can_block_from_room(
         "wipo3102ondwidsnm9o2w".to_string(),
         "3ork23-9kjwefm29".to_string(),
     )
-    .await;
+    .await
+    .0;
 
     let data = serde_json::to_string(&BlockUserFromRoom {
         user_id: new_real_user_id.clone(),
@@ -516,7 +589,7 @@ async fn owner_can_block_from_room(
     )
     .await;
 
-    //make sure the user we just blocked in no longer in the room state
+    //make sure the user we just blocked is no longer in the room state
     assert!(
         state
             .write()
