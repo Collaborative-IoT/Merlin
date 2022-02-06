@@ -8,7 +8,9 @@ pub mod helpers {
     use crate::communication::communication_types::{
         BasicRequest, BasicResponse, BasicRoomCreation, GenericRoomIdAndPeerId,
         VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerRequest,
+        UserPreview, CommunicationRoom
     };
+    use crate::communication::communication_handler_helpers;
     use crate::communication::{communication_router, data_capturer};
     use crate::data_store::db_models::DBUser;
     use crate::data_store::sql_execution_handler::ExecutionHandler;
@@ -20,6 +22,7 @@ pub mod helpers {
     use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
     use lapin::{options::*, types::FieldTable, Channel, Connection, Consumer};
     use serde::Serialize;
+    use std::collections::HashMap;
     use std::sync::Arc;
     use tokio::sync::mpsc;
     use tokio::sync::RwLock;
@@ -226,15 +229,15 @@ pub mod helpers {
         }
     }
 
-    pub fn generate_user_struct() -> DBUser {
+    pub fn generate_user_struct(gh_id: String, dc_id: String) -> DBUser {
         let user: DBUser = DBUser {
             id: 0, //doesn't matter in insertion
             display_name: "teseeeet12".to_string(),
             avatar_url: "test.cxexeeom/avatar2".to_string(),
             user_name: "ultimatxeeexe_tester2".to_string(),
             last_online: Utc::now().to_string(),
-            github_id: "1238hriofwelkj".to_string(),
-            discord_id: "239-0ur2jop3-0".to_string(),
+            github_id: gh_id,
+            discord_id: dc_id,
             github_access_token: "23diudi2322".to_string(),
             discord_access_token: "2ejnedjn93202".to_string(),
             banned: false,
@@ -263,9 +266,13 @@ pub mod helpers {
         execution_handler: &Arc<Mutex<ExecutionHandler>>,
         state: &Arc<RwLock<ServerState>>,
         consume_channel: &mut Consumer,
+        gh_id: String,
+        dc_id: String,
     ) -> i32 {
         let mut handler = execution_handler.lock().await;
-        let user_id = data_capturer::capture_new_user(&mut handler, &generate_user_struct()).await;
+        let user_id =
+            data_capturer::capture_new_user(&mut handler, &generate_user_struct(gh_id, dc_id))
+                .await;
         drop(handler);
         spawn_new_user_and_join_room(
             publish_channel,
@@ -277,4 +284,21 @@ pub mod helpers {
         .await;
         return user_id;
     }
+
+    pub async fn construct_top_room_response_for_test(user_id:i32,state: &Arc<RwLock<ServerState>>)->Vec<CommunicationRoom>{
+        //we know these values of the room construction
+        //because we created the room/user manually
+        let preview = UserPreview{
+            display_name:"teseeeet12".to_string(),
+            avatar_url:"test.cxexeeom/avatar2".to_string()
+        };
+        let mut mock_previews:HashMap<i32,UserPreview> = HashMap::new();
+        mock_previews.insert(user_id, preview);
+        let read_state = state.read().await;
+        let room_state = read_state.rooms.get(&3).unwrap();
+        let mut holder:Vec<CommunicationRoom> = Vec::new();
+        communication_handler_helpers::construct_communication_room(mock_previews, room_state, &mut holder, 33, "fast".to_string());
+        return holder;
+    }
+
 }

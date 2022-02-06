@@ -50,6 +50,7 @@ use crate::state::state::ServerState;
 use futures::lock::Mutex;
 
 use lapin::{options::*, types::FieldTable, Consumer};
+use serde_json::to_string;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -155,6 +156,15 @@ pub async fn tests() {
         &execution_handler,
         &mock_state,
         &mut rx_user_two,
+        &mut consumer,
+    )
+    .await;
+
+    test_users_can_get_top_rooms(
+        &execution_handler,
+        &mock_state,
+        &mut rx_user_one,
+        &publish_channel,
         &mut consumer,
     )
     .await;
@@ -408,9 +418,66 @@ async fn test_blocking_from_room(
     owner_can_block_from_room(consume_channel, publish_channel, execution_handler, state).await;
 }
 
-//| INNER LOGIC/HELPERS FROM THIS POINT FORWARD|
+async fn test_users_can_get_top_rooms(
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    state: &Arc<RwLock<ServerState>>,
+    speaker_rx: &mut UnboundedReceiverStream<Message>,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    consume_channel: &mut Consumer,
+) {
+    //Before we make this request we need to remove
+    //all 'mock users', so there is only user in the room
+    //which is the room owner aka 33.
+    //
+    //So we will remove user 33,add a real user,
+    //make the top rooms request, and then add 33 back since
+    //they are the room owner.
+    //
+    //The reason this owner must be
+    //removed is because the function being called to get
+    //user previews takes all users in a room and search the
+    //database for their user row. Mock users don't have a row.
+    println!("testing getting top rooms");
+    helpers::clear_message_that_was_fanned(vec![speaker_rx]).await;
+    let new_user_id = helpers::spawn_new_real_user_and_join_room(
+        publish_channel,
+        execution_handler,
+        state,
+        consume_channel,
+        "qopkqwepokqw1321241".to_string(),
+        "fwieopjj29024nsdocikndv0".to_string(),
+    )
+    .await;
+    state
+        .write()
+        .await
+        .rooms
+        .get_mut(&3)
+        .unwrap()
+        .user_ids
+        .remove(&33);
+    let request = helpers::basic_request("get_top_rooms".to_string(), "".to_string());
+    communication_router::route_msg(request, 33, state, publish_channel, execution_handler)
+        .await
+        .unwrap();
+    
+    //make sure the response is correct
+    let mock_communication_room = helpers::construct_top_room_response_for_test(new_user_id,state).await;
+    let mock_communication_room_str = serde_json::to_string(&mock_communication_room).unwrap();
+    helpers::grab_and_assert_request_response(speaker_rx, "top_rooms", &mock_communication_room_str).await;
+    state
+        .write()
+        .await
+        .rooms
+        .get_mut(&3)
+        .unwrap()
+        .user_ids
+        .insert(33);
+}
+
+//| INNER LOGIC FROM THIS POINT FORWARD|
 //
-//| INNER LOGIC/HELPERS FROM THIS POINT FORWARD|
+//| INNER LOGIC FROM THIS POINT FORWARD|
 
 async fn owner_can_block_from_room(
     consume_channel: &mut Consumer,
@@ -426,6 +493,8 @@ async fn owner_can_block_from_room(
         execution_handler,
         state,
         consume_channel,
+        "wipo3102ondwidsnm9o2w".to_string(),
+        "3ork23-9kjwefm29".to_string(),
     )
     .await;
 
@@ -446,6 +515,19 @@ async fn owner_can_block_from_room(
         "close-peer".to_owned(),
     )
     .await;
+
+    //make sure the user we just blocked in no longer in the room state
+    assert!(
+        state
+            .write()
+            .await
+            .rooms
+            .get_mut(&3)
+            .unwrap()
+            .user_ids
+            .contains(&new_real_user_id)
+            == false
+    );
 }
 
 async fn non_owner_can_not_block_from_room(

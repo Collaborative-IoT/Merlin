@@ -96,7 +96,6 @@ pub async fn block_user_from_room(
             return Ok(());
         }
     }
-    println!("issue");
     send_error_response_to_requester(read_state, requester_id, server_state).await;
     return Ok(());
 }
@@ -279,6 +278,7 @@ pub async fn get_top_rooms(
         //(encountered_error) is the first of the tuple values
         let previews: (bool, HashMap<i32, UserPreview>) =
             data_fetcher::get_user_previews_for_users(all_room_user_ids, &mut handler).await;
+
         let owner_data_and_chat_mode: (bool, i32, String) =
             data_fetcher::get_room_owner_and_settings(&mut handler, &room.room_id).await;
 

@@ -173,8 +173,8 @@ pub async fn get_user_previews_for_users(
         let gather_result = execution_handler.select_user_preview_by_id(&user_id).await;
         if gather_result.is_ok() {
             let selected_rows = gather_result.unwrap();
-            let display_name: String = selected_rows[0].get(2);
-            let avatar_url: String = selected_rows[0].get(1);
+            let display_name: String = selected_rows[0].get(1);
+            let avatar_url: String = selected_rows[0].get(2);
             let user_preview = UserPreview {
                 display_name: display_name,
                 avatar_url: avatar_url,
