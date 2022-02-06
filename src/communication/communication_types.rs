@@ -33,7 +33,7 @@ pub struct JoinRoomAndGetInfo {
 
 #[derive(Deserialize, Serialize)]
 pub struct GetFollowList {
-    pub user_id: String,
+    pub user_id: i32,
 }
 
 #[derive(Deserialize, Serialize)]

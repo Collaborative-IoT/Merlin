@@ -237,25 +237,16 @@ pub async fn get_followers_or_following_list(
 ) -> Result<()> {
     //gather all
     let mut handler = execution_handler.lock().await;
-    let mut target: (bool, HashSet<i32>) = (true, HashSet::new());
+    let target;
     let request_data: GetFollowList = serde_json::from_str(&request.request_containing_data)?;
-    let room_and_peer_id_result = communication_handler_helpers::parse_peer_and_room_id(
-        &request_data.user_id,
-        &"-1".to_string(),
-    );
-    if !room_and_peer_id_result.is_ok() {
-        return Ok(());
-    }
-    let room_and_peer_id = room_and_peer_id_result.unwrap();
-    let peer_id: i32 = room_and_peer_id.0;
 
     if type_of_request == "followers" {
         //(encountered_error, user_ids)
-        target = data_fetcher::get_follower_user_ids_for_user(&mut handler, &peer_id).await;
+        target = data_fetcher::get_follower_user_ids_for_user(&mut handler, &request_data.user_id).await;
     } else {
-        target = data_fetcher::get_following_user_ids_for_user(&mut handler, &peer_id).await;
+        target = data_fetcher::get_following_user_ids_for_user(&mut handler, &request_data.user_id).await;
     }
-    communication_handler_helpers::send_follow_list(target, server_state, requester_id, peer_id)
+    communication_handler_helpers::send_follow_list(target, server_state, requester_id, request_data.user_id)
         .await;
     return Ok(());
 }
