@@ -231,45 +231,52 @@ pub async fn handle_web_rtc_request(
     return Ok(());
 }
 
-pub async fn follow_or_unfollow_user(    
+pub async fn follow_or_unfollow_user(
     request: BasicRequest,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     requester_id: i32,
-    server_state: &Arc<RwLock<ServerState>>) -> Result<()>{
-        let user_id_data: GenericUserId = serde_json::from_str(&request.request_containing_data)?;
-        let mut write_state = server_state.write().await;
-        let mut handler = execution_handler.lock().await;
-        let mut result:Option<CaptureResult> = None;
-        let mut response_data:Option<String> = None;
-        if request.request_op_code =="follow_user"{
-            let db_follower = DBFollower{
-                id:-1,
-                follower_id:requester_id,
-                user_id:user_id_data.user_id
-            };
-             result= Some(data_capturer::capture_new_follower(&mut handler, &db_follower).await);
-             response_data = Some("user_follow_successful".to_owned());
-            //no errors
-        }
-        else{
-            //unfollow
-            result = Some(data_capturer::capture_follower_removal(&mut handler, &requester_id, &user_id_data.user_id).await);
-            response_data = Some("user_unfollow_successful".to_owned());
-        }
-        //if we didn't get any error from capture execution(saving to db)
-        if result.is_some() && !result.unwrap().encountered_error{
-            send_to_requester_channel(
-                user_id_data.user_id.to_string(),
-                requester_id,
-                &mut write_state,
-                response_data.unwrap().to_owned(),
-            );
-            return Ok(());
-        }
-        drop(write_state);
-        drop(handler);
-        send_error_response_to_requester(server_state.read().await, requester_id, server_state).await;
+    server_state: &Arc<RwLock<ServerState>>,
+) -> Result<()> {
+    let user_id_data: GenericUserId = serde_json::from_str(&request.request_containing_data)?;
+    let mut write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    let mut result: Option<CaptureResult> = None;
+    let mut response_data: Option<String> = None;
+    if request.request_op_code == "follow_user" {
+        let db_follower = DBFollower {
+            id: -1,
+            follower_id: requester_id,
+            user_id: user_id_data.user_id,
+        };
+        result = Some(data_capturer::capture_new_follower(&mut handler, &db_follower).await);
+        response_data = Some("user_follow_successful".to_owned());
+        //no errors
+    } else {
+        //unfollow
+        result = Some(
+            data_capturer::capture_follower_removal(
+                &mut handler,
+                &requester_id,
+                &user_id_data.user_id,
+            )
+            .await,
+        );
+        response_data = Some("user_unfollow_successful".to_owned());
+    }
+    //if we didn't get any error from capture execution(saving to db)
+    if result.is_some() && !result.unwrap().encountered_error {
+        send_to_requester_channel(
+            user_id_data.user_id.to_string(),
+            requester_id,
+            &mut write_state,
+            response_data.unwrap().to_owned(),
+        );
         return Ok(());
+    }
+    drop(write_state);
+    drop(handler);
+    send_error_response_to_requester(server_state.read().await, requester_id, server_state).await;
+    return Ok(());
 }
 
 pub async fn get_followers_or_following_list(
