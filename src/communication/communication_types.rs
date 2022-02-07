@@ -242,6 +242,11 @@ pub struct GenericRoomId {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct  GenericUserId{
+    pub user_id:i32
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct VoiceServerRequest<T: Serialize> {
     pub op: String,
     pub d: T,
