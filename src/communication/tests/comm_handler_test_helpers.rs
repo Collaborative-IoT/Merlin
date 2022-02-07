@@ -17,7 +17,6 @@ pub mod helpers {
     use crate::rabbitmq::rabbit;
     use crate::state::state::ServerState;
     use crate::state::state_types;
-    use chrono::Utc;
     use futures::lock::Mutex;
     use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
     use lapin::{options::*, types::FieldTable, Channel, Connection, Consumer};
@@ -109,7 +108,7 @@ pub mod helpers {
         mock_state: &Arc<RwLock<ServerState>>,
     ) -> UnboundedReceiverStream<Message> {
         let (tx, rx) = mpsc::unbounded_channel();
-        let mut rx = UnboundedReceiverStream::new(rx);
+        let rx = UnboundedReceiverStream::new(rx);
         //add initial peer state to state
         //we will use th
         mock_state.write().await.peer_map.insert(mock_id, tx);
