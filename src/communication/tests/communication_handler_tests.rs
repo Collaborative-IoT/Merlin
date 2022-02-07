@@ -49,9 +49,9 @@ use crate::rabbitmq::rabbit;
 use crate::server::setup_execution_handler;
 use crate::state::state::ServerState;
 use futures::lock::Mutex;
-
 use lapin::{options::*, types::FieldTable, Consumer};
-use serde_json::to_string;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -174,6 +174,36 @@ pub async fn tests() {
         &mock_state,
         &publish_channel,
         &mut consumer,
+    )
+    .await;
+    test_invalid_webrtc_request(
+        &execution_handler,
+        &mock_state,
+        &publish_channel,
+        &mut rx_user_one,
+        GenericRoomIdAndPeerId {
+            roomId: 3,
+            peerId: 34,
+        },
+    )
+    .await;
+    test_invalid_webrtc_request(
+        &execution_handler,
+        &mock_state,
+        &publish_channel,
+        &mut rx_user_one,
+        GenericRoomId { room_id: 3 },
+    )
+    .await;
+    test_invalid_webrtc_request(
+        &execution_handler,
+        &mock_state,
+        &publish_channel,
+        &mut rx_user_one,
+        GenericRoomIdAndPeerId {
+            roomId: 2,
+            peerId: 34,
+        },
     )
     .await;
 }
@@ -545,6 +575,42 @@ async fn test_getting_all_users_in_room(
         &mock_response,
     )
     .await;
+    //cleanup
+    let mut write_state = state.write().await;
+    let room = write_state.rooms.get_mut(&3).unwrap();
+    room.user_ids.remove(&new_user.0);
+    room.user_ids.remove(&new_second_user.0);
+    room.user_ids.insert(33);
+}
+
+//webrtc requests are dynamic because
+//they send browser connection information
+//to the voice server. So we will only test
+//the invalid case, a webrtc request is invalid
+//when there is no peerid and room id associated.
+async fn test_invalid_webrtc_request<T: Serialize + DeserializeOwned>(
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    state: &Arc<RwLock<ServerState>>,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    speaker_rx: &mut UnboundedReceiverStream<Message>,
+    incorrect_data: T,
+) {
+    //The three invalid cases include:
+    //1.When a user sends a webrtc request for a different user
+    //2.When a user doesn't include both peer/room id in their webrtc request
+    //3.When a user sends a request for a room they aren't in
+    //To be completely clear, user 33(we are mocking requests for)
+    //is in room 3.
+    println!("Testing webrtc invalid requests");
+    let basic_request = helpers::basic_request(
+        "@get-recv-tracks".to_string(),
+        serde_json::to_string(&incorrect_data).unwrap(),
+    );
+    communication_router::route_msg(basic_request, 33, state, publish_channel, execution_handler)
+        .await
+        .unwrap();
+    helpers::grab_and_assert_request_response(speaker_rx, "invalid_request", "issue with request")
+        .await;
 }
 
 //| INNER LOGIC FROM THIS POINT FORWARD|

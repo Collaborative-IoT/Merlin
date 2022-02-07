@@ -36,6 +36,16 @@ pub async fn route_msg(
             )
             .await
         }
+
+        "@connect-transport" | "@send-track" | "@get-recv-tracks" => {
+            communication_handler::handle_web_rtc_request(
+                basic_request,
+                publish_channel,
+                server_state,
+                user_id,
+            )
+            .await
+        }
         "add_speaker" => {
             communication_handler::add_or_remove_speaker(
                 basic_request,

@@ -206,7 +206,6 @@ pub async fn handle_web_rtc_request(
     publish_channel: &Arc<Mutex<lapin::Channel>>,
     server_state: &Arc<RwLock<ServerState>>,
     requester_id: i32,
-    op_code: &str,
 ) -> Result<()> {
     let request_data: serde_json::Value = serde_json::from_str(&request.request_containing_data)?;
     let read_state = server_state.read().await;
@@ -219,7 +218,7 @@ pub async fn handle_web_rtc_request(
         rooms::room_handler::handle_web_rtc_specific_requests(
             request_data,
             publish_channel,
-            op_code,
+            &request.request_op_code,
         )
         .await;
         return Ok(());
