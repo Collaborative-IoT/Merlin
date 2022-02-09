@@ -381,7 +381,7 @@ pub async fn leave_room(
             &requester_id,
             &request_data.room_id,
             publish_channel,
-            execution_handler
+            execution_handler,
         )
         .await;
 

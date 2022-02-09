@@ -231,7 +231,7 @@ pub async fn leave_room(
     let mut room = server_state.rooms.get_mut(room_id).unwrap();
     room.amount_of_users -= 1;
     room.user_ids.remove(&requester_id);
-    if room.amount_of_users == 0{
+    if room.amount_of_users == 0 {
         destroy_room(server_state, publish_channel, execution_handler, room_id).await;
         return;
     }
@@ -247,7 +247,6 @@ pub async fn leave_room(
     );
     let channel = publish_channel.lock().await;
     rabbit::publish_message(&channel, request_str).await;
-    
 }
 
 ///  Adds a speaker that is already an existing peer in a room
