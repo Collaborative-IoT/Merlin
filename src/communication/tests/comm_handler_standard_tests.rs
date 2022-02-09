@@ -1,8 +1,8 @@
-use crate::communication::communication_router;
 use crate::communication::communication_types::{
-    GenericRoomId, GenericRoomIdAndPeerId, VoiceServerCreateRoom,
+    BasicRequest, GenericRoomId, GenericRoomIdAndPeerId, GenericUserId, VoiceServerCreateRoom,
 };
 use crate::communication::tests::comm_handler_test_helpers::helpers;
+use crate::communication::{communication_router, data_fetcher};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::state::state::ServerState;
 use futures::lock::Mutex;
@@ -239,8 +239,97 @@ pub async fn test_creating_room(
     assert_eq!(server_state.rooms.contains_key(&3), true);
 }
 
-pub async fn test_unfollowing_or_following_user(){
-    
+pub async fn test_unfollowing_and_following_user(
+    consume_channel: &mut Consumer,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
+    println!("Testing following and unfollowing user");
+    //create 2 new users
+    let mut new_user = helpers::spawn_new_real_user_and_join_room(
+        publish_channel,
+        execution_handler,
+        state,
+        consume_channel,
+        "311231212111111111111wepo242345kqw1321241".to_string(),
+        "fwij2428959478239825833234024nsdocikndv0".to_string(),
+    )
+    .await;
+
+    let new_second_user = helpers::spawn_new_real_user_and_join_room(
+        publish_channel,
+        execution_handler,
+        state,
+        consume_channel,
+        "31!1231212111111111111wepo242345kqw1321241".to_string(),
+        "fwij!2428959478239825833234024nsdocikndv0".to_string(),
+    )
+    .await;
+
+    let follow_request = GenericUserId {
+        user_id: new_second_user.0.to_owned(),
+    };
+
+    //use user 1 to follow user 2
+    communication_router::route_msg(
+        helpers::basic_request(
+            "follow_user".to_owned(),
+            serde_json::to_string(&follow_request).unwrap(),
+        ),
+        new_user.0,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    helpers::grab_and_assert_request_response(
+        &mut new_user.1,
+        "user_follow_successful",
+        &new_second_user.0.to_string(),
+    )
+    .await;
+    //get user 1 from the perspective of user 2 after follow
+    let mut temp_lock = execution_handler.lock().await;
+    let result = data_fetcher::get_users_for_user(
+        new_second_user.0.to_owned(),
+        vec![new_user.0.to_owned()],
+        &mut temp_lock,
+    )
+    .await;
+    assert_eq!(result.1.len(), 1);
+    assert_eq!(result.1[0].follows_you, true);
+    drop(temp_lock);
+    //use user 1 to unfollow user 2
+    communication_router::route_msg(
+        helpers::basic_request(
+            "unfollow_user".to_owned(),
+            serde_json::to_string(&follow_request).unwrap(),
+        ),
+        new_user.0,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    helpers::grab_and_assert_request_response(
+        &mut new_user.1,
+        "user_unfollow_successful",
+        &new_second_user.0.to_string(),
+    )
+    .await;
+    //get user 1 from the perspective of user 2 after unfollow
+    let mut temp_lock = execution_handler.lock().await;
+    let result = data_fetcher::get_users_for_user(
+        new_second_user.0.to_owned(),
+        vec![new_user.0.to_owned()],
+        &mut temp_lock,
+    )
+    .await;
+    assert_eq!(result.1.len(), 1);
+    assert_eq!(result.1[0].follows_you, false);
 }
 
 pub async fn test_joining_room(

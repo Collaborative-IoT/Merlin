@@ -215,6 +215,13 @@ pub async fn tests() {
         },
     )
     .await;
+    comm_handler_standard_tests::test_unfollowing_and_following_user(
+        &mut consumer,
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+    )
+    .await;
 }
 
 // Raising/lowering your

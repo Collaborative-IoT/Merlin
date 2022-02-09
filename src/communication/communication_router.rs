@@ -155,7 +155,7 @@ pub async fn route_msg(
             )
             .await
         }
-        "follow_user"|"unfollow_user" => {
+        "follow_user" | "unfollow_user" => {
             communication_handler::follow_or_unfollow_user(
                 basic_request,
                 execution_handler,
