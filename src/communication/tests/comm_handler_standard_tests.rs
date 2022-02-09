@@ -239,6 +239,10 @@ pub async fn test_creating_room(
     assert_eq!(server_state.rooms.contains_key(&3), true);
 }
 
+pub async fn test_unfollowing_or_following_user(){
+    
+}
+
 pub async fn test_joining_room(
     consume_channel: &mut Consumer,
     publish_channel: &Arc<Mutex<lapin::Channel>>,

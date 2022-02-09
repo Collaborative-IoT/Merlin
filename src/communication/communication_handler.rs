@@ -241,7 +241,7 @@ pub async fn follow_or_unfollow_user(
     let mut write_state = server_state.write().await;
     let mut handler = execution_handler.lock().await;
     let mut result: Option<CaptureResult> = None;
-    let mut response_data: Option<String> = None;
+    let mut response_op: Option<String> = None;
     if request.request_op_code == "follow_user" {
         let db_follower = DBFollower {
             id: -1,
@@ -249,7 +249,7 @@ pub async fn follow_or_unfollow_user(
             user_id: user_id_data.user_id,
         };
         result = Some(data_capturer::capture_new_follower(&mut handler, &db_follower).await);
-        response_data = Some("user_follow_successful".to_owned());
+        response_op = Some("user_follow_successful".to_owned());
         //no errors
     } else {
         //unfollow
@@ -261,7 +261,7 @@ pub async fn follow_or_unfollow_user(
             )
             .await,
         );
-        response_data = Some("user_unfollow_successful".to_owned());
+        response_op = Some("user_unfollow_successful".to_owned());
     }
     //if we didn't get any error from capture execution(saving to db)
     if result.is_some() && !result.unwrap().encountered_error {
@@ -269,7 +269,7 @@ pub async fn follow_or_unfollow_user(
             user_id_data.user_id.to_string(),
             requester_id,
             &mut write_state,
-            response_data.unwrap().to_owned(),
+            response_op.unwrap().to_owned(),
         );
         return Ok(());
     }
