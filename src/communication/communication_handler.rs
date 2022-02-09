@@ -5,7 +5,7 @@ use crate::communication::communication_types::{
     GenericRoomId, GenericRoomIdAndPeerId, GetFollowList, User, UserPreview,
 };
 use crate::communication::data_fetcher;
-use crate::data_store::db_models::DBFollower;
+use crate::data_store::db_models::{DBFollower, DBUserBlock};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rooms;
 use crate::state::state::ServerState;
@@ -65,7 +65,7 @@ pub async fn create_room(
         return Ok(());
     }
     // If the request is invalid
-    send_error_response_to_requester(read_state, requester_id, server_state).await;
+    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
     return Ok(());
 }
 
@@ -100,7 +100,7 @@ pub async fn block_user_from_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(read_state, requester_id, server_state).await;
+    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
     return Ok(());
 }
 
@@ -151,7 +151,7 @@ pub async fn join_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(read_state, requester_id, server_state).await;
+    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
     return Ok(());
 }
 
@@ -201,7 +201,7 @@ pub async fn add_or_remove_speaker(
             return Ok(());
         }
     }
-    send_error_response_to_requester(read_state, requester_id, server_state).await;
+    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
     return Ok(());
 }
 
@@ -227,7 +227,7 @@ pub async fn handle_web_rtc_request(
         .await;
         return Ok(());
     }
-    send_error_response_to_requester(read_state, requester_id, server_state).await;
+    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
     return Ok(());
 }
 
@@ -275,7 +275,7 @@ pub async fn follow_or_unfollow_user(
     }
     drop(write_state);
     drop(handler);
-    send_error_response_to_requester(server_state.read().await, requester_id, server_state).await;
+    send_error_response_to_requester(None, requester_id, server_state).await;
     return Ok(());
 }
 
@@ -403,7 +403,58 @@ pub async fn raise_hand_or_lower_hand(
             return Ok(());
         }
     }
-    send_error_response_to_requester(read_state, requester_id, server_state).await;
+    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
+    return Ok(());
+}
+
+pub async fn block_or_unblock_user_from_user(
+    request: BasicRequest,
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    type_of_block_action: &str,
+) -> Result<()> {
+    let mut write_state = server_state.write().await;
+    let request_data: GenericUserId = serde_json::from_str(&request.request_containing_data)?;
+    //no user can block or unblock themselves
+    if request_data.user_id == requester_id {
+        return Ok(());
+    }
+    let mut capture_result: Option<CaptureResult> = None;
+    let mut response_op: Option<String> = None;
+    let mut handler = execution_handler.lock().await;
+    if type_of_block_action == "block_user" {
+        let user_block = DBUserBlock {
+            id: -1,
+            owner_user_id: requester_id.clone(),
+            blocked_user_id: request_data.user_id.clone(),
+        };
+        capture_result =
+            Some(data_capturer::capture_new_user_block(&mut handler, &user_block).await);
+        response_op = Some("user_personally_blocked".to_owned());
+    } else {
+        capture_result = Some(
+            data_capturer::capture_user_block_removal(
+                &mut handler,
+                &requester_id,
+                &request_data.user_id,
+            )
+            .await,
+        );
+        response_op = Some("user_personally_unblocked".to_owned());
+    }
+
+    if capture_result.is_some() && !capture_result.unwrap().encountered_error {
+        send_to_requester_channel(
+            request_data.user_id.to_string(),
+            requester_id,
+            &mut write_state,
+            response_op.unwrap().to_owned(),
+        );
+        return Ok(());
+    }
+    drop(write_state);
+    send_error_response_to_requester(None, requester_id, server_state).await;
     return Ok(());
 }
 
@@ -454,12 +505,12 @@ pub async fn gather_all_users_in_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(read_state, requester_id, server_state).await;
+    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
     return Ok(());
 }
 
 async fn send_error_response_to_requester(
-    read_state: tokio::sync::RwLockReadGuard<'_, ServerState>,
+    read_state: Option<tokio::sync::RwLockReadGuard<'_, ServerState>>,
     requester_id: i32,
     server_state: &Arc<RwLock<ServerState>>,
 ) {
