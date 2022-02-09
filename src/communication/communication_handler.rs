@@ -361,6 +361,7 @@ pub async fn leave_room(
     request: BasicRequest,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
     server_state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
     requester_id: i32,
 ) -> Result<()> {
     let request_data: GenericRoomId = serde_json::from_str(&request.request_containing_data)?;
@@ -380,6 +381,7 @@ pub async fn leave_room(
             &requester_id,
             &request_data.room_id,
             publish_channel,
+            execution_handler
         )
         .await;
 

@@ -221,6 +221,7 @@ pub async fn leave_room(
     requester_id: &i32,
     room_id: &i32,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) {
     server_state
         .active_users
@@ -230,7 +231,10 @@ pub async fn leave_room(
     let mut room = server_state.rooms.get_mut(room_id).unwrap();
     room.amount_of_users -= 1;
     room.user_ids.remove(&requester_id);
-
+    if room.amount_of_users == 0{
+        destroy_room(server_state, publish_channel, execution_handler, room_id).await;
+        return;
+    }
     let request_to_voice_server = VoiceServerClosePeer {
         roomId: room_id.to_string(),
         peerId: requester_id.to_string(),
@@ -243,6 +247,7 @@ pub async fn leave_room(
     );
     let channel = publish_channel.lock().await;
     rabbit::publish_message(&channel, request_str).await;
+    
 }
 
 ///  Adds a speaker that is already an existing peer in a room

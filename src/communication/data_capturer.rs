@@ -216,7 +216,11 @@ pub async fn capture_room_removal(
     execution_handler: &mut ExecutionHandler,
     room_id: &i32,
 ) -> CaptureResult {
+    //need to combine these capture results in the future.
+    //should be good for beta though.
     let deletion_result = execution_handler.delete_room(room_id).await;
+    execution_handler.delete_all_room_permissions(room_id).await;
+    execution_handler.delete_room_blocks(room_id).await;
     return handle_removal_or_update_capture(
         "Room Removed".to_owned(),
         "Unexpected error removing room".to_owned(),
