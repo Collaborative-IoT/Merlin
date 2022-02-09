@@ -357,6 +357,38 @@ pub async fn get_top_rooms(
     );
 }
 
+pub async fn leave_room(
+    request: BasicRequest,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+) -> Result<()> {
+    let request_data: GenericRoomId = serde_json::from_str(&request.request_containing_data)?;
+    //the user is in this room
+    if server_state
+        .read()
+        .await
+        .active_users
+        .get(&requester_id)
+        .unwrap()
+        .current_room_id
+        == request_data.room_id
+    {
+        let mut write_state = server_state.write().await;
+        rooms::room_handler::leave_room(
+            &mut write_state,
+            &requester_id,
+            &request_data.room_id,
+            publish_channel,
+        )
+        .await;
+
+        return Ok(());
+    }
+    send_error_response_to_requester(None, requester_id, server_state).await;
+    return Ok(());
+}
+
 pub async fn raise_hand_or_lower_hand(
     request: BasicRequest,
     server_state: &Arc<RwLock<ServerState>>,

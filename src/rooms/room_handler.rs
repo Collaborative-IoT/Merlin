@@ -216,6 +216,35 @@ pub async fn join_room(
     );
 }
 
+pub async fn leave_room(
+    server_state: &mut ServerState,
+    requester_id: &i32,
+    room_id: &i32,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+) {
+    server_state
+        .active_users
+        .get_mut(&requester_id)
+        .unwrap()
+        .current_room_id = -1;
+    let mut room = server_state.rooms.get_mut(room_id).unwrap();
+    room.amount_of_users -= 1;
+    room.user_ids.remove(&requester_id);
+
+    let request_to_voice_server = VoiceServerClosePeer {
+        roomId: room_id.to_string(),
+        peerId: requester_id.to_string(),
+        kicked: false,
+    };
+    let request_str: String = create_voice_server_request(
+        "close-peer",
+        &requester_id.to_string(),
+        request_to_voice_server,
+    );
+    let channel = publish_channel.lock().await;
+    rabbit::publish_message(&channel, request_str).await;
+}
+
 ///  Adds a speaker that is already an existing peer in a room
 ///  this happens and is only allowed for users who have already
 ///  requested to speak.
