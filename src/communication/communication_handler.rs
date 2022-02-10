@@ -7,9 +7,9 @@ use crate::communication::communication_types::{
 use crate::communication::data_fetcher;
 use crate::data_store::db_models::{DBFollower, DBUserBlock};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
-use crate::rooms;
 use crate::state::state::ServerState;
 use crate::state::state_types::Room;
+use crate::{rooms, ws_fan};
 use futures::lock::Mutex;
 use serde_json::Result;
 use std::collections::{HashMap, HashSet};
@@ -17,7 +17,9 @@ use std::mem::drop;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::communication_types::GenericUserId;
+use super::communication_types::{
+    BasicResponse, DeafAndMuteStatus, DeafAndMuteStatusUpdate, GenericUserId, RoomUpdate,
+};
 use super::data_capturer::{self, CaptureResult};
 
 /*
@@ -540,6 +542,75 @@ pub async fn gather_all_users_in_room(
         }
     }
     send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
+    return Ok(());
+}
+
+pub async fn change_room_metadata(
+    request: BasicRequest,
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) -> Result<()> {
+    let room_update: RoomUpdate = serde_json::from_str(&request.request_containing_data)?;
+    let mut write_state = server_state.write().await;
+    let user = write_state.active_users.get(&requester_id).unwrap();
+    let user_room_id = user.current_room_id.clone();
+    //never go through with requests when the user isn't
+    //in a room
+    if user_room_id != -1 {
+        rooms::room_handler::update_room_meta_data(
+            &mut write_state,
+            &user_room_id,
+            requester_id,
+            execution_handler,
+            room_update,
+        )
+        .await;
+        return Ok(());
+    }
+
+    send_to_requester_channel(
+        "issue with request".to_owned(),
+        requester_id,
+        &mut write_state,
+        "invalid_request".to_owned(),
+    );
+    return Ok(());
+}
+
+pub async fn update_mute_and_deaf_status(
+    request: BasicRequest,
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+) -> Result<()> {
+    let mute_and_deaf: DeafAndMuteStatus = serde_json::from_str(&request.request_containing_data)?;
+    let mut write_state = server_state.write().await;
+    let user = write_state.active_users.get_mut(&requester_id).unwrap();
+    //you can only update your muted/deaf status if you aren't in a room
+    if user.current_room_id != -1 {
+        user.deaf = mute_and_deaf.deaf.clone();
+        user.muted = mute_and_deaf.muted.clone();
+        let user_room_id = user.current_room_id.clone();
+        //send everyone the deaf/mute update
+        let deaf_mute_response = DeafAndMuteStatusUpdate {
+            deaf: mute_and_deaf.deaf,
+            muted: mute_and_deaf.muted,
+            user_id: requester_id,
+        };
+        let basic_response = BasicResponse {
+            response_op_code: "user_mute_and_deaf_update".to_owned(),
+            response_containing_data: serde_json::to_string(&deaf_mute_response).unwrap(),
+        };
+        let basic_response_str = serde_json::to_string(&basic_response).unwrap();
+        ws_fan::fan::broadcast_message_to_room(basic_response_str, &mut write_state, user_room_id)
+            .await;
+    }
+    send_to_requester_channel(
+        "issue with request".to_owned(),
+        requester_id,
+        &mut write_state,
+        "invalid_request".to_owned(),
+    );
     return Ok(());
 }
 

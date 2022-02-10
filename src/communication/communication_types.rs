@@ -50,6 +50,19 @@ pub struct BasicRoomCreation {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct DeafAndMuteStatus {
+    pub muted: bool,
+    pub deaf: bool,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct DeafAndMuteStatusUpdate {
+    pub muted: bool,
+    pub deaf: bool,
+    pub user_id: i32,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct UserRemovedFromRoom {
     pub user_id: i32,
     pub type_of_ban: String,
@@ -137,12 +150,13 @@ pub struct ScheduledRoomUpdate {
     pub description: String,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct RoomUpdate {
-    name: String,
-    privacy: String,
-    chat_throttle: i32,
-    description: String,
-    auto_speaker: bool,
+    pub name: String,
+    pub public: bool,
+    pub chat_throttle: i32,
+    pub description: String,
+    pub auto_speaker: bool,
 }
 
 pub struct GenericOnlyBool {

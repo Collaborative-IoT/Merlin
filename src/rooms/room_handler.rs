@@ -1,7 +1,7 @@
 use super::permission_configs;
 use crate::common::common_response_logic::send_to_requester_channel;
 use crate::communication::communication_types::{
-    BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, VoiceServerClosePeer,
+    BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, RoomUpdate, VoiceServerClosePeer,
     VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRequest,
 };
 use crate::communication::data_capturer::CaptureResult;
@@ -11,7 +11,7 @@ use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
 use crate::state::state_types::Room;
-use crate::ws_fan::fan;
+use crate::ws_fan::{self, fan};
 use chrono::Utc;
 use futures::lock::Mutex;
 use lapin::Channel;
@@ -231,6 +231,9 @@ pub async fn leave_room(
     let mut room = server_state.rooms.get_mut(room_id).unwrap();
     room.amount_of_users -= 1;
     room.user_ids.remove(&requester_id);
+    //A lways cleanup empty rooms
+    //this is handled during unexpected
+    //disconnects too.
     if room.amount_of_users == 0 {
         destroy_room(server_state, publish_channel, execution_handler, room_id).await;
         return;
@@ -470,6 +473,48 @@ pub async fn lower_hand(
     );
 }
 
+//changes the room name,desc and other data.
+pub async fn update_room_meta_data(
+    server_state: &mut ServerState,
+    room_id: &i32,
+    requester_id: i32,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    request_data: RoomUpdate,
+) {
+    let mut handler = execution_handler.lock().await;
+    let all_room_permissions: (bool, HashMap<i32, RoomPermissions>) =
+        data_fetcher::get_room_permissions_for_users(room_id, &mut handler).await;
+    if all_room_permissions.0 {
+        return;
+    }
+
+    let requester_permissions: &RoomPermissions =
+        all_room_permissions.1.get(&requester_id).unwrap();
+    if requester_permissions.is_mod {
+        let mut room = server_state.rooms.get_mut(&room_id).unwrap();
+        room.auto_speaker = request_data.auto_speaker.clone();
+        room.chat_throttle = request_data.chat_throttle.clone();
+        room.public = request_data.public.clone();
+        room.desc = request_data.description.clone();
+        room.name = request_data.name.clone();
+        //let the users know about the update
+        let basic_response = BasicResponse {
+            response_op_code: "room_meta_update".to_owned(),
+            response_containing_data: serde_json::to_string(&request_data).unwrap(),
+        };
+        let basic_response_str = serde_json::to_string(&basic_response).unwrap();
+        ws_fan::fan::broadcast_message_to_room(basic_response_str, server_state, room_id.clone())
+            .await;
+        return;
+    }
+    send_to_requester_channel(
+        "issue with request".to_owned(),
+        requester_id.clone(),
+        server_state,
+        "invalid_request".to_owned(),
+    );
+}
+
 async fn handle_user_block_capture_result(
     capture_result: CaptureResult,
     requester_id: i32,
@@ -487,7 +532,6 @@ async fn handle_user_block_capture_result(
         remove_user_from_room_basic(request, server_state, publish_channel).await;
         return;
     }
-    println!("issue1");
     send_to_requester_channel(
         user_id.to_string(),
         requester_id,
