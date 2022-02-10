@@ -1,5 +1,6 @@
 use crate::communication::communication_types::{
-    BasicRequest, GenericRoomId, GenericRoomIdAndPeerId, GenericUserId, VoiceServerCreateRoom,
+    BasicRequest, GenericRoomId, GenericRoomIdAndPeerId, GenericUserId, VoiceServerClosePeer,
+    VoiceServerCreateRoom, VoiceServerDestroyRoom,
 };
 use crate::communication::tests::comm_handler_test_helpers::helpers;
 use crate::communication::{communication_router, data_fetcher};
@@ -9,6 +10,7 @@ use futures::lock::Mutex;
 use lapin::Consumer;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -375,7 +377,8 @@ pub async fn test_blocking_and_unblocking_user(
         publish_channel,
         execution_handler,
     )
-    .await.unwrap();
+    .await
+    .unwrap();
     helpers::grab_and_assert_request_response(
         &mut new_user.1,
         "user_personally_blocked",
@@ -407,7 +410,8 @@ pub async fn test_blocking_and_unblocking_user(
         publish_channel,
         execution_handler,
     )
-    .await.unwrap();
+    .await
+    .unwrap();
     helpers::grab_and_assert_request_response(
         &mut new_user.1,
         "user_personally_unblocked",
@@ -424,6 +428,104 @@ pub async fn test_blocking_and_unblocking_user(
     )
     .await;
     assert_eq!(result.1[0].they_blocked_you, false);
+}
+
+//without cleanup means the room should still be alive
+//after we force users to leave.
+pub async fn test_leaving_room_without_cleanup(
+    consume_channel: &mut Consumer,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
+    let new_user = helpers::spawn_new_real_user_and_join_room(
+        publish_channel,
+        execution_handler,
+        state,
+        consume_channel,
+        "3@#$12342341111111wepo242345kqw1321241".to_string(),
+        "%12312$$$$$$$$833234024nsdocikndv0".to_string(),
+    )
+    .await;
+    let request = helpers::basic_request(
+        "leave_room".to_owned(),
+        serde_json::to_string(&GenericRoomId { room_id: 3 }).unwrap(),
+    );
+    communication_router::route_msg(
+        request,
+        new_user.0.clone(),
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    let close_peer = VoiceServerClosePeer {
+        roomId: "3".to_owned(),
+        peerId: new_user.0.to_string(),
+        kicked: false,
+    };
+    helpers::grab_and_assert_message_to_voice_server::<VoiceServerClosePeer>(
+        consume_channel,
+        serde_json::to_string(&close_peer).unwrap(),
+        new_user.0.to_string(),
+        "close-peer".to_owned(),
+    )
+    .await;
+    //user no longer in room state
+    assert!(
+        state
+            .read()
+            .await
+            .rooms
+            .get(&3)
+            .unwrap()
+            .user_ids
+            .contains(&new_user.0)
+            == false
+    );
+    assert!(
+        state
+            .read()
+            .await
+            .active_users
+            .get(&new_user.0)
+            .unwrap()
+            .current_room_id
+            == -1
+    );
+}
+
+pub async fn test_leaving_room_with_cleanup(
+    consume_channel: &mut Consumer,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
+    let mut write_state = state.write().await;
+    let room = write_state.rooms.get_mut(&3).unwrap();
+
+    room.user_ids = HashSet::new();
+    room.amount_of_users = 1;
+    room.user_ids.insert(33);
+    drop(write_state);
+    let request = helpers::basic_request(
+        "leave_room".to_owned(),
+        serde_json::to_string(&GenericRoomId { room_id: 3 }).unwrap(),
+    );
+    communication_router::route_msg(request, 33, state, publish_channel, execution_handler)
+        .await
+        .unwrap();
+    let destroy = VoiceServerDestroyRoom {
+        roomId: "3".to_string(),
+    };
+    helpers::grab_and_assert_message_to_voice_server::<VoiceServerDestroyRoom>(
+        consume_channel,
+        serde_json::to_string(&destroy).unwrap(),
+        "-1".to_string(),
+        "destroy-room".to_owned(),
+    )
+    .await;
 }
 
 pub async fn test_joining_room(

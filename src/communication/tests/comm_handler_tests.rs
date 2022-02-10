@@ -227,7 +227,8 @@ pub async fn tests() {
         &publish_channel,
         &mock_state,
         &execution_handler,
-    ).await;
+    )
+    .await;
 }
 
 // Raising/lowering your

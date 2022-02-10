@@ -173,6 +173,16 @@ pub async fn route_msg(
             )
             .await
         }
+        "leave_room" => {
+            communication_handler::leave_room(
+                basic_request,
+                publish_channel,
+                server_state,
+                execution_handler,
+                user_id,
+            )
+            .await
+        }
         _ => Ok(()),
     }
 }
