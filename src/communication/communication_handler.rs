@@ -448,7 +448,6 @@ pub async fn block_or_unblock_user_from_user(
     server_state: &Arc<RwLock<ServerState>>,
     requester_id: i32,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
-    type_of_block_action: &str,
 ) -> Result<()> {
     let mut write_state = server_state.write().await;
     let request_data: GenericUserId = serde_json::from_str(&request.request_containing_data)?;
@@ -459,7 +458,7 @@ pub async fn block_or_unblock_user_from_user(
     let mut capture_result: Option<CaptureResult> = None;
     let mut response_op: Option<String> = None;
     let mut handler = execution_handler.lock().await;
-    if type_of_block_action == "block_user" {
+    if request.request_op_code == "block_user" {
         let user_block = DBUserBlock {
             id: -1,
             owner_user_id: requester_id.clone(),

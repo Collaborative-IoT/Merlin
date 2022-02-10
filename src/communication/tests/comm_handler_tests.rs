@@ -222,6 +222,12 @@ pub async fn tests() {
         &execution_handler,
     )
     .await;
+    comm_handler_standard_tests::test_blocking_and_unblocking_user(
+        &mut consumer,
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+    ).await;
 }
 
 // Raising/lowering your

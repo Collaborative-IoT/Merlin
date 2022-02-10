@@ -332,6 +332,100 @@ pub async fn test_unfollowing_and_following_user(
     assert_eq!(result.1[0].follows_you, false);
 }
 
+pub async fn test_blocking_and_unblocking_user(
+    consume_channel: &mut Consumer,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
+    println!("Testing blocking and unblocking user");
+    //create 2 new users
+    let mut new_user = helpers::spawn_new_real_user_and_join_room(
+        publish_channel,
+        execution_handler,
+        state,
+        consume_channel,
+        "3@#$11111111wepo242345kqw1321241".to_string(),
+        "%$$$$$$$$833234024nsdocikndv0".to_string(),
+    )
+    .await;
+
+    let new_second_user = helpers::spawn_new_real_user_and_join_room(
+        publish_channel,
+        execution_handler,
+        state,
+        consume_channel,
+        "31#$%11111111wepo242345kqw1321241".to_string(),
+        "#@9478239825833234024nsdocikndv0".to_string(),
+    )
+    .await;
+
+    //use user one to block user two
+    let block_request = helpers::basic_request(
+        "block_user".to_owned(),
+        serde_json::to_string(&GenericUserId {
+            user_id: new_second_user.0.clone(),
+        })
+        .unwrap(),
+    );
+    communication_router::route_msg(
+        block_request,
+        new_user.0.to_owned(),
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await.unwrap();
+    helpers::grab_and_assert_request_response(
+        &mut new_user.1,
+        "user_personally_blocked",
+        &new_second_user.0.to_string(),
+    )
+    .await;
+    //get user one from user two perspective
+    let mut temp_lock = execution_handler.lock().await;
+    let result = data_fetcher::get_users_for_user(
+        new_second_user.0.to_owned(),
+        vec![new_user.0.to_owned()],
+        &mut temp_lock,
+    )
+    .await;
+    assert_eq!(result.1[0].they_blocked_you, true);
+    drop(temp_lock);
+    //use user two to unblock user two
+    let unblock_request = helpers::basic_request(
+        "unblock_user".to_owned(),
+        serde_json::to_string(&GenericUserId {
+            user_id: new_second_user.0.clone(),
+        })
+        .unwrap(),
+    );
+    communication_router::route_msg(
+        unblock_request,
+        new_user.0.to_owned(),
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await.unwrap();
+    helpers::grab_and_assert_request_response(
+        &mut new_user.1,
+        "user_personally_unblocked",
+        &new_second_user.0.to_string(),
+    )
+    .await;
+
+    //get user one from user two perspective
+    let mut temp_lock = execution_handler.lock().await;
+    let result = data_fetcher::get_users_for_user(
+        new_second_user.0.to_owned(),
+        vec![new_user.0.to_owned()],
+        &mut temp_lock,
+    )
+    .await;
+    assert_eq!(result.1[0].they_blocked_you, false);
+}
+
 pub async fn test_joining_room(
     consume_channel: &mut Consumer,
     publish_channel: &Arc<Mutex<lapin::Channel>>,

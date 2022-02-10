@@ -164,6 +164,15 @@ pub async fn route_msg(
             )
             .await
         }
+        "block_user" | "unblock_user" => {
+            communication_handler::block_or_unblock_user_from_user(
+                basic_request,
+                server_state,
+                user_id,
+                execution_handler,
+            )
+            .await
+        }
         _ => Ok(()),
     }
 }
