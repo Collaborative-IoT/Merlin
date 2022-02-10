@@ -229,6 +229,21 @@ pub async fn tests() {
         &execution_handler,
     )
     .await;
+    comm_handler_standard_tests::test_leaving_room_without_cleanup(
+        &mut consumer,
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+    )
+    .await;
+    comm_handler_standard_tests::test_leaving_room_with_cleanup(
+        &mut consumer,
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+        &mut rx_user_one,
+    )
+    .await;
 }
 
 // Raising/lowering your

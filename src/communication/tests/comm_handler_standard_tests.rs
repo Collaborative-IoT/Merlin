@@ -438,6 +438,7 @@ pub async fn test_leaving_room_without_cleanup(
     state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) {
+    println!("Testing leaving room without cleanup");
     let new_user = helpers::spawn_new_real_user_and_join_room(
         publish_channel,
         execution_handler,
@@ -501,7 +502,10 @@ pub async fn test_leaving_room_with_cleanup(
     publish_channel: &Arc<Mutex<lapin::Channel>>,
     state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    user_one_rx: &mut UnboundedReceiverStream<Message>,
 ) {
+
+    println!("Testing leaving room with cleanup");
     let mut write_state = state.write().await;
     let room = write_state.rooms.get_mut(&3).unwrap();
 
@@ -509,6 +513,18 @@ pub async fn test_leaving_room_with_cleanup(
     room.amount_of_users = 1;
     room.user_ids.insert(33);
     drop(write_state);
+    //send the request with the wrong room
+    let request = helpers::basic_request(
+        "leave_room".to_owned(),
+        serde_json::to_string(&GenericRoomId { room_id: 4 }).unwrap(),
+    );
+    communication_router::route_msg(request, 33, state, publish_channel, execution_handler)
+        .await
+        .unwrap();
+    helpers::grab_and_assert_request_response(user_one_rx, "invalid_request", "issue with request")
+        .await;
+
+    //send the request with the correct room
     let request = helpers::basic_request(
         "leave_room".to_owned(),
         serde_json::to_string(&GenericRoomId { room_id: 3 }).unwrap(),
@@ -519,6 +535,7 @@ pub async fn test_leaving_room_with_cleanup(
     let destroy = VoiceServerDestroyRoom {
         roomId: "3".to_string(),
     };
+    //check voice server msg
     helpers::grab_and_assert_message_to_voice_server::<VoiceServerDestroyRoom>(
         consume_channel,
         serde_json::to_string(&destroy).unwrap(),
@@ -526,6 +543,14 @@ pub async fn test_leaving_room_with_cleanup(
         "destroy-room".to_owned(),
     )
     .await;
+    //check server state
+    let read_state = state.read().await;
+    assert_eq!(read_state.rooms.contains_key(&3), false);
+    assert_eq!(
+        read_state.active_users.get(&33).unwrap().current_room_id,
+        -1
+    );
+
 }
 
 pub async fn test_joining_room(
