@@ -604,6 +604,7 @@ pub async fn update_mute_and_deaf_status(
         let basic_response_str = serde_json::to_string(&basic_response).unwrap();
         ws_fan::fan::broadcast_message_to_room(basic_response_str, &mut write_state, user_room_id)
             .await;
+        return Ok(());
     }
     send_to_requester_channel(
         "issue with request".to_owned(),
@@ -612,6 +613,32 @@ pub async fn update_mute_and_deaf_status(
         "invalid_request".to_owned(),
     );
     return Ok(());
+}
+
+pub async fn send_chat_message(
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+    message: String,
+) {
+    let mut write_state = server_state.write().await;
+    let user = write_state.active_users.get_mut(&requester_id).unwrap();
+    let user_room_id = user.current_room_id.clone();
+    if user_room_id != -1 {
+        let basic_response = BasicResponse {
+            response_op_code: "new_chat_message".to_owned(),
+            response_containing_data: message,
+        };
+        let basic_response_str = serde_json::to_string(&basic_response).unwrap();
+        ws_fan::fan::broadcast_message_to_room(basic_response_str, &mut write_state, user_room_id)
+            .await;
+        return;
+    }
+    send_to_requester_channel(
+        "issue with request".to_owned(),
+        requester_id,
+        &mut write_state,
+        "invalid_request".to_owned(),
+    );
 }
 
 async fn send_error_response_to_requester(
