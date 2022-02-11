@@ -259,6 +259,14 @@ pub async fn tests() {
     )
     .await;
 
+    comm_handler_standard_tests::test_updating_muted_and_deaf(
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+        &mut rx_user_one,
+    )
+    .await;
+
     comm_handler_standard_tests::test_leaving_room_without_cleanup(
         &mut consumer,
         &publish_channel,
@@ -289,7 +297,7 @@ async fn test_raising_and_lowering_hand(
     listener_rx: &mut UnboundedReceiverStream<Message>,
     consume_channel: &mut Consumer,
 ) {
-    println!("Testing raising/lowering hand");
+    println!("testing raising/lowering hand");
     comm_handler_hand_tests::users_not_in_room_cannot_make_requests(
         publish_channel,
         execution_handler,

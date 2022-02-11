@@ -193,6 +193,10 @@ pub async fn route_msg(
             )
             .await
         }
+        "update_deaf_and_mute" => {
+            communication_handler::update_mute_and_deaf_status(basic_request, server_state, user_id)
+                .await
+        }
         _ => Ok(()),
     }
 }

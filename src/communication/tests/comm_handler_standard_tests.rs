@@ -1,6 +1,7 @@
 use crate::communication::communication_types::{
-    BasicRequest, GenericRoomId, GenericRoomIdAndPeerId, GenericUserId, RoomUpdate,
-    VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom,
+    BasicRequest, DeafAndMuteStatus, DeafAndMuteStatusUpdate, GenericRoomId,
+    GenericRoomIdAndPeerId, GenericUserId, RoomUpdate, VoiceServerClosePeer, VoiceServerCreateRoom,
+    VoiceServerDestroyRoom,
 };
 use crate::communication::tests::comm_handler_test_helpers::helpers;
 use crate::communication::{communication_router, data_fetcher};
@@ -161,7 +162,7 @@ pub async fn test_invalid_webrtc_request<T: Serialize + DeserializeOwned>(
     //3.When a user sends a request for a room they aren't in
     //To be completely clear, user 33(we are mocking requests for)
     //is in room 3.
-    println!("Testing webrtc invalid requests");
+    println!("testing webrtc invalid requests");
     let basic_request = helpers::basic_request(
         "@get-recv-tracks".to_string(),
         serde_json::to_string(&incorrect_data).unwrap(),
@@ -417,7 +418,7 @@ pub async fn test_blocking_and_unblocking_user_invalid(
     dc_id: String,
     op_code: String,
 ) {
-    println!("Testing blocking or unblocking user invalid({})", op_code);
+    println!("testing blocking or unblocking user invalid({})", op_code);
     let mut new_user = helpers::spawn_new_real_user_and_join_room(
         publish_channel,
         execution_handler,
@@ -654,6 +655,77 @@ pub async fn test_updating_room_meta_data(
     assert_eq!(room.desc, room_update.description);
     assert_eq!(room.auto_speaker, room_update.auto_speaker);
     assert_eq!(room.name, room_update.name);
+}
+
+pub async fn test_updating_muted_and_deaf(
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    user_one_rx: &mut UnboundedReceiverStream<Message>,
+) {
+    println!("testing updating muted and deaf status");
+    let mut room_death_and_mute = DeafAndMuteStatus {
+        deaf: true,
+        muted: true,
+    };
+    let mut room_death_and_mute_response = DeafAndMuteStatusUpdate {
+        deaf: true,
+        muted: true,
+        user_id: 33,
+    };
+
+    let basic_request = helpers::basic_request(
+        "update_deaf_and_mute".to_owned(),
+        serde_json::to_string(&room_death_and_mute).unwrap(),
+    );
+
+    // Test invalid case
+    // no user who isn't in a room can
+    // change their death/mute status
+    // we will set user 33's room to -1
+    // and expect it to fail.
+    state
+        .write()
+        .await
+        .active_users
+        .get_mut(&33)
+        .unwrap()
+        .current_room_id = -1;
+    communication_router::route_msg(
+        basic_request.clone(),
+        33,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    helpers::grab_and_assert_request_response(user_one_rx, "invalid_request", "issue with request")
+        .await;
+
+    //test the valid case
+    state
+        .write()
+        .await
+        .active_users
+        .get_mut(&33)
+        .unwrap()
+        .current_room_id = 3;
+    communication_router::route_msg(basic_request, 33, state, publish_channel, execution_handler)
+        .await
+        .unwrap();
+
+    helpers::grab_and_assert_request_response(
+        user_one_rx,
+        "user_mute_and_deaf_update",
+        &serde_json::to_string(&room_death_and_mute_response).unwrap(),
+    )
+    .await;
+
+    let read_state = state.read().await;
+    let user = read_state.active_users.get(&33).unwrap();
+    assert_eq!(user.deaf, room_death_and_mute.deaf);
+    assert_eq!(user.muted, room_death_and_mute.muted);
 }
 
 pub async fn test_joining_room(
