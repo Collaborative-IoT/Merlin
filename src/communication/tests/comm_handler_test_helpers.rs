@@ -8,8 +8,8 @@ pub mod helpers {
     use crate::communication::communication_handler_helpers;
     use crate::communication::communication_types::{
         AllUsersInRoomResponse, BasicRequest, BasicResponse, BasicRoomCreation, CommunicationRoom,
-        GenericRoomIdAndPeerId, User, UserPreview, VoiceServerClosePeer, VoiceServerCreateRoom,
-        VoiceServerRequest,
+        GenericRoomIdAndPeerId, GenericUserId, User, UserPreview, VoiceServerClosePeer,
+        VoiceServerCreateRoom, VoiceServerRequest,
     };
     use crate::communication::{communication_router, data_capturer};
     use crate::data_store::db_models::DBUser;
@@ -330,5 +330,38 @@ pub mod helpers {
             users: vec![user],
         };
         return serde_json::to_string(&response).unwrap();
+    }
+
+    pub async fn trigger_block_or_unblock(
+        publish_channel: &Arc<Mutex<lapin::Channel>>,
+        state: &Arc<RwLock<ServerState>>,
+        execution_handler: &Arc<Mutex<ExecutionHandler>>,
+        new_user: &mut (i32, UnboundedReceiverStream<Message>),
+        new_second_user: &(i32, UnboundedReceiverStream<Message>),
+        block_op_code: String,
+        response_op_code: &str,
+    ) {
+        let block_request = basic_request(
+            block_op_code,
+            serde_json::to_string(&GenericUserId {
+                user_id: new_second_user.0.clone(),
+            })
+            .unwrap(),
+        );
+        communication_router::route_msg(
+            block_request,
+            new_user.0.to_owned(),
+            state,
+            publish_channel,
+            execution_handler,
+        )
+        .await
+        .unwrap();
+        grab_and_assert_request_response(
+            &mut new_user.1,
+            response_op_code,
+            &new_second_user.0.to_string(),
+        )
+        .await;
     }
 }

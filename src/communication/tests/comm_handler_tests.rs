@@ -244,6 +244,26 @@ pub async fn tests() {
         &mut rx_user_one,
     )
     .await;
+    comm_handler_standard_tests::test_blocking_and_unblocking_user_invalid(
+        &mut consumer,
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+        "**&&^^%%".to_owned(),
+        "(*(&*@&^#^".to_owned(),
+        "block_user".to_owned(),
+    )
+    .await;
+    comm_handler_standard_tests::test_blocking_and_unblocking_user_invalid(
+        &mut consumer,
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+        "**&&^^%%".to_owned(),
+        "(*(&*@&^#^".to_owned(),
+        "unblock_user".to_owned(),
+    )
+    .await;
 }
 
 // Raising/lowering your

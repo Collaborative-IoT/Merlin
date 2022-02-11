@@ -363,28 +363,17 @@ pub async fn test_blocking_and_unblocking_user(
     .await;
 
     //use user one to block user two
-    let block_request = helpers::basic_request(
-        "block_user".to_owned(),
-        serde_json::to_string(&GenericUserId {
-            user_id: new_second_user.0.clone(),
-        })
-        .unwrap(),
-    );
-    communication_router::route_msg(
-        block_request,
-        new_user.0.to_owned(),
-        state,
+    helpers::trigger_block_or_unblock(
         publish_channel,
+        state,
         execution_handler,
-    )
-    .await
-    .unwrap();
-    helpers::grab_and_assert_request_response(
-        &mut new_user.1,
+        &mut new_user,
+        &new_second_user,
+        "block_user".to_owned(),
         "user_personally_blocked",
-        &new_second_user.0.to_string(),
     )
     .await;
+
     //get user one from user two perspective
     let mut temp_lock = execution_handler.lock().await;
     let result = data_fetcher::get_users_for_user(
@@ -395,27 +384,16 @@ pub async fn test_blocking_and_unblocking_user(
     .await;
     assert_eq!(result.1[0].they_blocked_you, true);
     drop(temp_lock);
+
     //use user two to unblock user two
-    let unblock_request = helpers::basic_request(
-        "unblock_user".to_owned(),
-        serde_json::to_string(&GenericUserId {
-            user_id: new_second_user.0.clone(),
-        })
-        .unwrap(),
-    );
-    communication_router::route_msg(
-        unblock_request,
-        new_user.0.to_owned(),
-        state,
+    helpers::trigger_block_or_unblock(
         publish_channel,
+        state,
         execution_handler,
-    )
-    .await
-    .unwrap();
-    helpers::grab_and_assert_request_response(
-        &mut new_user.1,
+        &mut new_user,
+        &new_second_user,
+        "unblock_user".to_owned(),
         "user_personally_unblocked",
-        &new_second_user.0.to_string(),
     )
     .await;
 
@@ -428,6 +406,48 @@ pub async fn test_blocking_and_unblocking_user(
     )
     .await;
     assert_eq!(result.1[0].they_blocked_you, false);
+}
+
+pub async fn test_blocking_and_unblocking_user_invalid(
+    consume_channel: &mut Consumer,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    gh_id: String,
+    dc_id: String,
+    op_code: String,
+) {
+    println!("Testing blocking and unblocking user invalid");
+    let mut new_user = helpers::spawn_new_real_user_and_join_room(
+        publish_channel,
+        execution_handler,
+        state,
+        consume_channel,
+        gh_id,
+        dc_id,
+    )
+    .await;
+
+    //test blocking user that doesn't exist
+    let block_request = helpers::basic_request(
+        op_code,
+        serde_json::to_string(&GenericUserId { user_id: 9939239 }).unwrap(),
+    );
+    communication_router::route_msg(
+        block_request,
+        new_user.0.to_owned(),
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    helpers::grab_and_assert_request_response(
+        &mut new_user.1,
+        "invalid_request",
+        "issue with request",
+    )
+    .await;
 }
 
 //without cleanup means the room should still be alive
@@ -504,7 +524,6 @@ pub async fn test_leaving_room_with_cleanup(
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     user_one_rx: &mut UnboundedReceiverStream<Message>,
 ) {
-
     println!("Testing leaving room with cleanup");
     let mut write_state = state.write().await;
     let room = write_state.rooms.get_mut(&3).unwrap();
@@ -550,7 +569,6 @@ pub async fn test_leaving_room_with_cleanup(
         read_state.active_users.get(&33).unwrap().current_room_id,
         -1
     );
-
 }
 
 pub async fn test_joining_room(
