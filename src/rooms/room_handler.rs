@@ -204,8 +204,8 @@ pub async fn join_room(
             &request_to_voice_server.peerId.to_string(),
             request_to_voice_server,
         );
-        rabbit::publish_message(&channel, request_str).await;
         add_user_to_room_state(&room_id, user_id, server_state);
+        rabbit::publish_message(&channel, request_str).await;
         return;
     };
     send_to_requester_channel(
@@ -582,11 +582,11 @@ async fn continue_with_successful_room_creation(
     let request_to_voice_server = VoiceServerCreateRoom {
         roomId: room_id.clone().to_string(),
     };
+    let new_room_state: Room = construct_basic_room_for_state(room_id.clone(), public, name, desc);
+    server_state.rooms.insert(room_id, new_room_state);
     let request_str =
         create_voice_server_request("create-room", &user_id.to_string(), request_to_voice_server);
     rabbit::publish_message(channel, request_str).await;
-    let new_room_state: Room = construct_basic_room_for_state(room_id.clone(), public, name, desc);
-    server_state.rooms.insert(room_id, new_room_state);
 }
 
 async fn check_or_insert_initial_permissions(
