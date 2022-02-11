@@ -664,11 +664,11 @@ pub async fn test_updating_muted_and_deaf(
     user_one_rx: &mut UnboundedReceiverStream<Message>,
 ) {
     println!("testing updating muted and deaf status");
-    let mut room_death_and_mute = DeafAndMuteStatus {
+    let room_death_and_mute = DeafAndMuteStatus {
         deaf: true,
         muted: true,
     };
-    let mut room_death_and_mute_response = DeafAndMuteStatusUpdate {
+    let room_death_and_mute_response = DeafAndMuteStatusUpdate {
         deaf: true,
         muted: true,
         user_id: 33,
