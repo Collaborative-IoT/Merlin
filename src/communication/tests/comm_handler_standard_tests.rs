@@ -247,7 +247,7 @@ pub async fn test_unfollowing_and_following_user(
     state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) {
-    println!("Testing following and unfollowing user");
+    println!("testing following and unfollowing user");
     //create 2 new users
     let mut new_user = helpers::spawn_new_real_user_and_join_room(
         publish_channel,
@@ -340,7 +340,7 @@ pub async fn test_blocking_and_unblocking_user(
     state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) {
-    println!("Testing blocking and unblocking user");
+    println!("testing blocking and unblocking user");
     //create 2 new users
     let mut new_user = helpers::spawn_new_real_user_and_join_room(
         publish_channel,
@@ -460,7 +460,7 @@ pub async fn test_leaving_room_without_cleanup(
     state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) {
-    println!("Testing leaving room without cleanup");
+    println!("testing leaving room without cleanup");
     let new_user = helpers::spawn_new_real_user_and_join_room(
         publish_channel,
         execution_handler,
@@ -526,7 +526,7 @@ pub async fn test_leaving_room_with_cleanup(
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     user_one_rx: &mut UnboundedReceiverStream<Message>,
 ) {
-    println!("Testing leaving room with cleanup");
+    println!("testing leaving room with cleanup");
     let mut write_state = state.write().await;
     let room = write_state.rooms.get_mut(&3).unwrap();
 
@@ -582,7 +582,7 @@ pub async fn test_updating_room_meta_data(
 ) {
     //test invalid update
     //this person is not a mod so it should fail
-    println!("Testing invalid/valid room metadata update");
+    println!("testing invalid/valid room metadata update");
     let mut new_user = helpers::spawn_new_real_user_and_join_room(
         publish_channel,
         execution_handler,
@@ -592,6 +592,7 @@ pub async fn test_updating_room_meta_data(
         "%12312$$$$$$$$833234024nsdocikndv0".to_string(),
     )
     .await;
+
     let room_update: RoomUpdate = RoomUpdate {
         name: "test90432840".to_owned(),
         public: false,
@@ -600,7 +601,7 @@ pub async fn test_updating_room_meta_data(
         auto_speaker: true,
     };
     let basic_request = helpers::basic_request(
-        "update_room".to_owned(),
+        "update_room_meta".to_owned(),
         serde_json::to_string(&room_update).unwrap(),
     );
 
@@ -613,6 +614,7 @@ pub async fn test_updating_room_meta_data(
     )
     .await
     .unwrap();
+
     helpers::grab_and_assert_request_response(
         &mut new_user.1,
         "invalid_request",
@@ -630,18 +632,28 @@ pub async fn test_updating_room_meta_data(
         auto_speaker: true,
     };
     let basic_request = helpers::basic_request(
-        "update_room".to_owned(),
+        "update_room_meta".to_owned(),
         serde_json::to_string(&room_update).unwrap(),
     );
+
     communication_router::route_msg(basic_request, 33, state, publish_channel, execution_handler)
         .await
         .unwrap();
+
     helpers::grab_and_assert_request_response(
         user_one_rx,
         "room_meta_update",
         &serde_json::to_string(&room_update).unwrap(),
     )
     .await;
+
+    let read_state = state.read().await;
+    let room = read_state.rooms.get(&3).unwrap();
+    assert_eq!(room.chat_throttle, room_update.chat_throttle);
+    assert_eq!(room.public, room_update.public);
+    assert_eq!(room.desc, room_update.description);
+    assert_eq!(room.auto_speaker, room_update.auto_speaker);
+    assert_eq!(room.name, room_update.name);
 }
 
 pub async fn test_joining_room(

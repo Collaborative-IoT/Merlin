@@ -183,6 +183,16 @@ pub async fn route_msg(
             )
             .await
         }
+
+        "update_room_meta" => {
+            communication_handler::change_room_metadata(
+                basic_request,
+                server_state,
+                user_id,
+                execution_handler,
+            )
+            .await
+        }
         _ => Ok(()),
     }
 }
