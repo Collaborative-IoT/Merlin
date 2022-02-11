@@ -38,7 +38,6 @@ pub mod helpers {
     ) -> UnboundedReceiverStream<Message> {
         let mock_temp_user = create_and_add_new_user_channel_to_peer_map(user_id, state).await;
         insert_user_state(state, user_id).await;
-
         let create_room_msg = basic_request(
             "join-as-new-peer".to_owned(),
             generic_room_and_peer_id(user_id, 3),
@@ -52,7 +51,6 @@ pub mod helpers {
             &user_id,
         )
         .await;
-
         //we need to consume the message
         //so the queue can be clear
         //since we don't need to check

@@ -417,7 +417,7 @@ pub async fn test_blocking_and_unblocking_user_invalid(
     dc_id: String,
     op_code: String,
 ) {
-    println!("Testing blocking and unblocking user invalid");
+    println!("Testing blocking or unblocking user invalid({})", op_code);
     let mut new_user = helpers::spawn_new_real_user_and_join_room(
         publish_channel,
         execution_handler,
@@ -433,6 +433,7 @@ pub async fn test_blocking_and_unblocking_user_invalid(
         op_code,
         serde_json::to_string(&GenericUserId { user_id: 9939239 }).unwrap(),
     );
+
     communication_router::route_msg(
         block_request,
         new_user.0.to_owned(),
@@ -442,6 +443,7 @@ pub async fn test_blocking_and_unblocking_user_invalid(
     )
     .await
     .unwrap();
+
     helpers::grab_and_assert_request_response(
         &mut new_user.1,
         "invalid_request",
