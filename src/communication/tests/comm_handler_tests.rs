@@ -249,6 +249,16 @@ pub async fn tests() {
         "unblock_user".to_owned(),
     )
     .await;
+
+    comm_handler_standard_tests::test_updating_room_meta_data(
+        &mut consumer,
+        &publish_channel,
+        &mock_state,
+        &execution_handler,
+        &mut rx_user_one,
+    )
+    .await;
+
     comm_handler_standard_tests::test_leaving_room_without_cleanup(
         &mut consumer,
         &publish_channel,

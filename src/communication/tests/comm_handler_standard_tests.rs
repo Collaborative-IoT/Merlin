@@ -1,6 +1,6 @@
 use crate::communication::communication_types::{
-    BasicRequest, GenericRoomId, GenericRoomIdAndPeerId, GenericUserId, VoiceServerClosePeer,
-    VoiceServerCreateRoom, VoiceServerDestroyRoom,
+    BasicRequest, GenericRoomId, GenericRoomIdAndPeerId, GenericUserId, RoomUpdate,
+    VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom,
 };
 use crate::communication::tests::comm_handler_test_helpers::helpers;
 use crate::communication::{communication_router, data_fetcher};
@@ -571,6 +571,77 @@ pub async fn test_leaving_room_with_cleanup(
         read_state.active_users.get(&33).unwrap().current_room_id,
         -1
     );
+}
+
+pub async fn test_updating_room_meta_data(
+    consume_channel: &mut Consumer,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    user_one_rx: &mut UnboundedReceiverStream<Message>,
+) {
+    //test invalid update
+    //this person is not a mod so it should fail
+    println!("Testing invalid/valid room metadata update");
+    let mut new_user = helpers::spawn_new_real_user_and_join_room(
+        publish_channel,
+        execution_handler,
+        state,
+        consume_channel,
+        "3@#$12342341111111wepo242345kqw1321241".to_string(),
+        "%12312$$$$$$$$833234024nsdocikndv0".to_string(),
+    )
+    .await;
+    let room_update: RoomUpdate = RoomUpdate {
+        name: "test90432840".to_owned(),
+        public: false,
+        chat_throttle: 2000,
+        description: "for the best".to_owned(),
+        auto_speaker: true,
+    };
+    let basic_request = helpers::basic_request(
+        "update_room".to_owned(),
+        serde_json::to_string(&room_update).unwrap(),
+    );
+
+    communication_router::route_msg(
+        basic_request,
+        new_user.0,
+        state,
+        publish_channel,
+        execution_handler,
+    )
+    .await
+    .unwrap();
+    helpers::grab_and_assert_request_response(
+        &mut new_user.1,
+        "invalid_request",
+        "issue with request",
+    )
+    .await;
+
+    //test valid update
+    //user 33 is the owner and is a mod so it should complete
+    let room_update: RoomUpdate = RoomUpdate {
+        name: "test90432840!!!!!".to_owned(),
+        public: true,
+        chat_throttle: 3000,
+        description: "for the bes333".to_owned(),
+        auto_speaker: true,
+    };
+    let basic_request = helpers::basic_request(
+        "update_room".to_owned(),
+        serde_json::to_string(&room_update).unwrap(),
+    );
+    communication_router::route_msg(basic_request, 33, state, publish_channel, execution_handler)
+        .await
+        .unwrap();
+    helpers::grab_and_assert_request_response(
+        user_one_rx,
+        "room_meta_update",
+        &serde_json::to_string(&room_update).unwrap(),
+    )
+    .await;
 }
 
 pub async fn test_joining_room(
