@@ -12,6 +12,7 @@ use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::{mpsc, RwLock};
 use tokio_postgres::{Error, NoTls};
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -39,37 +40,10 @@ async fn user_connected(ws: WebSocket, server_state: Arc<RwLock<ServerState>>) {
         //Make use of a mpsc channel for each user.
         let current_user_id = auth_result.1;
         let (tx, rx) = mpsc::unbounded_channel();
-        let mut rx = UnboundedReceiverStream::new(rx);
-
-        tokio::task::spawn(async move {
-            while let Some(message) = rx.next().await {
-                user_ws_tx
-                    .send(message)
-                    .unwrap_or_else(|e| {
-                        eprintln!("websocket send error: {}", e);
-                    })
-                    .await;
-            }
-        });
-        server_state
-            .write()
-            .await
-            .peer_map
-            .insert(current_user_id, tx);
-
-        while let Some(result) = user_ws_rx.next().await {
-            let msg = match result {
-                Ok(msg) => msg,
-                Err(e) => {
-                    eprintln!("websocket error(uid={}): {}", current_user_id, e);
-                    break;
-                }
-            };
-            user_message(&current_user_id, msg, &server_state).await;
-        }
-
-        // user_ws_rx stream will keep processing as long as the user stays
-        // connected. Once they disconnect, then...
+        let rx = UnboundedReceiverStream::new(rx);
+        setup_outgoing_messages_task(user_ws_tx, rx);
+        insert_new_peer(server_state.clone(), tx, current_user_id.clone()).await;
+        block_and_handle_incoming_messages(&mut user_ws_rx, &current_user_id, &server_state).await;
         user_disconnected(&current_user_id, &server_state).await;
     }
 }
@@ -100,6 +74,80 @@ async fn handle_authentication(
     return (true, 2 as i32);
 }
 
+// Sets up a task for grabbing messages
+// from each user's channel and sending it
+// to the user via websocket. Each user
+// has a channel that we use to communicate
+// over tasks.
+fn setup_outgoing_messages_task(
+    mut user_ws_tx: SplitSink<WebSocket, Message>,
+    mut rx: UnboundedReceiverStream<Message>,
+) {
+    tokio::task::spawn(async move {
+        while let Some(message) = rx.next().await {
+            user_ws_tx
+                .send(message)
+                .unwrap_or_else(|e| {
+                    eprintln!("websocket send error: {}", e);
+                })
+                .await;
+        }
+    });
+}
+
+//whenever we get a message from the user via websocket
+async fn block_and_handle_incoming_messages(
+    user_ws_rx: &mut SplitStream<WebSocket>,
+    current_user_id: &i32,
+    server_state: &Arc<RwLock<ServerState>>,
+) {
+    while let Some(result) = user_ws_rx.next().await {
+        let msg = match result {
+            Ok(msg) => msg,
+            Err(e) => {
+                eprintln!("websocket error(uid={}): {}", current_user_id, e);
+                break;
+            }
+        };
+        user_message(&current_user_id, msg, server_state).await;
+    }
+}
+
+//A peer is just the mapping
+//of a user to its recieving end of
+//the Multi Producer Single Consumer Channel.
+//this is how we send messages to our users.
+async fn insert_new_peer(
+    server_state: Arc<RwLock<ServerState>>,
+    tx: UnboundedSender<Message>,
+    current_user_id: i32,
+) {
+    server_state
+        .write()
+        .await
+        .peer_map
+        .insert(current_user_id, tx);
+}
+
+pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
+    //"host=localhost user=postgres port=5432 password=password"
+    let host = env::var("PG_HOST").unwrap();
+    let user = env::var("PG_USER").unwrap();
+    let port = env::var("PG_PORT").unwrap();
+    let password = env::var("PG_PASSWORD").unwrap();
+    let config: String = format!(
+        "host={} user={} port={} password={}",
+        host, user, port, password
+    );
+
+    let (client, connection) = tokio_postgres::connect(&config, NoTls).await?;
+    //TODO: handle connection error
+    tokio::spawn(async move { if let Err(e) = connection.await {} });
+    let mut handler = ExecutionHandler::new(client);
+    handler.create_all_tables_if_needed().await?;
+    return Ok(handler);
+}
+
 async fn setup_routes_and_serve<T: Into<SocketAddr>>(
     addr: T,
     server_state: Arc<RwLock<ServerState>>,
@@ -110,7 +158,7 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
 
     //GET /user-api
     let user_api_route = warp::path("user-api")
-        // The `ws()` filter will prepare Websocket handshake...
+        // The `ws()` filter will prepare  Websocket handshake...
         .and(warp::ws())
         .and(server_state)
         .and(execution_handler.clone())
@@ -185,23 +233,4 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
     );
 
     warp::serve(routes).run(addr).await;
-}
-
-pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
-    //"host=localhost user=postgres port=5432 password=password"
-    let host = env::var("PG_HOST").unwrap();
-    let user = env::var("PG_USER").unwrap();
-    let port = env::var("PG_PORT").unwrap();
-    let password = env::var("PG_PASSWORD").unwrap();
-    let config: String = format!(
-        "host={} user={} port={} password={}",
-        host, user, port, password
-    );
-
-    let (client, connection) = tokio_postgres::connect(&config, NoTls).await?;
-    //TODO: handle connection error
-    tokio::spawn(async move { if let Err(e) = connection.await {} });
-    let mut handler = ExecutionHandler::new(client);
-    handler.create_all_tables_if_needed().await?;
-    return Ok(handler);
 }

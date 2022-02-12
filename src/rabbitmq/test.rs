@@ -27,7 +27,6 @@ struct MockVoiceServerResponseForRoom {
 
 pub async fn test() {
     test_publish_and_consume().await;
-    test_type_of_request().await;
 }
 
 pub async fn test_publish_and_consume() {
@@ -60,30 +59,4 @@ pub async fn test_publish_and_consume() {
     delivery.ack(BasicAckOptions::default()).await.expect("ack");
     let parsed_msg = rabbit::parse_message(delivery);
     assert_eq!(parsed_msg, data_to_publish);
-}
-
-pub async fn test_type_of_request() {
-    let room_struct_data = MockVoiceServerResponseForRoom {
-        op: "test".to_string(),
-        d: "test".to_string(),
-        rid: "test".to_string(),
-    };
-
-    let user_struct_data = MockVoiceServerResponseForUser {
-        op: "test".to_string(),
-        d: "test".to_string(),
-        uid: "test".to_string(),
-    };
-
-    let room_str_data: String = serde_json::to_string(&room_struct_data).unwrap();
-    let user_str_data: String = serde_json::to_string(&user_struct_data).unwrap();
-
-    let room_json_value = serde_json::from_str(&room_str_data).unwrap();
-    let user_json_value = serde_json::from_str(&user_str_data).unwrap();
-
-    let type_of_request_room = rabbit::type_of_request(&room_json_value);
-    let type_of_request_user = rabbit::type_of_request(&user_json_value);
-
-    assert_eq!(type_of_request_room, "room");
-    assert_eq!(type_of_request_user, "user");
 }
