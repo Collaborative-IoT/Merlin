@@ -52,12 +52,17 @@ pub async fn notify_user_only(response: VoiceServerResponse, state: &mut ServerS
     .await;
 }
 
-pub async fn notify_entire_room(response: serde_json::Value, state: &mut ServerState){
+pub async fn notify_entire_room(response: serde_json::Value, state: &mut ServerState) {
     let basic_response_for_user = BasicResponse {
         response_op_code: response["op"].to_string(),
         response_containing_data: response["d"].to_string(),
     };
-    let room_id:i32 = response["rid"].to_string().parse().unwrap();
+    let room_id: i32 = response["rid"].to_string().parse().unwrap();
 
-    fan::broadcast_message_to_room(serde_json::to_string(&basic_response_for_user).unwrap(), state, room_id).await;
+    fan::broadcast_message_to_room(
+        serde_json::to_string(&basic_response_for_user).unwrap(),
+        state,
+        room_id,
+    )
+    .await;
 }

@@ -71,8 +71,8 @@ pub mod rooms {
 
 pub mod vs_response {
     pub mod vs_response_handler;
-    pub mod vs_response_types;
     pub mod vs_response_router;
+    pub mod vs_response_types;
 }
 
 #[tokio::main]
