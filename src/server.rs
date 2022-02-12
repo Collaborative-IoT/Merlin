@@ -6,6 +6,7 @@ use crate::communication::communication_router;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
+use crate::state::state_types::User;
 use crate::warp::http::Uri;
 use futures::lock::Mutex;
 use futures_util::stream::SplitStream;
@@ -59,7 +60,14 @@ async fn user_connected(
         let rx = UnboundedReceiverStream::new(rx);
         setup_outgoing_messages_task(user_ws_tx, rx);
         insert_new_peer(server_state.clone(), tx, current_user_id.clone()).await;
-        block_and_handle_incoming_messages(&mut user_ws_rx, &current_user_id, &server_state).await;
+        block_and_handle_incoming_messages(
+            &mut user_ws_rx,
+            &current_user_id,
+            &server_state,
+            &execution_handler,
+            &publish_channel,
+        )
+        .await;
         user_disconnected(&current_user_id, &server_state).await;
     }
 }
@@ -68,6 +76,8 @@ async fn user_message(
     current_user_id: &i32,
     msg: Message,
     server_state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) {
     // Skip any non-Text messages...
     let msg = if let Ok(s) = msg.to_str() {
@@ -75,7 +85,14 @@ async fn user_message(
     } else {
         return;
     };
-    //communication_router::route_msg(msg.to_string(), current_user_id).await; - in dev
+    communication_router::route_msg(
+        msg.to_string(),
+        current_user_id.clone(),
+        &server_state,
+        publish_channel,
+        execution_handler,
+    )
+    .await;
 }
 
 async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<ServerState>>) {
@@ -116,6 +133,8 @@ async fn block_and_handle_incoming_messages(
     user_ws_rx: &mut SplitStream<WebSocket>,
     current_user_id: &i32,
     server_state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) {
     while let Some(result) = user_ws_rx.next().await {
         let msg = match result {
@@ -125,7 +144,14 @@ async fn block_and_handle_incoming_messages(
                 break;
             }
         };
-        user_message(&current_user_id, msg, server_state).await;
+        user_message(
+            &current_user_id,
+            msg,
+            server_state,
+            execution_handler,
+            publish_channel,
+        )
+        .await;
     }
 }
 
@@ -143,6 +169,15 @@ async fn insert_new_peer(
         .await
         .peer_map
         .insert(current_user_id, tx);
+    server_state.write().await.active_users.insert(
+        current_user_id,
+        User {
+            ip: "-1".to_owned(),
+            current_room_id: -1,
+            muted: false,
+            deaf: false,
+        },
+    );
 }
 
 pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {

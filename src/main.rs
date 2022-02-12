@@ -54,6 +54,7 @@ pub mod auth {
     pub mod api_data_handler;
     pub mod authentication_handler;
     pub mod oauth_locations;
+    pub mod ws_auth_handler;
 }
 
 pub mod server;

@@ -266,3 +266,10 @@ pub struct VoiceServerRequest<T: Serialize> {
     pub d: T,
     pub uid: String,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct AuthCredentials {
+    pub access: String,
+    pub refresh: String,
+    pub oauth_type: String,
+}
