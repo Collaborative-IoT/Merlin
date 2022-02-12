@@ -36,14 +36,15 @@ pub async fn broadcast_message_to_room_excluding_user(
     new_msg: String,
     server_state: &mut ServerState,
     room_id: i32,
-    user_id: i32
+    user_id: i32,
 ) {
     let room_users: Vec<&i32> = server_state
         .rooms
         .get(&room_id)
         .unwrap()
         .user_ids
-        .iter().filter(|x| x != &&user_id)
+        .iter()
+        .filter(|x| x != &&user_id)
         .collect();
     for id in room_users {
         let user_websocket_channel = server_state.peer_map.get(id).unwrap();
@@ -54,7 +55,8 @@ pub async fn broadcast_message_to_room_excluding_user(
 pub async fn broadcast_message_to_single_user(
     new_msg: String,
     server_state: &mut ServerState,
-    user_id:&i32){
-        let user_websocket_channel = server_state.peer_map.get(user_id).unwrap();
-        user_websocket_channel.send(Message::text(new_msg.clone()));
+    user_id: &i32,
+) {
+    let user_websocket_channel = server_state.peer_map.get(user_id).unwrap();
+    user_websocket_channel.send(Message::text(new_msg.clone()));
 }

@@ -343,6 +343,12 @@ pub async fn remove_speaker(
             );
             let channel = publish_channel.lock().await;
             rabbit::publish_message(&channel, request_str).await;
+            ws_fan::fan::broadcast_message_to_room(
+                "speaker_removed".to_owned(),
+                server_state,
+                room_id,
+            )
+            .await;
             return;
         }
     }
