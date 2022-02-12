@@ -7,6 +7,7 @@ use lapin::{
     BasicProperties, Channel, Connection, ConnectionProperties, Error, Result,
 };
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use tokio_amqp::*;
 
 pub async fn setup_rabbit_connection() -> Result<Connection> {
@@ -17,9 +18,22 @@ pub async fn setup_rabbit_connection() -> Result<Connection> {
     return Ok(conn);
 }
 
+pub async fn setup_publish_channel(conn: &Connection) -> Result<Channel> {
+    let channel = conn.create_channel().await?;
+    // declare/create new main queue
+    channel
+        .queue_declare(
+            "voice_server_consume",
+            QueueDeclareOptions::default(),
+            FieldTable::default(),
+        )
+        .await?;
+    return Ok(channel);
+}
+
 pub async fn setup_consume_task(
     conn: &Connection,
-    server_state: Arc<Mutex<ServerState>>,
+    server_state: Arc<RwLock<ServerState>>,
 ) -> Result<()> {
     let channel = conn.create_channel().await?;
     // declare/create new main queue
@@ -46,7 +60,7 @@ pub async fn setup_consume_task(
             let (_, delivery) = delivery.expect("error in consumer");
             delivery.ack(BasicAckOptions::default()).await.expect("ack");
             let message = parse_message(delivery);
-            let mut state = server_state.lock().await;
+            let mut state = server_state.write().await;
             vs_response_router::route_msg(message, &mut state).await;
         }
     });

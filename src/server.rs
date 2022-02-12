@@ -4,11 +4,13 @@ use crate::auth::authentication_handler::CodeParams;
 use crate::auth::oauth_locations;
 use crate::communication::communication_router;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
+use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
 use crate::warp::http::Uri;
 use futures::lock::Mutex;
 use futures_util::stream::SplitStream;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
+use lapin::Connection;
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -20,15 +22,29 @@ use warp::ws::{Message, WebSocket};
 use warp::Filter;
 
 pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
-    // Keep track of all connected users(websocket sender value).
+    //these should never panic, if they do then the server is
+    //100% in fault and can't run anyway.
     let server_state: Arc<RwLock<ServerState>> = Arc::new(RwLock::new(ServerState::new()));
     let execution_handler: Arc<Mutex<ExecutionHandler>> =
         Arc::new(Mutex::new(setup_execution_handler().await.unwrap()));
-    // Turn our "state" into a new Filter...
-    setup_routes_and_serve(addr, server_state, execution_handler).await;
+    let rabbit_connection: Connection = rabbit::setup_rabbit_connection().await.unwrap();
+    let publish_channel: Arc<Mutex<lapin::Channel>> = Arc::new(Mutex::new(
+        rabbit::setup_publish_channel(&rabbit_connection)
+            .await
+            .unwrap(),
+    ));
+    rabbit::setup_consume_task(&rabbit_connection, server_state.clone())
+        .await
+        .unwrap();
+    setup_routes_and_serve(addr, server_state, execution_handler, publish_channel).await;
 }
 
-async fn user_connected(ws: WebSocket, server_state: Arc<RwLock<ServerState>>) {
+async fn user_connected(
+    ws: WebSocket,
+    server_state: Arc<RwLock<ServerState>>,
+    execution_handler: Arc<Mutex<ExecutionHandler>>,
+    publish_channel: Arc<Mutex<lapin::Channel>>,
+) {
     // Split the socket into a sender and receive of messages.
     let (mut user_ws_tx, mut user_ws_rx) = ws.split();
 
@@ -152,22 +168,27 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
     addr: T,
     server_state: Arc<RwLock<ServerState>>,
     execution_handler: Arc<Mutex<ExecutionHandler>>,
+    publish_channel: Arc<Mutex<lapin::Channel>>,
 ) {
     let server_state = warp::any().map(move || server_state.clone());
     let execution_handler = warp::any().map(move || execution_handler.clone());
-
+    let publish_channel = warp::any().map(move || publish_channel.clone());
     //GET /user-api
     let user_api_route = warp::path("user-api")
         // The `ws()` filter will prepare  Websocket handshake...
         .and(warp::ws())
-        .and(server_state)
+        .and(server_state.clone())
         .and(execution_handler.clone())
+        .and(publish_channel.clone())
         .map(
             |ws: warp::ws::Ws,
              server_state: Arc<RwLock<ServerState>>,
-             execution_handler: Arc<Mutex<ExecutionHandler>>| {
+             execution_handler: Arc<Mutex<ExecutionHandler>>,
+             publish_channel: Arc<Mutex<lapin::Channel>>| {
                 // This will call our function if the handshake succeeds.
-                ws.on_upgrade(move |socket| user_connected(socket, server_state))
+                ws.on_upgrade(move |socket| {
+                    user_connected(socket, server_state, execution_handler, publish_channel)
+                })
             },
         );
 
