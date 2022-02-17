@@ -1,8 +1,9 @@
 // #![deny(warnings)]
-use crate::auth::authentication_handler;
+use crate::auth::{authentication_handler, ws_auth_handler};
 use crate::auth::authentication_handler::CodeParams;
 use crate::auth::oauth_locations;
 use crate::communication::communication_router;
+use crate::communication::communication_types::AuthCredentials;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
@@ -21,6 +22,7 @@ use tokio_postgres::{Error, NoTls};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 use warp::Filter;
+
 
 pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
     //these should never panic, if they do then the server is
@@ -103,8 +105,34 @@ async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<Serv
 async fn handle_authentication(
     user_ws_tx: &mut SplitSink<WebSocket, Message>,
     user_ws_rx: &mut SplitStream<WebSocket>,
-) -> (bool, i32) {
-    return (true, 2 as i32);
+    execution_handler: &Arc<Mutex<ExecutionHandler>>
+) -> Result<Option<i32>, serde_json::Error> {
+    let msg = user_ws_rx.next().await;
+    let msg_result = match msg{
+        Some(msg) =>msg,
+        None => return Ok(None)
+    };
+    let msg_value_result = match msg_result {
+        Ok(msg_result) => msg_result,
+        Err(e) => return Ok(None)
+        
+    };
+    let msg_value_to_str =msg_value_result.to_str();
+    let auth_credentials: AuthCredentials  = match  msg_value_to_str {
+        Ok(msg_value_to_str) => serde_json::from_str(msg_value_to_str)?,
+        Err(e) => return Ok(None)
+    };
+
+    if auth_credentials.oauth_type == "discord"{
+        let user_id:Option<i32> = ws_auth_handler::gather_user_id_using_discord_id(auth_credentials.refresh, auth_credentials.access, execution_handler).await;]
+        return Ok(user_id);
+    }
+    else{
+        let user_id:Option<i32> = ws_auth_handler::gather_user_id_using_github_id(auth_credentials.access, execution_handler).await;
+        return Ok(user_id);
+    }
+
+    return Ok(None)
 }
 
 // Sets up a task for grabbing messages

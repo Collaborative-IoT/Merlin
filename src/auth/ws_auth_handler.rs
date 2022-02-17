@@ -1,4 +1,4 @@
-/*When a user connects to the server
+/*When a user connects to the server via ws
 after they authenticate using the
  auth endpoints, we need to authenticate them
 with their access/refresh tokens that they have
@@ -8,10 +8,11 @@ use crate::data_store::sql_execution_handler::ExecutionHandler;
 use futures::lock::Mutex;
 use std::sync::Arc;
 use tokio_postgres::Row;
+
 pub async fn gather_user_id_using_discord_id(
     refresh: String,
     access: String,
-    handler: Arc<Mutex<ExecutionHandler>>,
+    handler: &Arc<Mutex<ExecutionHandler>>,
 ) -> Option<i32> {
     let gather_result = authentication_handler::gather_user_basic_data_discord(access).await;
     if gather_result.is_ok() {
@@ -34,7 +35,7 @@ pub async fn gather_user_id_using_discord_id(
 
 pub async fn gather_user_id_using_github_id(
     access: String,
-    handler: Arc<Mutex<ExecutionHandler>>,
+    handler: &Arc<Mutex<ExecutionHandler>>,
 ) -> Option<i32> {
     let gather_result = authentication_handler::gather_user_basic_data_github(access).await;
     if gather_result.is_ok() {
@@ -49,7 +50,7 @@ pub async fn gather_user_id_using_github_id(
 //selects by discord id or github id based on the passed in type
 async fn get_id_from_response(
     response_data: serde_json::Value,
-    handler: Arc<Mutex<ExecutionHandler>>,
+    handler: &Arc<Mutex<ExecutionHandler>>,
     type_of_select: &str,
 ) -> Option<i32> {
     if response_data["id"] != serde_json::Value::Null {
