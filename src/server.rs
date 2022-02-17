@@ -1,7 +1,7 @@
 // #![deny(warnings)]
-use crate::auth::{authentication_handler, ws_auth_handler};
 use crate::auth::authentication_handler::CodeParams;
 use crate::auth::oauth_locations;
+use crate::auth::{authentication_handler, ws_auth_handler};
 use crate::communication::communication_router;
 use crate::communication::communication_types::AuthCredentials;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
@@ -22,7 +22,6 @@ use tokio_postgres::{Error, NoTls};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 use warp::Filter;
-
 
 pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
     //these should never panic, if they do then the server is
@@ -47,31 +46,34 @@ async fn user_connected(
     server_state: Arc<RwLock<ServerState>>,
     execution_handler: Arc<Mutex<ExecutionHandler>>,
     publish_channel: Arc<Mutex<lapin::Channel>>,
-) -> Result<(),serde_json::Error>{
+) {
     // Split the socket into a sender and receive of messages.
     let (mut user_ws_tx, mut user_ws_rx) = ws.split();
 
     //authenticate and ensure auth passed
-    let auth_result = handle_authentication(&mut user_ws_tx, &mut user_ws_rx,&execution_handler).await?;
-    let auth_passed = auth_result.is_some();
-    if auth_passed{
-        //Make use of a mpsc channel for each user.
-        let current_user_id = auth_result.unwrap();
-        let (tx, rx) = mpsc::unbounded_channel();
-        let rx = UnboundedReceiverStream::new(rx);
-        setup_outgoing_messages_task(user_ws_tx, rx);
-        insert_new_peer(server_state.clone(), tx, current_user_id.clone()).await;
-        block_and_handle_incoming_messages(
-            &mut user_ws_rx,
-            &current_user_id,
-            &server_state,
-            &execution_handler,
-            &publish_channel,
-        )
-        .await;
-        user_disconnected(&current_user_id, &server_state).await;
+    let auth_result =
+        handle_authentication(&mut user_ws_tx, &mut user_ws_rx, &execution_handler).await;
+    let auth_result_ok = auth_result.is_ok();
+    if auth_result_ok {
+        let user_id = auth_result.unwrap();
+        if user_id.is_some() {
+            //Make use of a mpsc channel for each user.
+            let current_user_id = user_id.unwrap();
+            let (tx, rx) = mpsc::unbounded_channel();
+            let rx = UnboundedReceiverStream::new(rx);
+            setup_outgoing_messages_task(user_ws_tx, rx);
+            insert_new_peer(server_state.clone(), tx, current_user_id.clone()).await;
+            block_and_handle_incoming_messages(
+                &mut user_ws_rx,
+                &current_user_id,
+                &server_state,
+                &execution_handler,
+                &publish_channel,
+            )
+            .await;
+            user_disconnected(&current_user_id, &server_state).await;
+        }
     }
-    return Ok(());
 }
 
 async fn user_message(
@@ -105,34 +107,39 @@ async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<Serv
 async fn handle_authentication(
     user_ws_tx: &mut SplitSink<WebSocket, Message>,
     user_ws_rx: &mut SplitStream<WebSocket>,
-    execution_handler: &Arc<Mutex<ExecutionHandler>>
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) -> Result<Option<i32>, serde_json::Error> {
     let msg = user_ws_rx.next().await;
-    let msg_result = match msg{
-        Some(msg) =>msg,
-        None => return Ok(None)
+    let msg_result = match msg {
+        Some(msg) => msg,
+        None => return Ok(None),
     };
     let msg_value_result = match msg_result {
         Ok(msg_result) => msg_result,
-        Err(e) => return Ok(None)
-        
+        Err(e) => return Ok(None),
     };
-    let msg_value_to_str =msg_value_result.to_str();
-    let auth_credentials: AuthCredentials  = match  msg_value_to_str {
+    let msg_value_to_str = msg_value_result.to_str();
+    let auth_credentials: AuthCredentials = match msg_value_to_str {
         Ok(msg_value_to_str) => serde_json::from_str(msg_value_to_str)?,
-        Err(e) => return Ok(None)
+        Err(e) => return Ok(None),
     };
 
-    if auth_credentials.oauth_type == "discord"{
-        let user_id:Option<i32> = ws_auth_handler::gather_user_id_using_discord_id(auth_credentials.refresh, auth_credentials.access, execution_handler).await;
+    if auth_credentials.oauth_type == "discord" {
+        let user_id: Option<i32> = ws_auth_handler::gather_user_id_using_discord_id(
+            auth_credentials.refresh,
+            auth_credentials.access,
+            execution_handler,
+        )
+        .await;
+        return Ok(user_id);
+    } else {
+        let user_id: Option<i32> = ws_auth_handler::gather_user_id_using_github_id(
+            auth_credentials.access,
+            execution_handler,
+        )
+        .await;
         return Ok(user_id);
     }
-    else{
-        let user_id:Option<i32> = ws_auth_handler::gather_user_id_using_github_id(auth_credentials.access, execution_handler).await;
-        return Ok(user_id);
-    }
-
-    return Ok(None)
 }
 
 // Sets up a task for grabbing messages
