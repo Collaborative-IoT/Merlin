@@ -47,17 +47,16 @@ async fn user_connected(
     server_state: Arc<RwLock<ServerState>>,
     execution_handler: Arc<Mutex<ExecutionHandler>>,
     publish_channel: Arc<Mutex<lapin::Channel>>,
-) {
+) -> Result<(),serde_json::Error>{
     // Split the socket into a sender and receive of messages.
     let (mut user_ws_tx, mut user_ws_rx) = ws.split();
 
     //authenticate and ensure auth passed
-    let auth_result: (bool, i32) = handle_authentication(&mut user_ws_tx, &mut user_ws_rx).await;
-    let auth_passed = auth_result.0;
-
-    if auth_passed {
+    let auth_result = handle_authentication(&mut user_ws_tx, &mut user_ws_rx,&execution_handler).await?;
+    let auth_passed = auth_result.is_some();
+    if auth_passed{
         //Make use of a mpsc channel for each user.
-        let current_user_id = auth_result.1;
+        let current_user_id = auth_result.unwrap();
         let (tx, rx) = mpsc::unbounded_channel();
         let rx = UnboundedReceiverStream::new(rx);
         setup_outgoing_messages_task(user_ws_tx, rx);
@@ -72,6 +71,7 @@ async fn user_connected(
         .await;
         user_disconnected(&current_user_id, &server_state).await;
     }
+    return Ok(());
 }
 
 async fn user_message(
@@ -124,7 +124,7 @@ async fn handle_authentication(
     };
 
     if auth_credentials.oauth_type == "discord"{
-        let user_id:Option<i32> = ws_auth_handler::gather_user_id_using_discord_id(auth_credentials.refresh, auth_credentials.access, execution_handler).await;]
+        let user_id:Option<i32> = ws_auth_handler::gather_user_id_using_discord_id(auth_credentials.refresh, auth_credentials.access, execution_handler).await;
         return Ok(user_id);
     }
     else{
