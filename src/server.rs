@@ -53,27 +53,29 @@ async fn user_connected(
     //authenticate and ensure auth passed
     let auth_result =
         handle_authentication(&mut user_ws_tx, &mut user_ws_rx, &execution_handler).await;
-    let auth_result_ok = auth_result.is_ok();
-    if auth_result_ok {
-        let user_id = auth_result.unwrap();
-        if user_id.is_some() {
-            //Make use of a mpsc channel for each user.
-            let current_user_id = user_id.unwrap();
-            let (tx, rx) = mpsc::unbounded_channel();
-            let rx = UnboundedReceiverStream::new(rx);
-            setup_outgoing_messages_task(user_ws_tx, rx);
-            insert_new_peer(server_state.clone(), tx, current_user_id.clone()).await;
-            block_and_handle_incoming_messages(
-                &mut user_ws_rx,
-                &current_user_id,
-                &server_state,
-                &execution_handler,
-                &publish_channel,
-            )
-            .await;
-            user_disconnected(&current_user_id, &server_state).await;
-        }
-    }
+    let user_id_option = match auth_result {
+        Ok(auth_result) => auth_result,
+        Err(e) => return,
+    };
+    let user_id = match user_id_option {
+        Some(user_id_option) => user_id_option,
+        None => return,
+    };
+    //Make use of a mpsc channel for each user.
+    let current_user_id = user_id;
+    let (tx, rx) = mpsc::unbounded_channel();
+    let rx = UnboundedReceiverStream::new(rx);
+    setup_outgoing_messages_task(user_ws_tx, rx);
+    insert_new_peer(server_state.clone(), tx, current_user_id.clone()).await;
+    block_and_handle_incoming_messages(
+        &mut user_ws_rx,
+        &current_user_id,
+        &server_state,
+        &execution_handler,
+        &publish_channel,
+    )
+    .await;
+    user_disconnected(&current_user_id, &server_state).await;
 }
 
 async fn user_message(
