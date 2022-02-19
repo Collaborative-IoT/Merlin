@@ -11,8 +11,6 @@ use serde_json::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::data_fetcher;
-
 pub async fn route_msg(
     msg: String,
     user_id: i32,
