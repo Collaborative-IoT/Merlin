@@ -11,6 +11,8 @@ use serde_json::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+use super::data_fetcher;
+
 pub async fn route_msg(
     msg: String,
     user_id: i32,
@@ -197,6 +199,12 @@ pub async fn route_msg(
             communication_handler::update_mute_and_deaf_status(basic_request, server_state, user_id)
                 .await
         }
+        "all_room_permissions" => Ok(communication_handler::get_room_permissions_for_users(
+            server_state,
+            user_id,
+            execution_handler,
+        )
+        .await),
         _ => Ok(()),
     }
 }
