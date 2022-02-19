@@ -4,11 +4,8 @@
 */
 use crate::rabbitmq::rabbit;
 use futures_util::stream::StreamExt;
-use lapin::{
-    message::Delivery, options::*, publisher_confirm::Confirmation, types::FieldTable,
-    BasicProperties, Channel, Connection, ConnectionProperties, Error, Result,
-};
-use serde::{Deserialize, Serialize, __private::de};
+use lapin::{options::*, types::FieldTable, Connection};
+use serde::{Deserialize, Serialize};
 use tokio_amqp::*;
 
 #[derive(Deserialize, Serialize)]

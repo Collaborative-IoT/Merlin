@@ -55,11 +55,23 @@ async fn user_connected(
         handle_authentication(&mut user_ws_tx, &mut user_ws_rx, &execution_handler).await;
     let user_id_option = match auth_result {
         Ok(auth_result) => auth_result,
-        Err(e) => return,
+        Err(_e) => {
+            user_ws_tx
+                .send(Message::text("auth-not-good"))
+                .await
+                .unwrap_or_else(|e| eprint!("{}", e));
+            return;
+        }
     };
     let user_id = match user_id_option {
         Some(user_id_option) => user_id_option,
-        None => return,
+        None => {
+            user_ws_tx
+                .send(Message::text("auth-not-good"))
+                .await
+                .unwrap_or_else(|e| eprint!("{}", e));
+            return;
+        }
     };
     //Make use of a mpsc channel for each user.
     let current_user_id = user_id;
