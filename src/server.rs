@@ -110,7 +110,8 @@ async fn user_message(
         publish_channel,
         execution_handler,
     )
-    .await;
+    .await
+    .unwrap_or_else(|e| eprintln!("issue routing msg:{}", e));
 }
 
 async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<ServerState>>) {
@@ -130,12 +131,12 @@ async fn handle_authentication(
     };
     let msg_value_result = match msg_result {
         Ok(msg_result) => msg_result,
-        Err(e) => return Ok(None),
+        Err(_e) => return Ok(None),
     };
     let msg_value_to_str = msg_value_result.to_str();
     let auth_credentials: AuthCredentials = match msg_value_to_str {
         Ok(msg_value_to_str) => serde_json::from_str(msg_value_to_str)?,
-        Err(e) => return Ok(None),
+        Err(_e) => return Ok(None),
     };
 
     if auth_credentials.oauth_type == "discord" {
@@ -242,7 +243,7 @@ pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
 
     let (client, connection) = tokio_postgres::connect(&config, NoTls).await?;
     //TODO: handle connection error
-    tokio::spawn(async move { if let Err(e) = connection.await {} });
+    tokio::spawn(async move { if let Err(_e) = connection.await {} });
     let mut handler = ExecutionHandler::new(client);
     handler.create_all_tables_if_needed().await?;
     return Ok(handler);

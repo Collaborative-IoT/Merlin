@@ -4,7 +4,10 @@ use crate::data_store::sql_execution_handler::ExecutionHandler;
 pub async fn test_follower_insertion_and_gather(execution_handler: &mut ExecutionHandler) {
     //insert follower
     let new_follower: DBFollower = gather_db_follower();
-    execution_handler.insert_follower(&new_follower).await;
+    execution_handler
+        .insert_follower(&new_follower)
+        .await
+        .unwrap_or_default();
 
     //make sure we have the correct results getting returned after insertion
     let gather_followers_result = execution_handler

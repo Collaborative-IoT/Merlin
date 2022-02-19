@@ -261,7 +261,8 @@ pub async fn test_update_banner_url(execution_handler: &mut ExecutionHandler, us
     //update
     execution_handler
         .update_banner_url(new_banner_url, &user_id)
-        .await;
+        .await
+        .unwrap_or_default();
     //check after update
     test_user_column_after_update(
         13 as usize,

@@ -1,10 +1,9 @@
 use crate::state::state::ServerState;
 use crate::vs_response::vs_response_router;
-use futures::lock::Mutex;
 use futures_util::stream::StreamExt;
 use lapin::{
     message::Delivery, options::*, publisher_confirm::Confirmation, types::FieldTable,
-    BasicProperties, Channel, Connection, ConnectionProperties, Error, Result,
+    BasicProperties, Channel, Connection, ConnectionProperties, Result,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;

@@ -4,7 +4,10 @@ use crate::data_store::sql_execution_handler::ExecutionHandler;
 pub async fn test_insert_and_gather_user_blocks(execution_handler: &mut ExecutionHandler) {
     println!("testing inserting user block");
     let user_block: DBUserBlock = gather_user_block();
-    execution_handler.insert_user_block(&user_block).await;
+    execution_handler
+        .insert_user_block(&user_block)
+        .await
+        .unwrap_or_default();
     let gather_result = execution_handler
         .select_all_blocked_for_user(&user_block.owner_user_id)
         .await;

@@ -111,11 +111,6 @@ pub struct RoomPermissions {
     pub is_mod: bool,
 }
 
-pub struct MessageToken {
-    type_of_token: String,
-    value: String,
-}
-
 #[derive(Deserialize, Serialize)]
 
 pub struct UserPreview {
@@ -159,21 +154,8 @@ pub struct RoomUpdate {
     pub auto_speaker: bool,
 }
 
-pub struct GenericOnlyBool {
-    value: bool,
-}
-
 #[derive(Deserialize, Serialize)]
 pub struct GenericOnlyUserId {
-    user_id: i32,
-}
-
-pub struct Mute {
-    muted: bool,
-}
-
-pub struct ScheduledRoomGather {
-    range: String,
     user_id: i32,
 }
 
@@ -206,25 +188,6 @@ pub struct BaseUser {
     pub num_following: i32,
     pub num_followers: i32,
     pub contributions: i32,
-}
-
-pub struct MessageBroadcastRequestDetails {
-    tokens: Vec<MessageToken>,
-    whispered_to: Vec<String>,
-}
-
-pub struct Message {
-    id: String, //uuid
-    user_id: i32,
-    avatar_url: String,
-    color: String,
-    display_name: String,
-    tokens: Vec<MessageToken>,
-    username: String,
-    deleted: bool,
-    deleter_id: String,
-    sent_at: String,
-    is_whisper: bool,
 }
 
 #[derive(Deserialize, Serialize)]

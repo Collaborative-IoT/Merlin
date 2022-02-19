@@ -219,8 +219,14 @@ pub async fn capture_room_removal(
     //need to combine these capture results in the future.
     //should be good for beta though.
     let deletion_result = execution_handler.delete_room(room_id).await;
-    execution_handler.delete_all_room_permissions(room_id).await;
-    execution_handler.delete_room_blocks(room_id).await;
+    execution_handler
+        .delete_all_room_permissions(room_id)
+        .await
+        .unwrap_or_default();
+    execution_handler
+        .delete_room_blocks(room_id)
+        .await
+        .unwrap_or_default();
     return handle_removal_or_update_capture(
         "Room Removed".to_owned(),
         "Unexpected error removing room".to_owned(),
@@ -528,7 +534,8 @@ async fn try_to_increase_num_attending_for_sch_room(
             let new_num_attending = old_num_attending + 1;
             execution_handler
                 .update_num_attending_sch_room(&new_num_attending, room_id)
-                .await;
+                .await
+                .unwrap_or_default();
         }
     };
 }

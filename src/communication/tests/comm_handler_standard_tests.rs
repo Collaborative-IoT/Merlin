@@ -1,7 +1,6 @@
 use crate::communication::communication_types::{
-    BasicRequest, DeafAndMuteStatus, DeafAndMuteStatusUpdate, GenericRoomId,
-    GenericRoomIdAndPeerId, GenericUserId, RoomUpdate, VoiceServerClosePeer, VoiceServerCreateRoom,
-    VoiceServerDestroyRoom,
+    DeafAndMuteStatus, DeafAndMuteStatusUpdate, GenericRoomId, GenericRoomIdAndPeerId,
+    GenericUserId, RoomUpdate, VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom,
 };
 use crate::communication::tests::comm_handler_test_helpers::helpers;
 use crate::communication::{communication_router, data_fetcher};

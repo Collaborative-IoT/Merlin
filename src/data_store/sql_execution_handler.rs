@@ -13,8 +13,6 @@ use tokio_postgres::{row::Row, Client, Error};
 
 pub struct ExecutionHandler {
     client: Client,
-    num_of_errors: i32,
-    in_error_state: bool,
 }
 
 //Handles the main sql execution by making usage of the DB types.
@@ -22,11 +20,7 @@ pub struct ExecutionHandler {
 //execution.
 impl ExecutionHandler {
     pub fn new(client_val: Client) -> Self {
-        Self {
-            client: client_val,
-            num_of_errors: 0,
-            in_error_state: false,
-        }
+        Self { client: client_val }
     }
 
     //creation

@@ -1,4 +1,3 @@
-use crate::state::state::ServerState;
 use std::collections::{HashMap, HashSet};
 
 pub fn add_to_map<V>(map: &mut HashMap<String, V>, key: String, data: V) -> bool {
