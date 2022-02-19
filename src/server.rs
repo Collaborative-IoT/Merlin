@@ -51,8 +51,7 @@ async fn user_connected(
     let (mut user_ws_tx, mut user_ws_rx) = ws.split();
 
     //authenticate and ensure auth passed
-    let auth_result =
-        handle_authentication(&mut user_ws_tx, &mut user_ws_rx, &execution_handler).await;
+    let auth_result = handle_authentication(&mut user_ws_rx, &execution_handler).await;
     let user_id_option = match auth_result {
         Ok(auth_result) => auth_result,
         Err(_e) => {
@@ -120,7 +119,6 @@ async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<Serv
 }
 
 async fn handle_authentication(
-    user_ws_tx: &mut SplitSink<WebSocket, Message>,
     user_ws_rx: &mut SplitStream<WebSocket>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) -> Result<Option<i32>, serde_json::Error> {
