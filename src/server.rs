@@ -72,6 +72,11 @@ async fn user_connected(
             return;
         }
     };
+    user_ws_tx
+        .send(Message::text("auth-good"))
+        .await
+        .unwrap_or_else(|e| eprint!("{}", e));
+
     //Make use of a mpsc channel for each user.
     let current_user_id = user_id;
     let (tx, rx) = mpsc::unbounded_channel();
@@ -116,6 +121,10 @@ async fn user_message(
 async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<ServerState>>) {
     // Stream closed up, so remove from the user list
     server_state.write().await.peer_map.remove(current_user_id);
+}
+
+async fn handle_and_check_authentication(){
+    
 }
 
 async fn handle_authentication(

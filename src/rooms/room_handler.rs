@@ -139,7 +139,9 @@ pub async fn destroy_room(
     let request_str =
         create_voice_server_request("destroy-room", &"-1".to_owned(), request_to_voice_server);
     let channel = publish_channel.lock().await;
-    rabbit::publish_message(&channel, request_str).await.unwrap_or_default();
+    rabbit::publish_message(&channel, request_str)
+        .await
+        .unwrap_or_default();
 }
 
 pub async fn remove_user_from_room_basic(
@@ -159,7 +161,9 @@ pub async fn remove_user_from_room_basic(
         request_to_voice_server,
     );
     let channel = publish_channel.lock().await;
-    rabbit::publish_message(&channel, request_str).await.unwrap_or_default();
+    rabbit::publish_message(&channel, request_str)
+        .await
+        .unwrap_or_default();
 }
 
 /// - Handles both speaker join and peer join
@@ -205,7 +209,9 @@ pub async fn join_room(
             request_to_voice_server,
         );
         add_user_to_room_state(&room_id, user_id, server_state);
-        rabbit::publish_message(&channel, request_str).await.unwrap_or_default();
+        rabbit::publish_message(&channel, request_str)
+            .await
+            .unwrap_or_default();
         return;
     };
     send_to_requester_channel(
@@ -249,7 +255,9 @@ pub async fn leave_room(
         request_to_voice_server,
     );
     let channel = publish_channel.lock().await;
-    rabbit::publish_message(&channel, request_str).await.unwrap_or_default();
+    rabbit::publish_message(&channel, request_str)
+        .await
+        .unwrap_or_default();
 }
 
 ///  Adds a speaker that is already an existing peer in a room
@@ -291,7 +299,9 @@ pub async fn add_speaker(
                 request_to_voice_server,
             );
             let channel = publish_channel.lock().await;
-            rabbit::publish_message(&channel, request_str).await.unwrap_or_default();
+            rabbit::publish_message(&channel, request_str)
+                .await
+                .unwrap_or_default();
             return;
         }
     }
@@ -342,7 +352,9 @@ pub async fn remove_speaker(
                 request_to_voice_server,
             );
             let channel = publish_channel.lock().await;
-            rabbit::publish_message(&channel, request_str).await.unwrap_or_default();
+            rabbit::publish_message(&channel, request_str)
+                .await
+                .unwrap_or_default();
             ws_fan::fan::broadcast_message_to_room(
                 "speaker_removed".to_owned(),
                 server_state,
@@ -377,7 +389,9 @@ pub async fn handle_web_rtc_specific_requests(
     let user_id = request_to_voice_server["peerId"].to_string();
     let request_str = create_voice_server_request(op_code, &user_id, request_to_voice_server);
     let channel = publish_channel.lock().await;
-    rabbit::publish_message(&channel, request_str).await.unwrap_or_default();
+    rabbit::publish_message(&channel, request_str)
+        .await
+        .unwrap_or_default();
 }
 
 // A user can only raise a hand if:
@@ -592,7 +606,9 @@ async fn continue_with_successful_room_creation(
     server_state.rooms.insert(room_id, new_room_state);
     let request_str =
         create_voice_server_request("create-room", &user_id.to_string(), request_to_voice_server);
-    rabbit::publish_message(channel, request_str).await.unwrap_or_default();
+    rabbit::publish_message(channel, request_str)
+        .await
+        .unwrap_or_default();
 }
 
 async fn check_or_insert_initial_permissions(
