@@ -123,10 +123,6 @@ async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<Serv
     server_state.write().await.peer_map.remove(current_user_id);
 }
 
-async fn handle_and_check_authentication(){
-    
-}
-
 async fn handle_authentication(
     user_ws_rx: &mut SplitStream<WebSocket>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
