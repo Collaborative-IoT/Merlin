@@ -355,12 +355,14 @@ pub async fn remove_speaker(
             rabbit::publish_message(&channel, request_str)
                 .await
                 .unwrap_or_default();
+
+            //notify the users in the room.
+            let basic_response = BasicResponse {
+                response_op_code: "speaker_removed".to_owned(),
+                response_containing_data: user_id.to_string(),
+            };
             ws_fan::fan::broadcast_message_to_room(
-                serde_json::to_string(&BasicResponse {
-                    response_op_code: "speaker_removed".to_owned(),
-                    response_containing_data: user_id.to_string(),
-                })
-                .unwrap(),
+                serde_json::to_string(&basic_response).unwrap(),
                 server_state,
                 room_id,
             )
