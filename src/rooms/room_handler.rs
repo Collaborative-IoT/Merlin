@@ -356,7 +356,11 @@ pub async fn remove_speaker(
                 .await
                 .unwrap_or_default();
             ws_fan::fan::broadcast_message_to_room(
-                "speaker_removed".to_owned(),
+                serde_json::to_string(&BasicResponse {
+                    response_op_code: "speaker_removed".to_owned(),
+                    response_containing_data: user_id.to_string(),
+                })
+                .unwrap(),
                 server_state,
                 room_id,
             )
