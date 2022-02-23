@@ -203,6 +203,6 @@ pub async fn route_msg(
             execution_handler,
         )
         .await),
-        _ => {Ok(communication_handler::normal_invalid_request(server_state, user_id).await)},
+        _ => Ok(communication_handler::normal_invalid_request(server_state, user_id).await),
     }
 }

@@ -640,10 +640,8 @@ pub async fn send_chat_message(
     );
 }
 
-pub async fn normal_invalid_request(    
-    server_state: &Arc<RwLock<ServerState>>,
-    requester_id: i32){
-        send_error_response_to_requester(None, requester_id, server_state).await;
+pub async fn normal_invalid_request(server_state: &Arc<RwLock<ServerState>>, requester_id: i32) {
+    send_error_response_to_requester(None, requester_id, server_state).await;
 }
 
 pub async fn get_room_permissions_for_users(
