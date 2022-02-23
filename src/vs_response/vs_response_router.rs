@@ -52,7 +52,7 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
     }
     //when the response is suppose to go to the entire room
     //with no filters as to who see what. Some responses
-    //are have filters meaning only one user sees like
+    //have filters meaning only one user sees like
     //credentials etc.
     else {
         vs_response_handler::notify_entire_room(temp_value, state).await;
