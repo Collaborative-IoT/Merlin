@@ -27,7 +27,7 @@ pub fn github() -> String {
 pub fn save_tokens_location(access: String, refresh: String) -> String {
     let base_ui_url = env::var("BASE_UI_URL").unwrap();
     let ui_url: String = format!(
-        "{}/save_tokens?refresh={}&access={}",
+        "{}/save-tokens?refresh={}&access={}",
         base_ui_url,
         &refresh[1..refresh.len() - 1],
         &access[1..access.len() - 1] //removes the double quotes
