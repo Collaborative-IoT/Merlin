@@ -20,6 +20,7 @@ pub async fn parse_and_capture_discord_user_data(
     access_token: String,
 ) -> bool {
     let mut action_was_successful: bool = true;
+    println!("access_token{}",access_token);
     if discord_user_request_is_valid(&data) {
         let discord_user_id: String = data["id"].to_string();
         let discord_avatar_id: String = data["avatar"].to_string();
@@ -31,6 +32,7 @@ pub async fn parse_and_capture_discord_user_data(
         let fixed_dc_user_id = discord_user_id[1..discord_user_id.len() - 1].to_string();
         let fixed_dc_avatar_id = discord_avatar_id[1..discord_avatar_id.len() - 1].to_string();
         let fixed_dc_username = discord_username[1..discord_username.len() - 1].to_string();
+        let fixed_dc_access = access_token[1..access_token.len()].to_string();
         let avatar_url =
             construct_discord_image_url(fixed_dc_user_id.as_str(), fixed_dc_avatar_id.as_str());
         let mut handler = execution_handler.lock().await;
@@ -41,13 +43,13 @@ pub async fn parse_and_capture_discord_user_data(
             avatar_url,
             fixed_dc_username,
             "-1".to_owned(),
-            access_token.to_owned(),
+            fixed_dc_access.to_owned(),
             &mut handler,
         )
         .await;
         check_user_id_and_continue(
             user_id,
-            access_token,
+            fixed_dc_access,
             "-1".to_owned(),
             &mut action_was_successful,
             &mut handler,
@@ -77,6 +79,7 @@ pub async fn parse_and_capture_github_user_data(
             github_avatar_url[1..github_avatar_url.len() - 1].to_string();
         let fixed_github_name: String = github_name[1..github_name.len() - 1].to_string();
         let fixed_github_id: String = github_id[1..github_id.len() - 1].to_string();
+        let fixed_github_access = access_token[1..access_token.len()].to_string();
         let mut handler = execution_handler.lock().await;
 
         let user_id = generate_and_capture_new_user(
@@ -84,7 +87,7 @@ pub async fn parse_and_capture_github_user_data(
             fixed_github_id.to_owned(),
             fixed_avatar_url,
             fixed_github_name,
-            access_token.to_owned(),
+            fixed_github_access.to_owned(),
             "-1".to_owned(),
             &mut handler,
         )
@@ -93,7 +96,7 @@ pub async fn parse_and_capture_github_user_data(
         check_user_id_and_continue(
             user_id,
             "-1".to_owned(),
-            access_token,
+            fixed_github_access,
             &mut action_was_successful,
             &mut handler,
             "-1".to_owned(),

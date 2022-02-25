@@ -141,7 +141,6 @@ async fn handle_authentication(
         Ok(msg_value_to_str) => serde_json::from_str(msg_value_to_str)?,
         Err(_e) => return Ok(None),
     };
-
     if auth_credentials.oauth_type == "discord" {
         let user_id: Option<i32> = ws_auth_handler::gather_user_id_using_discord_id(
             auth_credentials.refresh,

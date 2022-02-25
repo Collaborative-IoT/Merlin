@@ -32,7 +32,6 @@ pub fn save_tokens_location(access: String, refresh: String) -> String {
         &refresh[1..refresh.len() - 1],
         &access[1..access.len() - 1] //removes the double quotes
     );
-    println!("{}", ui_url);
     return ui_url;
 }
 

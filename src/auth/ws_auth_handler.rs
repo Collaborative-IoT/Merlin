@@ -72,12 +72,14 @@ async fn select_dc_or_gh(
     type_of_select: &str,
     response_data: serde_json::Value,
 ) -> Result<Vec<Row>, tokio_postgres::Error> {
+    let dc_or_gh_id = response_data["id"].to_string();
+    let fixed_dc_or_gh_id = dc_or_gh_id[1..dc_or_gh_id.len()-1].to_string();
     if type_of_select == "dc" {
         return execution_handler
-            .select_user_by_discord_or_github_id(response_data["id"].to_string(), "-1".to_owned())
+            .select_user_by_discord_or_github_id(fixed_dc_or_gh_id, "-1".to_owned())
             .await;
     }
     return execution_handler
-        .select_user_by_discord_or_github_id("-1".to_owned(), response_data["id"].to_string())
+        .select_user_by_discord_or_github_id("-1".to_owned(), fixed_dc_or_gh_id)
         .await;
 }
