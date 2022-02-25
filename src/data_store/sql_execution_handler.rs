@@ -3,7 +3,7 @@ use crate::data_store::db_models::{
     DBUser, DBUserBlock,
 };
 
-use crate::communication::communication_types::BaseUser;
+use crate::communication::types::BaseUser;
 use crate::data_store::creation_queries;
 use crate::data_store::delete_queries;
 use crate::data_store::insert_queries;

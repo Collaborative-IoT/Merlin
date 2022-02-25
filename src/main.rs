@@ -5,13 +5,13 @@ extern crate warp;
 mod test;
 
 pub mod state {
+    pub mod helpers;
     pub mod state;
-    pub mod state_helpers;
-    pub mod state_types;
+    pub mod types;
 }
 
 pub mod common {
-    pub mod common_response_logic;
+    pub mod response_logic;
 }
 
 pub mod data_store {
@@ -32,21 +32,21 @@ pub mod data_store {
 }
 
 pub mod communication {
-    pub mod communication_handler;
-    pub mod communication_handler_helpers;
-    pub mod communication_router;
-    pub mod communication_types;
     pub mod data_capturer;
     pub mod data_fetcher;
+    pub mod handler;
+    pub mod helpers;
+    pub mod router;
     pub mod test;
+    pub mod types;
     pub mod tests {
         pub mod capture_and_fetch;
-        pub mod comm_handler_hand_tests;
-        pub mod comm_handler_mod_tests;
-        pub mod comm_handler_owner_tests;
-        pub mod comm_handler_standard_tests;
-        pub mod comm_handler_test_helpers;
-        pub mod comm_handler_tests;
+        pub mod hand_tests;
+        pub mod helpers;
+        pub mod mod_tests;
+        pub mod owner_tests;
+        pub mod standard_tests;
+        pub mod tests;
     }
 }
 
@@ -66,14 +66,14 @@ pub mod rabbitmq {
     pub mod test;
 }
 pub mod rooms {
+    pub mod handler;
     pub mod permission_configs;
-    pub mod room_handler;
 }
 
 pub mod vs_response {
-    pub mod vs_response_handler;
-    pub mod vs_response_router;
-    pub mod vs_response_types;
+    pub mod handler;
+    pub mod router;
+    pub mod types;
 }
 
 #[tokio::main]

@@ -4,7 +4,7 @@ invalid requests like a user trying to follow
 the same user twice etc.
 */
 
-use crate::communication::communication_types::{ScheduledRoomUpdate, UserProfileEdit};
+use crate::communication::types::{ScheduledRoomUpdate, UserProfileEdit};
 use crate::data_store::db_models::{
     DBFollower, DBRoom, DBRoomBlock, DBRoomPermissions, DBScheduledRoom, DBScheduledRoomAttendance,
     DBUser, DBUserBlock,
@@ -13,8 +13,8 @@ use crate::data_store::sql_execution_handler::ExecutionHandler;
 use futures_util::Future;
 use tokio_postgres::{row::Row, Error};
 
-use super::communication_types::BaseUser;
 use super::data_fetcher;
+use super::types::BaseUser;
 
 pub struct CaptureResult {
     pub desc: String,

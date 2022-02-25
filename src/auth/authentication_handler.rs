@@ -55,10 +55,11 @@ pub async fn gather_tokens_and_construct_save_url_discord(
 
         //make api request and grab user json data
         //
-        //remove double quotes from each side of the access token, 
+        //remove double quotes from each side of the access token,
         //it gets parsed as "fdsfsfdf" instead of fdsfsfdf
         let basic_data_gather_result =
-            gather_user_basic_data_discord(access_token[1..access_token.len() - 1].to_string()).await;
+            gather_user_basic_data_discord(access_token[1..access_token.len() - 1].to_string())
+                .await;
 
         //if the json data was good, meaning no errors from api call
         if basic_data_gather_result.is_ok() {
@@ -124,9 +125,11 @@ pub async fn gather_tokens_and_construct_save_url_github(
 
         //make api request and grab user json data
         //
-        //remove double quotes from each side of the access token, 
+        //remove double quotes from each side of the access token,
         //it gets parsed as "fdsfsfdf" instead of fdsfsfdf
-        let basic_data_gather_result = gather_user_basic_data_github(access_token[1..access_token.len() - 1].to_string()).await;
+        let basic_data_gather_result =
+            gather_user_basic_data_github(access_token[1..access_token.len() - 1].to_string())
+                .await;
 
         //if the json data was good, meaning no errors from api call
         if basic_data_gather_result.is_ok() {
@@ -170,10 +173,7 @@ pub async fn exchange_discord_refresh_token_for_access(
         ("client_id", client_id),
         ("client_secret", client_secret),
         ("grant_type", "refresh_token".to_owned()),
-        (
-            "refresh_token",
-            refresh_token,
-        ),
+        ("refresh_token", refresh_token),
     ];
     let client = reqwest::Client::new();
     //send request to get access/refresh tokens
@@ -192,8 +192,8 @@ pub async fn gather_user_basic_data_discord(
     access_token: String,
 ) -> Result<serde_json::Value, Error> {
     let base_url = "https://discord.com/api/v6/users/@me";
-    let bearer_token: String = format!("Bearer {}", access_token); 
-    println!("{}",bearer_token);
+    let bearer_token: String = format!("Bearer {}", access_token);
+    println!("{}", bearer_token);
     let client = reqwest::Client::new();
     let result: serde_json::Value = client
         .get(base_url)

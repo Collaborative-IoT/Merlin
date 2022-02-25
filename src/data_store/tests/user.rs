@@ -1,4 +1,4 @@
-use crate::communication::communication_types::BaseUser;
+use crate::communication::types::BaseUser;
 use crate::data_store::db_models::DBUser;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use chrono::Utc;

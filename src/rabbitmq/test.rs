@@ -6,6 +6,7 @@ use crate::rabbitmq::rabbit;
 use futures_util::stream::StreamExt;
 use lapin::{options::*, types::FieldTable, Connection};
 use serde::{Deserialize, Serialize};
+#[allow(unused_imports)]
 use tokio_amqp::*;
 
 #[derive(Deserialize, Serialize)]

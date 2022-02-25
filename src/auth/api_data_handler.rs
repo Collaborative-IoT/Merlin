@@ -20,7 +20,6 @@ pub async fn parse_and_capture_discord_user_data(
     access_token: String,
 ) -> bool {
     let mut action_was_successful: bool = true;
-    println!("access_token{}",access_token);
     if discord_user_request_is_valid(&data) {
         let discord_user_id: String = data["id"].to_string();
         let discord_avatar_id: String = data["avatar"].to_string();

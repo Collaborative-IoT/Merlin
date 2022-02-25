@@ -2,7 +2,7 @@
 abstracts usage of the sql execution handler
 by fetching and converts rows to correct response types.
 */
-use crate::communication::communication_types::{RoomPermissions, User, UserPreview};
+use crate::communication::types::{RoomPermissions, User, UserPreview};
 use crate::data_store::db_models::DBScheduledRoom;
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use futures_util::Future;
@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use tokio_postgres::{row::Row, Error};
 
-use super::communication_types::BaseUser;
+use super::types::BaseUser;
 
 /*
 Gathers user structs in direct relation

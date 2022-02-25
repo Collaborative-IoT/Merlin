@@ -1,13 +1,14 @@
 // #![deny(warnings)]
 use crate::auth::authentication_handler::CodeParams;
 use crate::auth::oauth_locations;
+use crate::auth::ws_auth_handler::UserIdAndNewAuthCredentials;
 use crate::auth::{authentication_handler, ws_auth_handler};
-use crate::communication::communication_router;
-use crate::communication::communication_types::AuthCredentials;
+use crate::communication::router;
+use crate::communication::types::{AuthCredentials, AuthResponse, BasicResponse};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
-use crate::state::state_types::User;
+use crate::state::types::User;
 use crate::warp::http::Uri;
 use futures::lock::Mutex;
 use futures_util::stream::SplitStream;
@@ -55,30 +56,27 @@ async fn user_connected(
     let user_id_option = match auth_result {
         Ok(auth_result) => auth_result,
         Err(_e) => {
-            user_ws_tx
-                .send(Message::text("auth-not-good"))
-                .await
-                .unwrap_or_else(|e| eprint!("{}", e));
+            send_auth_response(&mut user_ws_tx, None, None, "auth-not-good".to_owned()).await;
             return;
         }
     };
-    let user_id = match user_id_option {
+    let user_id_and_tokens = match user_id_option {
         Some(user_id_option) => user_id_option,
         None => {
-            user_ws_tx
-                .send(Message::text("auth-not-good"))
-                .await
-                .unwrap_or_else(|e| eprint!("{}", e));
+            send_auth_response(&mut user_ws_tx, None, None, "auth-not-good".to_owned()).await;
             return;
         }
     };
-    user_ws_tx
-        .send(Message::text("auth-good"))
-        .await
-        .unwrap_or_else(|e| eprint!("{}", e));
+    send_auth_response(
+        &mut user_ws_tx,
+        user_id_and_tokens.access,
+        user_id_and_tokens.refresh,
+        "auth-good".to_owned(),
+    )
+    .await;
 
     //Make use of a mpsc channel for each user.
-    let current_user_id = user_id;
+    let current_user_id = user_id_and_tokens.user_id;
     let (tx, rx) = mpsc::unbounded_channel();
     let rx = UnboundedReceiverStream::new(rx);
     setup_outgoing_messages_task(user_ws_tx, rx);
@@ -107,7 +105,7 @@ async fn user_message(
     } else {
         return;
     };
-    communication_router::route_msg(
+    router::route_msg(
         msg.to_string(),
         current_user_id.clone(),
         &server_state,
@@ -119,14 +117,14 @@ async fn user_message(
 }
 
 async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<ServerState>>) {
-    // Stream closed up, so remove from the user list
     server_state.write().await.peer_map.remove(current_user_id);
+    println!("user_disconnected");
 }
 
 async fn handle_authentication(
     user_ws_rx: &mut SplitStream<WebSocket>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
-) -> Result<Option<i32>, serde_json::Error> {
+) -> Result<Option<UserIdAndNewAuthCredentials>, serde_json::Error> {
     let msg = user_ws_rx.next().await;
     let msg_result = match msg {
         Some(msg) => msg,
@@ -142,20 +140,22 @@ async fn handle_authentication(
         Err(_e) => return Ok(None),
     };
     if auth_credentials.oauth_type == "discord" {
-        let user_id: Option<i32> = ws_auth_handler::gather_user_id_using_discord_id(
-            auth_credentials.refresh,
-            auth_credentials.access,
-            execution_handler,
-        )
-        .await;
-        return Ok(user_id);
+        let res: Option<UserIdAndNewAuthCredentials> =
+            ws_auth_handler::gather_user_id_using_discord_id(
+                auth_credentials.refresh,
+                auth_credentials.access,
+                execution_handler,
+            )
+            .await;
+        return Ok(res);
     } else {
-        let user_id: Option<i32> = ws_auth_handler::gather_user_id_using_github_id(
-            auth_credentials.access,
-            execution_handler,
-        )
-        .await;
-        return Ok(user_id);
+        let res: Option<UserIdAndNewAuthCredentials> =
+            ws_auth_handler::gather_user_id_using_github_id(
+                auth_credentials.access,
+                execution_handler,
+            )
+            .await;
+        return Ok(res);
     }
 }
 
@@ -249,6 +249,28 @@ pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
     let mut handler = ExecutionHandler::new(client);
     handler.create_all_tables_if_needed().await?;
     return Ok(handler);
+}
+
+async fn send_auth_response(
+    user_ws_tx: &mut SplitSink<WebSocket, Message>,
+    access: Option<String>,
+    refresh: Option<String>,
+    op: String,
+) {
+    user_ws_tx
+        .send(Message::text(
+            serde_json::to_string(&BasicResponse {
+                response_op_code: op,
+                response_containing_data: serde_json::to_string(&AuthResponse {
+                    new_access: access,
+                    new_refresh: refresh,
+                })
+                .unwrap(),
+            })
+            .unwrap(),
+        ))
+        .await
+        .unwrap_or_else(|e| eprint!("{}", e));
 }
 
 async fn setup_routes_and_serve<T: Into<SocketAddr>>(

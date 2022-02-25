@@ -1,4 +1,4 @@
-use crate::state::state_types::{ActiveRooms, ActiveUsers, IoTServerConnections, PeerMap};
+use crate::state::types::{ActiveRooms, ActiveUsers, IoTServerConnections, PeerMap};
 
 pub struct ServerState {
     pub iot_server_connections: IoTServerConnections,

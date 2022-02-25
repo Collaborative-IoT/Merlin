@@ -1,7 +1,7 @@
-use crate::communication::communication_types::{RoomPermissions, ScheduledRoomUpdate, User};
 use crate::communication::data_capturer;
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::data_fetcher;
+use crate::communication::types::{RoomPermissions, ScheduledRoomUpdate, User};
 
 use crate::data_store::db_models::{
     DBFollower, DBRoom, DBRoomBlock, DBRoomPermissions, DBScheduledRoom, DBUser, DBUserBlock,
