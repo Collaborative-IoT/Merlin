@@ -31,8 +31,7 @@ pub async fn capture_new_user(execution_handler: &mut ExecutionHandler, user: &D
     //  we haven't ran into db issues and our user doesn't exist
     if user_already_exist_result.is_ok() && user_already_exist_result.unwrap().len() == 0 {
         let insert_result = execution_handler.insert_user(user).await;
-        if insert_result.is_ok() {
-            let user_id: i32 = insert_result.unwrap();
+        if let Ok(user_id) = insert_result {
             return user_id;
         } else {
             // unexpected error
@@ -242,8 +241,7 @@ pub async fn capture_user_update(
 ) -> CaptureResult {
     let current_user_or_not: Option<BaseUser> =
         data_fetcher::gather_base_user(execution_handler, user_id).await;
-    if current_user_or_not.is_some() {
-        let mut current_user = current_user_or_not.unwrap();
+    if let Some(mut current_user) = current_user_or_not {
         merge_updates_with_current_user(&mut current_user, edit, execution_handler).await;
         let update_result = execution_handler
             .update_base_user_fields(&current_user)
@@ -266,9 +264,7 @@ pub async fn capture_scheduled_room_update(
     let owned_rooms_result = execution_handler
         .select_all_owned_scheduled_rooms_for_user(user_id)
         .await;
-    if owned_rooms_result.is_ok() {
-        let selected_rows = owned_rooms_result.unwrap();
-
+    if let Ok(selected_rows) = owned_rooms_result {
         // go through owned rooms, find the match and update.
         for row in selected_rows {
             let room_id: i32 = row.get(2);
@@ -417,8 +413,7 @@ async fn ensure_no_duplicates_exist_and_capture(
 /// Could be more generic to handle other similar cases.
 async fn capture_room(future_exc: impl Future<Output = Result<i32, Error>>) -> i32 {
     let insert_result = future_exc.await;
-    if insert_result.is_ok() {
-        let room_id: i32 = insert_result.unwrap();
+    if let Ok(room_id) = insert_result {
         return room_id;
     } else {
         return -1 as i32;
@@ -453,8 +448,7 @@ async fn insert_will_be_duplicate(
     future_exc: impl Future<Output = Result<Vec<Row>, Error>>,
 ) -> bool {
     let future_result = future_exc.await;
-    if future_result.is_ok() {
-        let selected_rows = future_result.unwrap();
+    if let Ok(selected_rows) = future_result {
         if selected_rows.len() > 0 {
             return true;
         } else {
@@ -493,29 +487,26 @@ async fn merge_updates_with_current_user(
     updates: UserProfileEdit,
     execution_handler: &mut ExecutionHandler,
 ) {
-    if updates.display_name.is_some() {
-        let target_update = updates.display_name.unwrap();
+    if let Some(target_update) = updates.display_name {
         if field_is_long_enough(&target_update, 20 as usize, 3 as usize) {
             current_user.display_name = target_update;
         }
     };
-    if updates.username.is_some() {
-        let target_update = updates.username.unwrap();
+    if let Some(target_update) = updates.username {
         if !username_already_exist(&target_update, execution_handler).await {
             current_user.username = target_update;
         };
     };
-    if updates.bio.is_some() {
-        let target_update = updates.bio.unwrap();
+    if let Some(target_update) = updates.bio {
         if field_is_long_enough(&target_update, 40 as usize, 1 as usize) {
             current_user.bio = target_update;
         }
     };
-    if updates.avatar_url.is_some() {
-        current_user.avatar_url = updates.avatar_url.unwrap();
+    if let Some(avatar_url) = updates.avatar_url {
+        current_user.avatar_url = avatar_url
     }
-    if updates.banner_url.is_some() {
-        current_user.banner_url = updates.banner_url.unwrap();
+    if let Some(banner_url) = updates.banner_url {
+        current_user.banner_url = banner_url
     }
 }
 
@@ -526,8 +517,7 @@ async fn try_to_increase_num_attending_for_sch_room(
     execution_handler: &mut ExecutionHandler,
 ) {
     let sch_room_result = execution_handler.select_scheduled_room_by_id(room_id).await;
-    if sch_room_result.is_ok() {
-        let selected_rows = sch_room_result.unwrap();
+    if let Ok(selected_rows) = sch_room_result {
         if selected_rows.len() == 1 {
             let row = &selected_rows[0];
             let old_num_attending: i32 = row.get(2);
@@ -554,8 +544,7 @@ async fn username_already_exist(
     execution_handler: &mut ExecutionHandler,
 ) -> bool {
     let search_result = execution_handler.select_user_by_username(username).await;
-    if search_result.is_ok() {
-        let selected_rows = search_result.unwrap();
+    if let Ok(selected_rows) = search_result {
         if selected_rows.len() != 0 {
             return true;
         } else {

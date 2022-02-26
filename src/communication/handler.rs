@@ -42,32 +42,25 @@ pub async fn create_room(
     requester_id: i32,
 ) -> Result<()> {
     let request_data: BasicRoomCreation = serde_json::from_str(&request.request_containing_data)?;
-    let read_state = server_state.read().await;
+    let mut write_state = server_state.write().await;
     //Make sure the user exist and they aren't in a room
-    if read_state.active_users.contains_key(&requester_id)
-        && read_state
-            .active_users
-            .get(&requester_id)
-            .unwrap()
-            .current_room_id
-            == -1
-    {
-        drop(read_state);
-        let mut write_state = server_state.write().await;
-        rooms::handler::create_room(
-            &mut write_state,
-            publish_channel,
-            execution_handler,
-            requester_id,
-            request_data.name,
-            request_data.desc,
-            request_data.public,
-        )
-        .await;
-        return Ok(());
+    if let Some(user) = write_state.active_users.get(&requester_id) {
+        if user.current_room_id == -1 {            
+            rooms::handler::create_room(
+                &mut write_state,
+                publish_channel,
+                execution_handler,
+                requester_id,
+                request_data.name,
+                request_data.desc,
+                request_data.public,
+            )
+            .await;
+            return Ok(());
+        }
     }
     // If the request is invalid
-    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
+    send_error_response_to_requester(requester_id,  &mut write_state).await;
     return Ok(());
 }
 
@@ -79,17 +72,13 @@ pub async fn block_user_from_room(
     publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) -> Result<()> {
     let request_data: BlockUserFromRoom = serde_json::from_str(&request.request_containing_data)?;
-    let read_state = server_state.read().await;
+    let mut write_state = server_state.write().await;
 
     // Make sure this room actually exists
-    if read_state.rooms.contains_key(&request_data.room_id) {
-        let room = read_state.rooms.get(&request_data.room_id).unwrap();
-
+    if let Some(room) = write_state.rooms.get(&request_data.room_id) {
         // Make sure both users are in the room
         // The owner checking happens in the room handler
         if room.user_ids.contains(&requester_id) && room.user_ids.contains(&request_data.user_id) {
-            drop(read_state);
-            let mut write_state = server_state.write().await;
             rooms::handler::block_user_from_room(
                 request_data.user_id,
                 request_data.room_id,
@@ -102,7 +91,7 @@ pub async fn block_user_from_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
+    send_error_response_to_requester(requester_id,  &mut write_state).await;
     return Ok(());
 }
 
@@ -114,23 +103,14 @@ pub async fn join_room(
     requester_id: i32,
     type_of_join: &str,
 ) -> Result<()> {
-    let read_state = server_state.read().await;
+    let mut write_state = server_state.write().await;
     let request_data: GenericRoomIdAndPeerId =
         serde_json::from_str(&request.request_containing_data)?;
 
     let room_id: i32 = request_data.roomId;
     let peer_id: i32 = request_data.peerId;
     //Ensure the room exist,the user isn't already in a room and this room is public
-    if read_state.rooms.contains_key(&room_id)
-        && read_state
-            .active_users
-            .get(&peer_id)
-            .unwrap()
-            .current_room_id
-            == -1
-        && read_state.rooms.get(&room_id).unwrap().public
-        && peer_id == requester_id
-    {
+    if room_is_joinable(&write_state, &peer_id, &requester_id, &room_id) {
         //make sure the user isn't blocked from the room
         let mut handler = execution_handler.lock().await;
         let blocked_result: (bool, HashSet<i32>) =
@@ -138,9 +118,7 @@ pub async fn join_room(
         // Nothing went wrong gathering blocked user ids
         // and user isn't blocked
         if blocked_result.0 == false && !blocked_result.1.contains(&peer_id) {
-            drop(read_state);
             drop(handler);
-            let mut write_state = server_state.write().await;
             rooms::handler::join_room(
                 request_data,
                 &mut write_state,
@@ -153,7 +131,7 @@ pub async fn join_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
+    send_error_response_to_requester(requester_id,  &mut write_state).await;
     return Ok(());
 }
 
@@ -165,7 +143,7 @@ pub async fn add_or_remove_speaker(
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     add_or_remove: &str,
 ) -> Result<()> {
-    let read_state = server_state.read().await;
+    let mut write_state = server_state.write().await;
     //ensure request parsing is successful
     let request_data: GenericRoomIdAndPeerId =
         serde_json::from_str(&request.request_containing_data)?;
@@ -173,14 +151,11 @@ pub async fn add_or_remove_speaker(
     let peer_id: i32 = request_data.peerId;
 
     // Make sure the room being requested exists
-    if read_state.rooms.contains_key(&room_id) {
-        let room = read_state.rooms.get(&room_id).unwrap();
-
+    if let Some(room) = write_state.rooms.get(&room_id) {
         // Make sure the requester and requestee is in the
         // room that is being requested
         if room.user_ids.contains(&requester_id) && room.user_ids.contains(&peer_id) {
-            drop(read_state);
-            let mut write_state = server_state.write().await;
+         
             if add_or_remove == "add" {
                 rooms::handler::add_speaker(
                     request_data,
@@ -203,7 +178,7 @@ pub async fn add_or_remove_speaker(
             return Ok(());
         }
     }
-    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
+    send_error_response_to_requester(requester_id,  &mut write_state).await;
     return Ok(());
 }
 
@@ -214,9 +189,9 @@ pub async fn handle_web_rtc_request(
     requester_id: i32,
 ) -> Result<()> {
     let request_data: serde_json::Value = serde_json::from_str(&request.request_containing_data)?;
-    let read_state = server_state.read().await;
+    let mut write_state = server_state.write().await;
 
-    if helpers::web_rtc_request_is_valid(&read_state, &request_data, &requester_id) {
+    if helpers::web_rtc_request_is_valid(&write_state, &request_data, &requester_id) {
         rooms::handler::handle_web_rtc_specific_requests(
             request_data,
             publish_channel,
@@ -225,7 +200,7 @@ pub async fn handle_web_rtc_request(
         .await;
         return Ok(());
     }
-    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
+    send_error_response_to_requester( requester_id,  &mut write_state).await;
     return Ok(());
 }
 
@@ -272,9 +247,8 @@ pub async fn follow_or_unfollow_user(
         );
         return Ok(());
     }
-    drop(write_state);
     drop(handler);
-    send_error_response_to_requester(None, requester_id, server_state).await;
+    send_error_response_to_requester(requester_id,  &mut write_state).await;
     return Ok(());
 }
 
@@ -310,8 +284,8 @@ pub async fn get_top_rooms(
     requester_id: i32,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) {
-    let read_state = server_state.read().await;
-    let mut all_rooms: Vec<&Room> = read_state.rooms.values().into_iter().collect();
+    let mut write_state = server_state.write().await;
+    let mut all_rooms: Vec<&Room> = write_state.rooms.values().into_iter().collect();
     all_rooms.sort_by_key(|room| room.amount_of_users);
     let mut handler = execution_handler.lock().await;
     let mut communication_rooms: Vec<CommunicationRoom> = Vec::new();
@@ -339,9 +313,8 @@ pub async fn get_top_rooms(
     }
     //clean up old mutexes and send the response
     drop(handler);
-    drop(read_state);
     let response_containing_data = serde_json::to_string(&communication_rooms).unwrap();
-    let mut write_state = server_state.write().await;
+
     send_to_requester_channel(
         response_containing_data,
         requester_id,
@@ -358,29 +331,23 @@ pub async fn leave_room(
     requester_id: i32,
 ) -> Result<()> {
     let request_data: GenericRoomId = serde_json::from_str(&request.request_containing_data)?;
+    let mut write_state = server_state.write().await;
     //the user is in this room
-    if server_state
-        .read()
-        .await
-        .active_users
-        .get(&requester_id)
-        .unwrap()
-        .current_room_id
-        == request_data.room_id
-    {
-        let mut write_state = server_state.write().await;
-        rooms::handler::leave_room(
-            &mut write_state,
-            &requester_id,
-            &request_data.room_id,
-            publish_channel,
-            execution_handler,
-        )
-        .await;
+    if let Some(user) = write_state.active_users.get(&requester_id) {
+        if user.current_room_id == request_data.room_id {
+            rooms::handler::leave_room(
+                &mut write_state,
+                &requester_id,
+                &request_data.room_id,
+                publish_channel,
+                execution_handler,
+            )
+            .await;
 
-        return Ok(());
+            return Ok(());
+        }
     }
-    send_error_response_to_requester(None, requester_id, server_state).await;
+    send_error_response_to_requester(requester_id,  &mut write_state).await;
     return Ok(());
 }
 
@@ -391,7 +358,7 @@ pub async fn raise_hand_or_lower_hand(
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     type_of_hand_action: &str,
 ) -> Result<()> {
-    let read_state = server_state.read().await;
+    let mut write_state = server_state.write().await;
     let request_data: GenericRoomIdAndPeerId =
         serde_json::from_str(&request.request_containing_data)?;
     let room_id: i32 = request_data.roomId;
@@ -403,12 +370,9 @@ pub async fn raise_hand_or_lower_hand(
     }
 
     //room exist
-    if read_state.rooms.contains_key(&room_id) {
-        let room = read_state.rooms.get(&room_id).unwrap();
+    if let Some(room) = write_state.rooms.get(&room_id) {
         //both users are in this room
-        if room.user_ids.contains(&requester_id) && room.user_ids.contains(&peer_id) {
-            drop(read_state);
-            let mut write_state = server_state.write().await;
+        if room.user_ids.contains(&requester_id) && room.user_ids.contains(&peer_id) {        
             if type_of_hand_action == "lower" {
                 rooms::handler::lower_hand(
                     &mut write_state,
@@ -430,7 +394,7 @@ pub async fn raise_hand_or_lower_hand(
             return Ok(());
         }
     }
-    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
+    send_error_response_to_requester(requester_id,  &mut write_state).await;
     return Ok(());
 }
 
@@ -480,8 +444,7 @@ pub async fn block_or_unblock_user_from_user(
         );
         return Ok(());
     }
-    drop(write_state);
-    send_error_response_to_requester(None, requester_id, server_state).await;
+    send_error_response_to_requester( requester_id,  &mut write_state).await;
     return Ok(());
 }
 
@@ -498,10 +461,9 @@ pub async fn gather_all_users_in_room(
 ) -> Result<()> {
     let room_id_obj: GenericRoomId = serde_json::from_str(&request.request_containing_data)?;
     let room_id = room_id_obj.room_id;
-    let read_state = server_state.read().await;
+    let mut write_state = server_state.write().await;
     //if the room exist
-    if read_state.rooms.contains_key(&room_id) {
-        let room = read_state.rooms.get(&room_id).unwrap();
+    if let Some(room) = write_state.rooms.get(&room_id) {
         let all_room_user_ids: Vec<i32> = room
             .user_ids
             .iter()
@@ -513,10 +475,7 @@ pub async fn gather_all_users_in_room(
             data_fetcher::get_users_for_user(requester_id.clone(), all_room_user_ids, &mut handler)
                 .await;
         //no error was encountered
-        if users.0 == false {
-            //remove old lock for state and get users
-            drop(read_state);
-            let mut write_state = server_state.write().await;
+        if users.0 == false {     
             //generate response with all users and send
             let response = AllUsersInRoomResponse {
                 room_id: room_id,
@@ -532,7 +491,7 @@ pub async fn gather_all_users_in_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(Some(read_state), requester_id, server_state).await;
+    send_error_response_to_requester( requester_id, &mut write_state).await;
     return Ok(());
 }
 
@@ -576,33 +535,38 @@ pub async fn update_mute_and_deaf_status(
 ) -> Result<()> {
     let mute_and_deaf: DeafAndMuteStatus = serde_json::from_str(&request.request_containing_data)?;
     let mut write_state = server_state.write().await;
-    let user = write_state.active_users.get_mut(&requester_id).unwrap();
-    //you can only update your muted/deaf status if you aren't in a room
-    if user.current_room_id != -1 {
-        user.deaf = mute_and_deaf.deaf.clone();
-        user.muted = mute_and_deaf.muted.clone();
-        let user_room_id = user.current_room_id.clone();
-        //send everyone the deaf/mute update
-        let deaf_mute_response = DeafAndMuteStatusUpdate {
-            deaf: mute_and_deaf.deaf,
-            muted: mute_and_deaf.muted,
-            user_id: requester_id,
-        };
-        let basic_response = BasicResponse {
-            response_op_code: "user_mute_and_deaf_update".to_owned(),
-            response_containing_data: serde_json::to_string(&deaf_mute_response).unwrap(),
-        };
-        let basic_response_str = serde_json::to_string(&basic_response).unwrap();
-        ws_fan::fan::broadcast_message_to_room(basic_response_str, &mut write_state, user_room_id)
+    if let Some(user) = write_state.active_users.get_mut(&requester_id) {
+        //you can only update your muted/deaf status if you aren't in a room
+        if user.current_room_id != -1 {
+            user.deaf = mute_and_deaf.deaf.clone();
+            user.muted = mute_and_deaf.muted.clone();
+            let user_room_id = user.current_room_id.clone();
+            //send everyone the deaf/mute update
+            let deaf_mute_response = DeafAndMuteStatusUpdate {
+                deaf: mute_and_deaf.deaf,
+                muted: mute_and_deaf.muted,
+                user_id: requester_id,
+            };
+            let basic_response = BasicResponse {
+                response_op_code: "user_mute_and_deaf_update".to_owned(),
+                response_containing_data: serde_json::to_string(&deaf_mute_response).unwrap(),
+            };
+            let basic_response_str = serde_json::to_string(&basic_response).unwrap();
+            ws_fan::fan::broadcast_message_to_room(
+                basic_response_str,
+                &mut write_state,
+                user_room_id,
+            )
             .await;
-        return Ok(());
+            return Ok(());
+        }
+        send_to_requester_channel(
+            "issue with request".to_owned(),
+            requester_id,
+            &mut write_state,
+            "invalid_request".to_owned(),
+        );
     }
-    send_to_requester_channel(
-        "issue with request".to_owned(),
-        requester_id,
-        &mut write_state,
-        "invalid_request".to_owned(),
-    );
     return Ok(());
 }
 
@@ -612,28 +576,34 @@ pub async fn send_chat_message(
     message: String,
 ) {
     let mut write_state = server_state.write().await;
-    let user = write_state.active_users.get_mut(&requester_id).unwrap();
-    let user_room_id = user.current_room_id.clone();
-    if user_room_id != -1 {
-        let basic_response = BasicResponse {
-            response_op_code: "new_chat_message".to_owned(),
-            response_containing_data: message,
-        };
-        let basic_response_str = serde_json::to_string(&basic_response).unwrap();
-        ws_fan::fan::broadcast_message_to_room(basic_response_str, &mut write_state, user_room_id)
+    if let Some(user) = write_state.active_users.get_mut(&requester_id) {
+        let user_room_id = user.current_room_id.clone();
+        if user_room_id != -1 {
+            let basic_response = BasicResponse {
+                response_op_code: "new_chat_message".to_owned(),
+                response_containing_data: message,
+            };
+            let basic_response_str = serde_json::to_string(&basic_response).unwrap();
+            ws_fan::fan::broadcast_message_to_room(
+                basic_response_str,
+                &mut write_state,
+                user_room_id,
+            )
             .await;
-        return;
+            return;
+        }
+        send_to_requester_channel(
+            "issue with request".to_owned(),
+            requester_id,
+            &mut write_state,
+            "invalid_request".to_owned(),
+        );
     }
-    send_to_requester_channel(
-        "issue with request".to_owned(),
-        requester_id,
-        &mut write_state,
-        "invalid_request".to_owned(),
-    );
 }
 
 pub async fn normal_invalid_request(server_state: &Arc<RwLock<ServerState>>, requester_id: i32) {
-    send_error_response_to_requester(None, requester_id, server_state).await;
+    let mut state= server_state.write().await;
+    send_error_response_to_requester( requester_id, &mut state ).await;
 }
 
 pub async fn get_room_permissions_for_users(
@@ -662,16 +632,28 @@ pub async fn get_room_permissions_for_users(
 }
 
 async fn send_error_response_to_requester(
-    read_state: Option<tokio::sync::RwLockReadGuard<'_, ServerState>>,
     requester_id: i32,
-    server_state: &Arc<RwLock<ServerState>>,
+    write_state:&mut ServerState
 ) {
-    drop(read_state);
-    let mut write_state = server_state.write().await;
     send_to_requester_channel(
         "issue with request".to_owned(),
         requester_id,
-        &mut write_state,
+        write_state,
         "invalid_request".to_owned(),
     );
+}
+pub fn room_is_joinable(
+    read_state: &ServerState,
+    peer_id: &i32,
+    requester_id: &i32,
+    room_id: &i32,
+) -> bool {
+    if let Some(user) = read_state.active_users.get(peer_id) {
+        if let Some(room) = read_state.rooms.get(room_id) {
+            if user.current_room_id == -1 && room.public && peer_id == requester_id {
+                return true;
+            }
+        }
+    }
+    return false;
 }
