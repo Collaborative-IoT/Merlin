@@ -19,6 +19,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::{mpsc, RwLock};
+use tokio::time::{sleep, Duration};
 use tokio_postgres::{Error, NoTls};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
@@ -28,6 +29,7 @@ pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
     //these should never panic, if they do then the server is
     //100% in fault and can't run anyway.
     let server_state: Arc<RwLock<ServerState>> = Arc::new(RwLock::new(ServerState::new()));
+    setup_room_cleanup_task(server_state.clone());
     let execution_handler: Arc<Mutex<ExecutionHandler>> =
         Arc::new(Mutex::new(setup_execution_handler().await.unwrap()));
     let rabbit_connection: Connection = rabbit::setup_rabbit_connection().await.unwrap();
@@ -249,6 +251,30 @@ pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
     let mut handler = ExecutionHandler::new(client);
     handler.create_all_tables_if_needed().await?;
     return Ok(handler);
+}
+
+// Make sure the rooms are being cleaned up
+// in the case that someone creates a room but
+// don't join the room within 3 seconds
+fn setup_room_cleanup_task(state: Arc<RwLock<ServerState>>) {
+    tokio::spawn(async move {
+        let state = state;
+        loop {
+            let mut to_delete: Vec<i32> = Vec::new();
+            sleep(Duration::from_millis(3000)).await;
+            let mut write_state = state.write().await;
+            for id in write_state.rooms.keys() {
+                if let Some(room) = write_state.rooms.get(&id) {
+                    if room.amount_of_users == 0 {
+                        to_delete.push(id.clone());
+                    }
+                }
+            }
+            for id in to_delete {
+                write_state.rooms.remove(&id);
+            }
+        }
+    });
 }
 
 async fn send_auth_response(
