@@ -177,6 +177,7 @@ pub struct User {
     pub i_blocked_them: bool,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct BaseUser {
     pub username: String,
     pub last_online: String,

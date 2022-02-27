@@ -77,13 +77,8 @@ pub async fn send_follow_list(
             for_user: peer_id,
         };
         let response_str = serde_json::to_string(&response).unwrap();
-        let basic_response = BasicResponse {
-            response_op_code: "follow_list".to_owned(),
-            response_containing_data: response_str,
-        };
-        let basic_response_str = serde_json::to_string(&basic_response).unwrap();
         send_to_requester_channel(
-            basic_response_str,
+            response_str,
             requester_id,
             &mut write_state,
             "follow_list_response".to_owned(),

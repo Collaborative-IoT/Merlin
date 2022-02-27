@@ -569,6 +569,25 @@ pub async fn update_mute_and_deaf_status(
     return Ok(());
 }
 
+// Used for when a user first authenticates
+// when you first authenticate you need your
+// own information.
+pub async fn gather_base_user(
+    requester_id: i32,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    server_state: &Arc<RwLock<ServerState>>,
+) {
+    let mut write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    let user_information = data_fetcher::gather_base_user(&mut handler, &requester_id).await;
+    send_to_requester_channel(
+        serde_json::to_string(&user_information).unwrap(),
+        requester_id,
+        &mut write_state,
+        "your_data".to_owned(),
+    );
+}
+
 pub async fn send_chat_message(
     server_state: &Arc<RwLock<ServerState>>,
     requester_id: i32,
