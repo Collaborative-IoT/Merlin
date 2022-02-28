@@ -107,6 +107,7 @@ async fn user_message(
     } else {
         return;
     };
+    println!("{}",msg);
     router::route_msg(
         msg.to_string(),
         current_user_id.clone(),
