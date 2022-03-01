@@ -249,3 +249,8 @@ pub struct AuthResponse {
     pub new_access: Option<String>,
     pub new_refresh: Option<String>,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct LooseUserPreviewRequest {
+    pub user_ids: Vec<i32>,
+}

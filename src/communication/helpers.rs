@@ -1,5 +1,5 @@
 use crate::common::response_logic::send_to_requester_channel;
-use crate::communication::types::{BasicResponse, GetFollowListResponse};
+use crate::communication::types::GetFollowListResponse;
 use crate::communication::types::{CommunicationRoom, RoomDetails, UserPreview};
 use crate::state::state::ServerState;
 use crate::state::types::Room;

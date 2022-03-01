@@ -189,6 +189,9 @@ pub async fn route_msg(
                     .await,
             )
         }
+        "user_previews" => {
+            handler::gather_previews(basic_request, server_state, user_id, execution_handler).await
+        }
         "my_data" => Ok(handler::gather_base_user(user_id, execution_handler, server_state).await),
         _ => Ok(handler::normal_invalid_request(server_state, user_id).await),
     }

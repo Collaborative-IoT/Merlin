@@ -18,6 +18,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::data_capturer::{self, CaptureResult};
+use super::types::LooseUserPreviewRequest;
 use super::types::{
     BasicResponse, DeafAndMuteStatus, DeafAndMuteStatusUpdate, GenericUserId, RoomUpdate,
 };
@@ -567,6 +568,33 @@ pub async fn update_mute_and_deaf_status(
         );
     }
     return Ok(());
+}
+
+// Used to just get user previews loosely,
+// normally user previews are included with
+// a "CommunicationRoom". Some functionality
+// on the clients require previews without
+// rooms, like the "people" list on the
+// dash board.
+pub async fn gather_previews(
+    request: BasicRequest,
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) -> Result<()> {
+    let mut write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    let request_data: LooseUserPreviewRequest =
+        serde_json::from_str(&request.request_containing_data)?;
+    let result =
+        data_fetcher::get_user_previews_for_users(request_data.user_ids, &mut handler).await;
+    send_to_requester_channel(
+        serde_json::to_string(&result.1).unwrap(),
+        requester_id,
+        &mut write_state,
+        "user_previews".to_owned(),
+    );
+    Ok(())
 }
 
 // Used for when a user first authenticates
