@@ -272,7 +272,14 @@ pub async fn get_followers_or_following_list(
         target = data_fetcher::get_following_user_ids_for_user(&mut handler, &request_data.user_id)
             .await;
     }
-    helpers::send_follow_list(target, server_state, requester_id, request_data.user_id).await;
+    helpers::send_follow_list(
+        target,
+        server_state,
+        &mut handler,
+        requester_id,
+        request_data.user_id,
+    )
+    .await;
     return Ok(());
 }
 

@@ -1,11 +1,16 @@
 use crate::common::response_logic::send_to_requester_channel;
 use crate::communication::types::GetFollowListResponse;
+use crate::communication::types::User;
 use crate::communication::types::{CommunicationRoom, RoomDetails, UserPreview};
+use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::state::state::ServerState;
 use crate::state::types::Room;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+use super::data_fetcher;
+use super::types::FollowInfo;
 
 pub fn web_rtc_request_is_valid(
     server_state: &ServerState,
@@ -58,6 +63,7 @@ pub fn parse_peer_and_room_id(
 pub async fn send_follow_list(
     target: (bool, HashSet<i32>),
     server_state: &Arc<RwLock<ServerState>>,
+    execution_handler: &mut ExecutionHandler,
     requester_id: i32,
     peer_id: i32,
 ) {
@@ -71,9 +77,23 @@ pub async fn send_follow_list(
             "invalid_request".to_owned(),
         );
     } else {
-        let vec_user_ids: Vec<i32> = target.1.into_iter().collect();
+        let user_ids: Vec<i32> = target.1.into_iter().collect();
+        let data_result =
+            data_fetcher::get_users_for_user(requester_id.clone(), user_ids, execution_handler)
+                .await;
+        let mut follow_holder: Vec<FollowInfo> = Vec::new();
+
+        for user in data_result.1 {
+            follow_holder.push(FollowInfo {
+                user_id: user.user_id.clone(),
+                avatar_url: user.avatar_url.clone(),
+                online: write_state.active_users.contains_key(&user.user_id),
+                room_id: grab_current_room(&mut write_state, user),
+            });
+        }
+
         let response = GetFollowListResponse {
-            user_ids: vec_user_ids,
+            user_ids: follow_holder,
             for_user: peer_id,
         };
         let response_str = serde_json::to_string(&response).unwrap();
@@ -116,4 +136,12 @@ pub fn construct_communication_room(
     };
 
     holder.push(new_communication_room);
+}
+
+fn grab_current_room(write_state: &mut ServerState, user: User) -> Option<i32> {
+    if let Some(data) = write_state.active_users.get(&user.user_id) {
+        Some(data.current_room_id)
+    } else {
+        None
+    }
 }

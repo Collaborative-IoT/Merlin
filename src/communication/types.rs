@@ -38,7 +38,7 @@ pub struct GetFollowList {
 
 #[derive(Deserialize, Serialize)]
 pub struct GetFollowListResponse {
-    pub user_ids: Vec<i32>,
+    pub user_ids: Vec<FollowInfo>,
     pub for_user: i32,
 }
 
@@ -96,7 +96,6 @@ pub struct AllUsersInRoomResponse {
 }
 
 #[derive(Deserialize, Serialize)]
-
 pub struct RoomDetails {
     pub name: String,
     pub chat_throttle: i32,
@@ -253,4 +252,12 @@ pub struct AuthResponse {
 #[derive(Deserialize, Serialize)]
 pub struct LooseUserPreviewRequest {
     pub user_ids: Vec<i32>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct FollowInfo {
+    pub user_id: i32,
+    pub avatar_url: String,
+    pub online: bool,
+    pub room_id: Option<i32>,
 }
