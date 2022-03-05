@@ -257,6 +257,7 @@ pub struct LooseUserPreviewRequest {
 #[derive(Deserialize, Serialize)]
 pub struct FollowInfo {
     pub user_id: i32,
+    pub username: String,
     pub avatar_url: String,
     pub online: bool,
     pub room_id: Option<i32>,

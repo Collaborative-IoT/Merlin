@@ -1,6 +1,5 @@
 use crate::common::response_logic::send_to_requester_channel;
 use crate::communication::types::GetFollowListResponse;
-use crate::communication::types::User;
 use crate::communication::types::{CommunicationRoom, RoomDetails, UserPreview};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::state::state::ServerState;
@@ -85,10 +84,11 @@ pub async fn send_follow_list(
 
         for user in data_result.1 {
             follow_holder.push(FollowInfo {
-                user_id: user.user_id.clone(),
-                avatar_url: user.avatar_url.clone(),
+                username: user.username,
+                avatar_url: user.avatar_url,
+                room_id: grab_current_room(&mut write_state, &user.user_id),
                 online: write_state.active_users.contains_key(&user.user_id),
-                room_id: grab_current_room(&mut write_state, user),
+                user_id: user.user_id,
             });
         }
 
@@ -138,8 +138,8 @@ pub fn construct_communication_room(
     holder.push(new_communication_room);
 }
 
-fn grab_current_room(write_state: &mut ServerState, user: User) -> Option<i32> {
-    if let Some(data) = write_state.active_users.get(&user.user_id) {
+fn grab_current_room(write_state: &mut ServerState, user_id: &i32) -> Option<i32> {
+    if let Some(data) = write_state.active_users.get(user_id) {
         Some(data.current_room_id)
     } else {
         None
