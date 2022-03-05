@@ -107,7 +107,6 @@ async fn user_message(
     } else {
         return;
     };
-    println!("{}", msg);
     router::route_msg(
         msg.to_string(),
         current_user_id.clone(),
@@ -262,7 +261,8 @@ fn setup_room_cleanup_task(state: Arc<RwLock<ServerState>>) {
         let state = state;
         loop {
             let mut to_delete: Vec<i32> = Vec::new();
-            sleep(Duration::from_millis(3000)).await;
+            
+            sleep(Duration::from_millis(10000)).await;
             let mut write_state = state.write().await;
             for id in write_state.rooms.keys() {
                 if let Some(room) = write_state.rooms.get(&id) {
@@ -271,8 +271,9 @@ fn setup_room_cleanup_task(state: Arc<RwLock<ServerState>>) {
                     }
                 }
             }
-            for id in to_delete {
-                write_state.rooms.remove(&id);
+            println!("to_delete:{:?}",to_delete);
+            while to_delete.len() > 0 {
+                write_state.rooms.remove(&to_delete.pop().unwrap());
             }
         }
     });
