@@ -343,7 +343,6 @@ pub async fn get_initial_room_data(
     let room_id: GenericRoomId = serde_json::from_str(&request_data.request_containing_data)?;
 
     if let Some(room) = write_state.rooms.get(&room_id.room_id) {
-        let all_room_user_ids: Vec<i32> = room.user_ids.iter().cloned().collect();
         let owner_data_and_chat_mode: (EncounteredError, i32, String) =
             data_fetcher::get_room_owner_and_settings(&mut handler, &room.room_id).await;
 
