@@ -36,7 +36,6 @@ pub async fn route_msg(
             )
             .await
         }
-
         "@connect-transport" | "@send-track" | "@get-recv-tracks" => {
             handler::handle_web_rtc_request(basic_request, publish_channel, server_state, user_id)
                 .await
@@ -174,6 +173,10 @@ pub async fn route_msg(
                 user_id,
             )
             .await
+        }
+        "initial_room_data" => {
+            handler::get_initial_room_data(server_state, user_id, basic_request, execution_handler)
+                .await
         }
 
         "update_room_meta" => {

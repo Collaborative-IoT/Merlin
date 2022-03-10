@@ -262,3 +262,12 @@ pub struct FollowInfo {
     pub online: bool,
     pub room_id: Option<i32>,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct InitRoomData {
+    pub details: RoomDetails,
+    pub creator_id: i32,
+    pub auto_speaker_setting: bool,
+    pub created_at: String,
+    pub chat_mode: String,
+}

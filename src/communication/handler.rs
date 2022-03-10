@@ -7,6 +7,7 @@ use crate::communication::types::{
 };
 use crate::data_store::db_models::{DBFollower, DBUserBlock};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
+use crate::rooms::handler::EncounteredError;
 use crate::state::state::ServerState;
 use crate::state::types::Room;
 use crate::{rooms, ws_fan};
@@ -18,7 +19,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::data_capturer::{self, CaptureResult};
+use super::types::InitRoomData;
 use super::types::LooseUserPreviewRequest;
+use super::types::RoomDetails;
 use super::types::{
     BasicResponse, DeafAndMuteStatus, DeafAndMuteStatusUpdate, GenericUserId, RoomUpdate,
 };
@@ -298,8 +301,7 @@ pub async fn get_top_rooms(
     let mut communication_rooms: Vec<CommunicationRoom> = Vec::new();
     for room in all_rooms {
         let all_room_user_ids: Vec<i32> = room.user_ids.iter().cloned().collect();
-        //(encountered_error) is the first of the tuple values
-        let previews: (bool, HashMap<i32, UserPreview>) =
+        let previews: (EncounteredError, HashMap<i32, UserPreview>) =
             data_fetcher::get_user_previews_for_users(all_room_user_ids, &mut handler).await;
 
         let owner_data_and_chat_mode: (bool, i32, String) =
@@ -328,6 +330,53 @@ pub async fn get_top_rooms(
         &mut write_state,
         "top_rooms".to_owned(),
     );
+}
+
+pub async fn get_initial_room_data(
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+    request_data: BasicRequest,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) -> Result<()> {
+    let mut write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    let room_id: GenericRoomId = serde_json::from_str(&request_data.request_containing_data)?;
+
+    if let Some(room) = write_state.rooms.get(&room_id.room_id) {
+        let all_room_user_ids: Vec<i32> = room.user_ids.iter().cloned().collect();
+        let owner_data_and_chat_mode: (EncounteredError, i32, String) =
+            data_fetcher::get_room_owner_and_settings(&mut handler, &room.room_id).await;
+
+        //if encountered errors getting data needed
+        if owner_data_and_chat_mode.0 {
+            send_error_response_to_requester(requester_id.clone(), &mut write_state).await;
+            return Ok(());
+        }
+        let init_data = InitRoomData {
+            details: RoomDetails {
+                name: room.name.clone(),
+                chat_throttle: room.chat_throttle.clone(),
+                is_private: room.public == true,
+                description: room.desc.clone(),
+            },
+            creator_id: owner_data_and_chat_mode.1,
+            auto_speaker_setting: room.auto_speaker.clone(),
+            created_at: room.created_at.clone(),
+            chat_mode: owner_data_and_chat_mode.2,
+        };
+        //clean up old mutexes and send the response
+        drop(handler);
+        let response_containing_data = serde_json::to_string(&init_data).unwrap();
+
+        send_to_requester_channel(
+            response_containing_data,
+            requester_id,
+            &mut write_state,
+            "initial_room_data".to_owned(),
+        );
+    }
+    send_error_response_to_requester(requester_id.clone(), &mut write_state).await;
+    Ok(())
 }
 
 pub async fn leave_room(
