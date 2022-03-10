@@ -715,22 +715,17 @@ pub async fn get_room_permissions_for_users(
 ) {
     let mut write_state = server_state.write().await;
     let mut handler = execution_handler.lock().await;
-    let result = data_fetcher::get_room_permissions_for_users(
-        &write_state
-            .active_users
-            .get(&requester_id)
-            .unwrap()
-            .current_room_id,
-        &mut handler,
-    )
-    .await;
-    drop(handler);
-    send_to_requester_channel(
-        serde_json::to_string(&result.1).unwrap(),
-        requester_id,
-        &mut write_state,
-        "room_permissions".to_owned(),
-    );
+    if let Some(user) = write_state.active_users.get(&requester_id) {
+        let result =
+            data_fetcher::get_room_permissions_for_users(&user.current_room_id, &mut handler).await;
+        drop(handler);
+        send_to_requester_channel(
+            serde_json::to_string(&result.1).unwrap(),
+            requester_id,
+            &mut write_state,
+            "room_permissions".to_owned(),
+        );
+    }
 }
 
 async fn send_error_response_to_requester(requester_id: i32, write_state: &mut ServerState) {
