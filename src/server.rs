@@ -261,7 +261,7 @@ fn setup_room_cleanup_task(state: Arc<RwLock<ServerState>>) {
         let state = state;
         loop {
             let mut to_delete: Vec<i32> = Vec::new();
-            
+
             sleep(Duration::from_millis(10000)).await;
             let mut write_state = state.write().await;
             for id in write_state.rooms.keys() {
@@ -271,7 +271,7 @@ fn setup_room_cleanup_task(state: Arc<RwLock<ServerState>>) {
                     }
                 }
             }
-            println!("to_delete:{:?}",to_delete);
+            println!("to_delete:{:?}", to_delete);
             while to_delete.len() > 0 {
                 write_state.rooms.remove(&to_delete.pop().unwrap());
             }
