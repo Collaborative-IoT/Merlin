@@ -229,35 +229,32 @@ pub async fn leave_room(
     publish_channel: &Arc<Mutex<lapin::Channel>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) {
-    server_state
-        .active_users
-        .get_mut(&requester_id)
-        .unwrap()
-        .current_room_id = -1;
-    let mut room = server_state.rooms.get_mut(room_id).unwrap();
-    room.amount_of_users -= 1;
-    room.user_ids.remove(&requester_id);
-    //A lways cleanup empty rooms
-    //this is handled during unexpected
-    //disconnects too.
-    if room.amount_of_users == 0 {
-        destroy_room(server_state, publish_channel, execution_handler, room_id).await;
-        return;
+    if let Some(user) = server_state.active_users.get_mut(&requester_id) {
+        user.current_room_id = -1;
+        let mut room = server_state.rooms.get_mut(room_id).unwrap();
+        room.amount_of_users -= 1;
+        room.user_ids.remove(&requester_id);
+        //Always cleanup empty rooms
+        //this is handled during unexpected
+        //disconnects too.
+        if room.amount_of_users == 0 {
+            destroy_room(server_state, publish_channel, execution_handler, room_id).await;
+        }
+        let request_to_voice_server = VoiceServerClosePeer {
+            roomId: room_id.to_string(),
+            peerId: requester_id.to_string(),
+            kicked: false,
+        };
+        let request_str: String = create_voice_server_request(
+            "close-peer",
+            &requester_id.to_string(),
+            request_to_voice_server,
+        );
+        let channel = publish_channel.lock().await;
+        rabbit::publish_message(&channel, request_str)
+            .await
+            .unwrap_or_default();
     }
-    let request_to_voice_server = VoiceServerClosePeer {
-        roomId: room_id.to_string(),
-        peerId: requester_id.to_string(),
-        kicked: false,
-    };
-    let request_str: String = create_voice_server_request(
-        "close-peer",
-        &requester_id.to_string(),
-        request_to_voice_server,
-    );
-    let channel = publish_channel.lock().await;
-    rabbit::publish_message(&channel, request_str)
-        .await
-        .unwrap_or_default();
 }
 
 ///  Adds a speaker that is already an existing peer in a room

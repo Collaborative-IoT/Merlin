@@ -7,6 +7,7 @@ use crate::communication::router;
 use crate::communication::types::{AuthCredentials, AuthResponse, BasicResponse};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
+use crate::rooms;
 use crate::state::state::ServerState;
 use crate::state::types::User;
 use crate::warp::http::Uri;
@@ -29,7 +30,6 @@ pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
     //these should never panic, if they do then the server is
     //100% in fault and can't run anyway.
     let server_state: Arc<RwLock<ServerState>> = Arc::new(RwLock::new(ServerState::new()));
-    setup_room_cleanup_task(server_state.clone());
     let execution_handler: Arc<Mutex<ExecutionHandler>> =
         Arc::new(Mutex::new(setup_execution_handler().await.unwrap()));
     let rabbit_connection: Connection = rabbit::setup_rabbit_connection().await.unwrap();
@@ -38,6 +38,11 @@ pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
             .await
             .unwrap(),
     ));
+    setup_room_cleanup_task(
+        server_state.clone(),
+        publish_channel.clone(),
+        execution_handler.clone(),
+    );
     rabbit::setup_consume_task(&rabbit_connection, server_state.clone())
         .await
         .unwrap();
@@ -91,7 +96,13 @@ async fn user_connected(
         &publish_channel,
     )
     .await;
-    user_disconnected(&current_user_id, &server_state).await;
+    user_disconnected(
+        &current_user_id,
+        &server_state,
+        &publish_channel,
+        &execution_handler,
+    )
+    .await;
 }
 
 async fn user_message(
@@ -118,8 +129,38 @@ async fn user_message(
     .unwrap_or_else(|e| eprintln!("issue routing msg:{}", e));
 }
 
-async fn user_disconnected(current_user_id: &i32, server_state: &Arc<RwLock<ServerState>>) {
-    server_state.write().await.peer_map.remove(current_user_id);
+async fn user_disconnected(
+    current_user_id: &i32,
+    server_state: &Arc<RwLock<ServerState>>,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
+    let mut write_state = server_state.write().await;
+    //if this user is in a room handle cleanup on the
+    //voice server side.
+    if write_state
+        .active_users
+        .get(current_user_id)
+        .unwrap()
+        .current_room_id
+        != -1
+    {
+        let current_room_id = write_state
+            .active_users
+            .get(current_user_id)
+            .unwrap()
+            .current_room_id
+            .clone();
+        rooms::handler::leave_room(
+            &mut write_state,
+            current_user_id,
+            &current_room_id,
+            publish_channel,
+            execution_handler,
+        )
+        .await;
+    }
+    write_state.peer_map.remove(current_user_id);
     println!("user_disconnected");
 }
 
@@ -255,13 +296,15 @@ pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
 
 // Make sure the rooms are being cleaned up
 // in the case that someone creates a room but
-// don't join the room within 3 seconds
-fn setup_room_cleanup_task(state: Arc<RwLock<ServerState>>) {
+// don't join the room within 10 seconds
+fn setup_room_cleanup_task(
+    state: Arc<RwLock<ServerState>>,
+    publish_channel: Arc<Mutex<lapin::Channel>>,
+    execution_handler: Arc<Mutex<ExecutionHandler>>,
+) {
     tokio::spawn(async move {
-        let state = state;
         loop {
             let mut to_delete: Vec<i32> = Vec::new();
-
             sleep(Duration::from_millis(10000)).await;
             let mut write_state = state.write().await;
             for id in write_state.rooms.keys() {
@@ -271,12 +314,34 @@ fn setup_room_cleanup_task(state: Arc<RwLock<ServerState>>) {
                     }
                 }
             }
-            println!("to_delete:{:?}", to_delete);
-            while to_delete.len() > 0 {
-                write_state.rooms.remove(&to_delete.pop().unwrap());
-            }
+            cleanup_rooms(
+                to_delete,
+                &mut write_state,
+                &publish_channel,
+                &execution_handler,
+            )
+            .await;
         }
     });
+}
+
+async fn cleanup_rooms(
+    mut to_delete: Vec<i32>,
+    write_state: &mut ServerState,
+    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) {
+    while to_delete.len() > 0 {
+        let room_to_delete = to_delete.pop().unwrap();
+        write_state.rooms.remove(&room_to_delete);
+        rooms::handler::destroy_room(
+            write_state,
+            publish_channel,
+            execution_handler,
+            &room_to_delete,
+        )
+        .await;
+    }
 }
 
 async fn send_auth_response(
