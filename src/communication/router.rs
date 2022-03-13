@@ -195,6 +195,12 @@ pub async fn route_msg(
         "user_previews" => {
             handler::gather_previews(basic_request, server_state, user_id, execution_handler).await
         }
+        "send_chat_msg" => Ok(handler::send_chat_message(
+            server_state,
+            user_id,
+            basic_request.request_containing_data,
+        )
+        .await),
         "my_data" => Ok(handler::gather_base_user(user_id, execution_handler, server_state).await),
         _ => Ok(handler::normal_invalid_request(server_state, user_id).await),
     }
