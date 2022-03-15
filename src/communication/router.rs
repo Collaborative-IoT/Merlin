@@ -19,7 +19,8 @@ pub async fn route_msg(
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) -> Result<()> {
     let basic_request: BasicRequest = serde_json::from_str(&msg)?;
-
+    println!("{}", basic_request.request_op_code);
+    println!("{}", basic_request.request_containing_data);
     //Route the request
     //We could use the basic_request op code for checking
     //different requests like add/remove user inside of the method
@@ -195,12 +196,10 @@ pub async fn route_msg(
         "user_previews" => {
             handler::gather_previews(basic_request, server_state, user_id, execution_handler).await
         }
-        "send_chat_msg" => Ok(handler::send_chat_message(
-            server_state,
-            user_id,
-            basic_request.request_containing_data,
-        )
-        .await),
+        "send_chat_msg" => {
+            handler::send_chat_message(server_state, user_id, basic_request.request_containing_data)
+                .await
+        }
         "my_data" => Ok(handler::gather_base_user(user_id, execution_handler, server_state).await),
         _ => Ok(handler::normal_invalid_request(server_state, user_id).await),
     }

@@ -13,6 +13,7 @@ use crate::state::types::Room;
 use crate::{rooms, ws_fan};
 use futures::lock::Mutex;
 use serde_json::Result;
+use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::mem::drop;
 use std::sync::Arc;
@@ -675,14 +676,22 @@ pub async fn send_chat_message(
     server_state: &Arc<RwLock<ServerState>>,
     requester_id: i32,
     message: String,
-) {
+) -> Result<()> {
+    //we need to inject the message with the
+    //requester id so the frontend can know
+    //who sent the message
+    let mut message: Value = serde_json::from_str(&message)?;
+    message["userId"] = Value::String(requester_id.to_string());
+    let new_message = serde_json::to_string(&message)?;
+
+    //broadcast to the room
     let mut write_state = server_state.write().await;
     if let Some(user) = write_state.active_users.get_mut(&requester_id) {
         let user_room_id = user.current_room_id.clone();
         if user_room_id != -1 {
             let basic_response = BasicResponse {
                 response_op_code: "new_chat_message".to_owned(),
-                response_containing_data: message,
+                response_containing_data: new_message,
             };
             let basic_response_str = serde_json::to_string(&basic_response).unwrap();
             ws_fan::fan::broadcast_message_to_room(
@@ -691,7 +700,7 @@ pub async fn send_chat_message(
                 user_room_id,
             )
             .await;
-            return;
+            return Ok(());
         }
         send_to_requester_channel(
             "issue with request".to_owned(),
@@ -700,6 +709,7 @@ pub async fn send_chat_message(
             "invalid_request".to_owned(),
         );
     }
+    Ok(())
 }
 
 pub async fn normal_invalid_request(server_state: &Arc<RwLock<ServerState>>, requester_id: i32) {
