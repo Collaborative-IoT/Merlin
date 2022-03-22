@@ -278,4 +278,5 @@ pub struct InitRoomData {
 pub struct JoinTypeInfo {
     pub as_speaker: bool,
     pub as_listener: bool,
+    pub room_id: i32,
 }

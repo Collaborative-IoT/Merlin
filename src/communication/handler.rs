@@ -696,6 +696,7 @@ pub async fn gather_type_of_room_join(
                 let response_data = JoinTypeInfo {
                     as_speaker: permissions.is_speaker,
                     as_listener: true,
+                    room_id: request_data.room_id,
                 };
                 send_to_requester_channel(
                     serde_json::to_string(&response_data).unwrap(),
