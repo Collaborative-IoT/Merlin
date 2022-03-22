@@ -200,6 +200,15 @@ pub async fn route_msg(
             handler::send_chat_message(server_state, user_id, basic_request.request_containing_data)
                 .await
         }
+        "join_type" => {
+            handler::gather_type_of_room_join(
+                basic_request,
+                user_id,
+                execution_handler,
+                server_state,
+            )
+            .await
+        }
         "my_data" => Ok(handler::gather_base_user(user_id, execution_handler, server_state).await),
         _ => Ok(handler::normal_invalid_request(server_state, user_id).await),
     }

@@ -271,3 +271,11 @@ pub struct InitRoomData {
     pub created_at: String,
     pub chat_mode: String,
 }
+
+/// What can you join as?
+/// in this room?
+#[derive(Deserialize, Serialize)]
+pub struct JoinTypeInfo {
+    pub as_speaker: bool,
+    pub as_listener: bool,
+}

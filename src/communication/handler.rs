@@ -21,6 +21,7 @@ use tokio::sync::RwLock;
 
 use super::data_capturer::{self, CaptureResult};
 use super::types::InitRoomData;
+use super::types::JoinTypeInfo;
 use super::types::LooseUserPreviewRequest;
 use super::types::RoomDetails;
 use super::types::{
@@ -670,6 +671,42 @@ pub async fn gather_base_user(
         &mut write_state,
         "your_data".to_owned(),
     );
+}
+
+/// Needed to let the frontend know
+/// what type of successful join
+/// request options there are.
+pub async fn gather_type_of_room_join(
+    request: BasicRequest,
+    requester_id: i32,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    server_state: &Arc<RwLock<ServerState>>,
+) -> Result<()> {
+    let mut write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    let request_data: GenericRoomId = serde_json::from_str(&request.request_containing_data)?;
+
+    if write_state.active_users.contains_key(&requester_id) {
+        let room_permissions =
+            data_fetcher::get_room_permissions_for_users(&request_data.room_id, &mut handler).await;
+        if !room_permissions.0 {
+            if let Some(permissions) = room_permissions.1.get(&requester_id) {
+                //IN FUTURE: We may restrict listeners for rooms
+                //that is why is_listner is added here
+                let response_data = JoinTypeInfo {
+                    as_speaker: permissions.is_speaker,
+                    as_listener: true,
+                };
+                send_to_requester_channel(
+                    serde_json::to_string(&response_data).unwrap(),
+                    requester_id,
+                    &mut write_state,
+                    "join_type_info".to_owned(),
+                );
+            }
+        }
+    }
+    Ok(())
 }
 
 pub async fn send_chat_message(
