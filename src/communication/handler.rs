@@ -690,14 +690,14 @@ pub async fn gather_type_of_room_join(
         let room_permissions =
             data_fetcher::get_room_permissions_for_users(&request_data.room_id, &mut handler).await;
         if !room_permissions.0 {
+            //IN FUTURE: We may restrict listeners for rooms
+            //that is why is_listner is added here
             let mut response_data = JoinTypeInfo {
                 as_speaker: false,
                 as_listener: true,
                 room_id: request_data.room_id,
             };
             if let Some(permissions) = room_permissions.1.get(&requester_id) {
-                //IN FUTURE: We may restrict listeners for rooms
-                //that is why is_listner is added here
                 response_data.as_speaker = permissions.is_speaker;
             }
             send_to_requester_channel(
