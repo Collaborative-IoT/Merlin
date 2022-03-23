@@ -280,3 +280,9 @@ pub struct JoinTypeInfo {
     pub as_listener: bool,
     pub room_id: i32,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct SingleUserDataResults {
+    pub user_id: i32,
+    pub data: User,
+}

@@ -24,6 +24,7 @@ use super::types::InitRoomData;
 use super::types::JoinTypeInfo;
 use super::types::LooseUserPreviewRequest;
 use super::types::RoomDetails;
+use super::types::SingleUserDataResults;
 use super::types::{
     BasicResponse, DeafAndMuteStatus, DeafAndMuteStatusUpdate, GenericUserId, RoomUpdate,
 };
@@ -549,7 +550,47 @@ pub async fn gather_all_users_in_room(
         }
     }
     send_error_response_to_requester(requester_id, &mut write_state).await;
-    return Ok(());
+    Ok(())
+}
+
+pub async fn gather_single_user(
+    request: BasicRequest,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    requester_id: i32,
+    server_state: &Arc<RwLock<ServerState>>,
+) -> Result<()> {
+    let mut write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    let user_id_obj: GenericUserId = serde_json::from_str(&request.request_containing_data)?;
+    let user_id = user_id_obj.user_id;
+    let mut users: (bool, Vec<User>) =
+        data_fetcher::get_users_for_user(requester_id.clone(), vec![user_id.clone()], &mut handler)
+            .await;
+    //no error was encountered and this user exists
+    if users.0 == false && users.1.len() == 1 {
+        let response = SingleUserDataResults {
+            user_id: user_id,
+            data: users.1.remove(0),
+        };
+        let response_str = serde_json::to_string(&response).unwrap();
+        send_to_requester_channel(
+            response_str,
+            requester_id.clone(),
+            &mut write_state,
+            "single_user_data".to_owned(),
+        );
+        return Ok(());
+    }
+    send_error_response_to_requester(requester_id, &mut write_state).await;
+    Ok(())
+}
+
+pub async fn gather_single_user_permission(
+    request: BasicRequest,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    requester_id: i32,
+    server_state: &Arc<RwLock<ServerState>>,
+) {
 }
 
 pub async fn change_room_metadata(
