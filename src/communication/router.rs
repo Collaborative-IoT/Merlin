@@ -210,6 +210,20 @@ pub async fn route_msg(
             .await
         }
         "my_data" => Ok(handler::gather_base_user(user_id, execution_handler, server_state).await),
+        "single_user_data" => {
+            handler::gather_single_user(basic_request, execution_handler, user_id, server_state)
+                .await
+        }
+        "single_user_permissions" => {
+            handler::gather_single_user_permission(
+                basic_request,
+                execution_handler,
+                user_id,
+                server_state,
+            )
+            .await
+        }
+
         _ => Ok(handler::normal_invalid_request(server_state, user_id).await),
     }
 }
