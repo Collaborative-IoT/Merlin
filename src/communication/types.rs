@@ -286,3 +286,9 @@ pub struct SingleUserDataResults {
     pub user_id: i32,
     pub data: User,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct SingleUserPermissionResults {
+    pub user_id: i32,
+    pub data: RoomPermissions,
+}

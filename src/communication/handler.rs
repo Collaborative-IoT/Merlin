@@ -25,6 +25,7 @@ use super::types::JoinTypeInfo;
 use super::types::LooseUserPreviewRequest;
 use super::types::RoomDetails;
 use super::types::SingleUserDataResults;
+use super::types::SingleUserPermissionResults;
 use super::types::{
     BasicResponse, DeafAndMuteStatus, DeafAndMuteStatusUpdate, GenericUserId, RoomUpdate,
 };
@@ -590,7 +591,29 @@ pub async fn gather_single_user_permission(
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     requester_id: i32,
     server_state: &Arc<RwLock<ServerState>>,
-) {
+) -> Result<()> {
+    let mut write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    let data_obj: GenericRoomIdAndPeerId = serde_json::from_str(&request.request_containing_data)?;
+    let permissions_res =
+        data_fetcher::get_single_user_permissions(&data_obj.roomId, &data_obj.peerId, &mut handler)
+            .await;
+    if let Some(permissions) = permissions_res {
+        let response = SingleUserPermissionResults {
+            user_id: data_obj.peerId,
+            data: permissions,
+        };
+        let response_str = serde_json::to_string(&response).unwrap();
+        send_to_requester_channel(
+            response_str,
+            requester_id.clone(),
+            &mut write_state,
+            "single_user_permissions".to_owned(),
+        );
+        return Ok(());
+    }
+    send_error_response_to_requester(requester_id, &mut write_state).await;
+    Ok(())
 }
 
 pub async fn change_room_metadata(
