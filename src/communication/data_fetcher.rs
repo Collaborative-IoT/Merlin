@@ -163,6 +163,29 @@ pub async fn get_room_permissions_for_users(
     }
 }
 
+pub async fn get_single_user_permissions(
+    room_id: &i32,
+    user_id: &i32,
+    execution_handler: &mut ExecutionHandler,
+) -> Option<RoomPermissions> {
+    let gather_result = execution_handler
+        .select_all_room_permissions_for_user(user_id, room_id)
+        .await;
+    let selected_rows = gather_result.unwrap();
+    if selected_rows.len() == 1 {
+        let row = &selected_rows[0];
+        let is_mod: bool = row.get(3);
+        let is_speaker: bool = row.get(4);
+        let asked_to_speak: bool = row.get(5);
+        return Some(RoomPermissions {
+            is_mod: is_mod,
+            is_speaker: is_speaker,
+            asked_to_speak: asked_to_speak,
+        });
+    }
+    None
+}
+
 pub async fn get_user_previews_for_users(
     user_ids: Vec<i32>,
     execution_handler: &mut ExecutionHandler,
