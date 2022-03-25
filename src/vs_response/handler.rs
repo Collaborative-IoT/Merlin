@@ -13,7 +13,7 @@ pub async fn notify_user_and_room(
     state: &mut ServerState,
     op_code_for_other_users: String,
 ) {
-    let room_id: i32 = response.d["roomId"].to_string().parse().unwrap();
+    let room_id: i32 = grab_room_id(response.d["roomId"].to_string());
     let user_id: i32 = response.uid.parse().unwrap();
     let basic_response_for_user = BasicResponse {
         response_op_code: response.op,
@@ -65,4 +65,13 @@ pub async fn notify_entire_room(response: serde_json::Value, state: &mut ServerS
         room_id,
     )
     .await;
+}
+
+/// Simply remove the wrapping double quotes
+/// from the roomId if it exists
+fn grab_room_id(mut data: String) -> i32 {
+    if data.contains(r#"""#) {
+        data = data[1..data.len() - 1].to_string();
+    }
+    data.parse().unwrap()
 }

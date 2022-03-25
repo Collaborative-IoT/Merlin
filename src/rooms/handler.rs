@@ -631,8 +631,16 @@ async fn check_or_insert_initial_permissions(
             //    previously and now they are joining as a speaker.
             if join_as == "join-as-speaker"
                 && current_user_permissions.is_speaker == false
-                && room.auto_speaker == false
+                && room.auto_speaker == true
             {
+                return false;
+            }
+            //if this person was in the room before and is a speaker
+            if join_as == "join-as-speaker" && current_user_permissions.is_speaker == true {
+                return false;
+            }
+            //Allow any join as peer requests
+            if join_as == "join-as-new-peer" {
                 return false;
             }
             return true;

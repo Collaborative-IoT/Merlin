@@ -3,7 +3,6 @@ use crate::vs_response::handler;
 use crate::vs_response::types::VoiceServerResponse;
 pub async fn route_msg(msg: String, state: &mut ServerState) {
     let temp_value: serde_json::Value = serde_json::from_str(&msg).unwrap();
-    println!("{}", temp_value);
     if temp_value["uid"] != serde_json::Value::Null {
         let op = temp_value["op"].as_str().unwrap();
         match op {

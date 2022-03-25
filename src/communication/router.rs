@@ -19,8 +19,6 @@ pub async fn route_msg(
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) -> Result<()> {
     let basic_request: BasicRequest = serde_json::from_str(&msg)?;
-    println!("{}", basic_request.request_op_code);
-    println!("{}", basic_request.request_containing_data);
     //Route the request
     //We could use the basic_request op code for checking
     //different requests like add/remove user inside of the method

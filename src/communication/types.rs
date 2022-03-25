@@ -103,7 +103,7 @@ pub struct RoomDetails {
     pub description: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct RoomPermissions {
     pub asked_to_speak: bool,
     pub is_speaker: bool,
