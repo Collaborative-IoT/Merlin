@@ -359,7 +359,7 @@ pub async fn get_initial_room_data(
             details: RoomDetails {
                 name: room.name.clone(),
                 chat_throttle: room.chat_throttle.clone(),
-                is_private: room.public == true,
+                is_private: !room.public,
                 description: room.desc.clone(),
             },
             creator_id: owner_data_and_chat_mode.1,
