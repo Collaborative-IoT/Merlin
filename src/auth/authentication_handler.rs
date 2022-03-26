@@ -184,7 +184,6 @@ pub async fn exchange_discord_refresh_token_for_access(
         .await?
         .json()
         .await?;
-    println!("{:?}", result);
     return Ok(result);
 }
 
@@ -193,7 +192,6 @@ pub async fn gather_user_basic_data_discord(
 ) -> Result<serde_json::Value, Error> {
     let base_url = "https://discord.com/api/v6/users/@me";
     let bearer_token: String = format!("Bearer {}", access_token);
-    println!("{}", bearer_token);
     let client = reqwest::Client::new();
     let result: serde_json::Value = client
         .get(base_url)
@@ -202,7 +200,6 @@ pub async fn gather_user_basic_data_discord(
         .await?
         .json()
         .await?;
-    println!("{:?}", result);
     return Ok(result);
 }
 
@@ -224,7 +221,6 @@ pub async fn gather_user_basic_data_github(
         .await?
         .json()
         .await?;
-    println!("{:?}", result);
     return Ok(result);
 }
 

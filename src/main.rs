@@ -1,6 +1,7 @@
 extern crate chrono;
 extern crate reqwest;
 extern crate warp;
+use std::env;
 #[allow(dead_code)]
 mod test;
 
@@ -76,17 +77,22 @@ pub mod vs_response {
     pub mod types;
 }
 
-#[tokio::main]
-async fn main() {
-    print_start();
-    server::start_server(([127, 0, 0, 1], 3030)).await;
-    //trace!("a trace example");
-    //debug!("deboogging");
-
-    //warn!("o_O");
-    //error!("boom");
+pub mod logging {
+    pub mod console;
 }
 
-fn print_start() {
-    //info!("Started....");
+#[tokio::main]
+async fn main() {
+    //print our ascii across win systems and unix systems
+    let unix_path =
+        env::current_dir().unwrap().to_str().unwrap().to_owned() + "/ascii_art/knightascii.txt";
+    let unix_result = logging::console::log_start(unix_path);
+    if unix_result.is_err() {
+        let win_path = env::current_dir().unwrap().to_str().unwrap().to_owned()
+            + r#"\ascii_art\knightascii.txt"#;
+        logging::console::log_start(win_path).unwrap_or_default();
+    }
+
+    //start
+    server::start_server(([127, 0, 0, 1], 3030)).await;
 }

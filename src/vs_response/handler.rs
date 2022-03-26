@@ -1,4 +1,5 @@
 use crate::communication::types::BasicResponse;
+use crate::logging;
 use crate::state::state::ServerState;
 use crate::vs_response::types::VoiceServerResponse;
 use crate::ws_fan::fan;
@@ -13,6 +14,10 @@ pub async fn notify_user_and_room(
     state: &mut ServerState,
     op_code_for_other_users: String,
 ) {
+    logging::console::log_event(&format!(
+        "VoiceServer triggered op code:{}",
+        op_code_for_other_users
+    ));
     let room_id: i32 = grab_room_id(response.d["roomId"].to_string());
     let user_id: i32 = response.uid.parse().unwrap();
     let basic_response_for_user = BasicResponse {

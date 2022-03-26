@@ -8,6 +8,7 @@ use crate::communication::types::{
 use crate::communication::{data_capturer, data_fetcher};
 use crate::data_store::db_models::{DBRoom, DBRoomBlock, DBRoomPermissions};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
+use crate::logging;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
 use crate::state::types::Room;
@@ -103,6 +104,7 @@ pub async fn create_room(
             server_state,
             "issue_creating_room".to_string(),
         );
+        logging::console::log_failure(&format!("user({}) create room failure", requester_id));
     } else {
         let channel = publish_channel.lock().await;
         continue_with_successful_room_creation(
@@ -118,6 +120,10 @@ pub async fn create_room(
     }
 }
 
+/// Handles room deletion in the following areas
+/// 1.Server state
+/// 2.Database
+/// 3.VoiceServer(via rabbitmq published message)
 pub async fn destroy_room(
     server_state: &mut ServerState,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
@@ -142,6 +148,7 @@ pub async fn destroy_room(
     rabbit::publish_message(&channel, request_str)
         .await
         .unwrap_or_default();
+    logging::console::log_event(&format!("Destroyed room:{}", room_id));
 }
 
 pub async fn remove_user_from_room_basic(
@@ -212,8 +219,13 @@ pub async fn join_room(
         rabbit::publish_message(&channel, request_str)
             .await
             .unwrap_or_default();
+        logging::console::log_success(&format!("user({}) joined room({})", requester_id, room_id));
         return;
     };
+    logging::console::log_failure(&format!(
+        "user({}) issue joining room({})",
+        requester_id, room_id
+    ));
     send_to_requester_channel(
         user_id.to_string(),
         requester_id,
@@ -222,6 +234,9 @@ pub async fn join_room(
     );
 }
 
+/// Removes users from a room, this method
+/// is used for both direct user triggered
+/// requests and unexpected disconnections
 pub async fn leave_room(
     server_state: &mut ServerState,
     requester_id: &i32,
@@ -254,6 +269,7 @@ pub async fn leave_room(
         rabbit::publish_message(&channel, request_str)
             .await
             .unwrap_or_default();
+        logging::console::log_success(&format!("user({}) left room({})", requester_id, room_id));
     }
 }
 
@@ -299,9 +315,17 @@ pub async fn add_speaker(
             rabbit::publish_message(&channel, request_str)
                 .await
                 .unwrap_or_default();
+            logging::console::log_success(&format!(
+                "user({}) added user({}) as to speakers",
+                requester_id, user_id
+            ));
             return;
         }
     }
+    logging::console::log_failure(&format!(
+        "user({}) failure to add speaker({})",
+        requester_id, user_id
+    ));
     send_to_requester_channel(
         user_id.to_string(),
         requester_id.clone(),
@@ -364,9 +388,17 @@ pub async fn remove_speaker(
                 room_id,
             )
             .await;
+            logging::console::log_success(&format!(
+                "user({}) removed user({}) from speaker",
+                requester_id, user_id
+            ));
             return;
         }
     }
+    logging::console::log_failure(&format!(
+        "user({}) invalid remove speaker request",
+        requester_id
+    ));
     send_to_requester_channel(
         user_id.to_string(),
         requester_id.clone(),
@@ -437,6 +469,10 @@ pub async fn raise_hand(
     };
     let basic_response_str = serde_json::to_string(&basic_response).unwrap();
     fan::broadcast_message_to_room(basic_response_str, server_state, room_id.clone()).await;
+    logging::console::log_success(&format!(
+        "user({}) successfully raised their hand",
+        requester_id
+    ));
 }
 
 pub async fn lower_hand(
@@ -486,8 +522,16 @@ pub async fn lower_hand(
         };
         let basic_response_str = serde_json::to_string(&basic_response).unwrap();
         fan::broadcast_message_to_room(basic_response_str, server_state, room_id.clone()).await;
+        logging::console::log_success(&format!(
+            "User({}) hand successfully lowered by user({})",
+            requestee_id, requester_id
+        ));
         return;
     }
+    logging::console::log_failure(&format!(
+        "Failed lower hand request from user({})",
+        requester_id
+    ));
     send_to_requester_channel(
         "issue with request".to_owned(),
         requester_id.clone(),
@@ -528,8 +572,16 @@ pub async fn update_room_meta_data(
         let basic_response_str = serde_json::to_string(&basic_response).unwrap();
         ws_fan::fan::broadcast_message_to_room(basic_response_str, server_state, room_id.clone())
             .await;
+        logging::console::log_success(&format!(
+            "user({}) updated room({}) metadata",
+            requester_id, room_id
+        ));
         return;
     }
+    logging::console::log_failure(&format!(
+        "Issue updating room metadata by user({})",
+        requester_id
+    ));
     send_to_requester_channel(
         "issue with request".to_owned(),
         requester_id.clone(),
@@ -612,6 +664,10 @@ async fn continue_with_successful_room_creation(
     rabbit::publish_message(channel, request_str)
         .await
         .unwrap_or_default();
+    logging::console::log_success(&format!(
+        "user({}) successfully created room({})",
+        user_id, room_id
+    ));
 }
 
 async fn check_or_insert_initial_permissions(

@@ -7,10 +7,10 @@ use crate::communication::router;
 use crate::communication::types::{AuthCredentials, AuthResponse, BasicResponse};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
-use crate::rooms;
 use crate::state::state::ServerState;
 use crate::state::types::User;
 use crate::warp::http::Uri;
+use crate::{logging, rooms};
 use futures::lock::Mutex;
 use futures_util::stream::SplitStream;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt, TryFutureExt};
@@ -81,6 +81,11 @@ async fn user_connected(
         "auth-good".to_owned(),
     )
     .await;
+
+    logging::console::log_event(&format!(
+        "New user({}) connection!",
+        user_id_and_tokens.user_id
+    ));
 
     //Make use of a mpsc channel for each user.
     let current_user_id = user_id_and_tokens.user_id;
@@ -161,7 +166,10 @@ async fn user_disconnected(
         .await;
     }
     write_state.peer_map.remove(current_user_id);
-    println!("user_disconnected");
+    logging::console::log_event(&format!(
+        "User({}) disconnected from the server",
+        current_user_id
+    ));
 }
 
 async fn handle_authentication(
@@ -341,6 +349,7 @@ async fn cleanup_rooms(
             &room_to_delete,
         )
         .await;
+        logging::console::log_event(&format!("Removed idle room:{}", room_to_delete));
     }
 }
 
