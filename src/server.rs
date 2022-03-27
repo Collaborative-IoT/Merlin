@@ -463,6 +463,6 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
             .or(github_auth_route)
             .or(github_auth_callback_route),
     );
-
+    logging::console::log_event("Server now listening for connections...");
     warp::serve(routes).run(addr).await;
 }

@@ -3,6 +3,10 @@ use anyhow::Result;
 use std::fs::File;
 use std::io::Read;
 
+pub fn clear_terminal() {
+    print!("\x1B[2J\x1B[1;1H");
+}
+
 pub fn log_success(data: &str) {
     println!("[{}]:{}", Colour::Green.paint("SUCCESS"), data);
 }

@@ -82,6 +82,9 @@ pub mod logging {
 
 #[tokio::main]
 async fn main() {
+    //make a clean slate for our ascii art
+    logging::console::clear_terminal();
+
     //print our ascii across win systems and unix systems
     let unix_path =
         env::current_dir().unwrap().to_str().unwrap().to_owned() + "/ascii_art/knightascii.txt";

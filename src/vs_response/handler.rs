@@ -18,6 +18,7 @@ pub async fn notify_user_and_room(
         "VoiceServer triggered op code:{}",
         op_code_for_other_users
     ));
+    println!("{},{}", response.op, op_code_for_other_users);
     let room_id: i32 = grab_room_id(response.d["roomId"].to_string());
     let user_id: i32 = response.uid.parse().unwrap();
     let basic_response_for_user = BasicResponse {
