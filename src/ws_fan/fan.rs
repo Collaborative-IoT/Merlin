@@ -61,8 +61,9 @@ pub async fn broadcast_message_to_single_user(
     server_state: &mut ServerState,
     user_id: &i32,
 ) {
-    let user_websocket_channel = server_state.peer_map.get(user_id).unwrap();
-    user_websocket_channel
-        .send(Message::text(new_msg.clone()))
-        .unwrap_or_else(|e| eprintln!("issue sending msg:{}", e));
+    if let Some(user_websocket_channel) = server_state.peer_map.get(user_id) {
+        user_websocket_channel
+            .send(Message::text(new_msg.clone()))
+            .unwrap_or_else(|e| eprintln!("issue sending msg:{}", e));
+    }
 }
