@@ -7,6 +7,7 @@ use crate::communication::types::{
 };
 use crate::data_store::db_models::{DBFollower, DBUserBlock};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
+use crate::logging;
 use crate::rooms::handler::EncounteredError;
 use crate::state::state::ServerState;
 use crate::state::types::Room;
@@ -252,8 +253,13 @@ pub async fn follow_or_unfollow_user(
             &mut write_state,
             response_op.unwrap().to_owned(),
         );
+        logging::console::log_success(&format!(
+            "User({}) successfully followed/unfollowed user({})",
+            requester_id, user_id_data.user_id
+        ));
         return Ok(());
     }
+    logging::console::log_failure(&format!("User({}) follow/unfollow failure", requester_id));
     drop(handler);
     send_error_response_to_requester(requester_id, &mut write_state).await;
     return Ok(());
