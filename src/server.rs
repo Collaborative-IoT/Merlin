@@ -166,6 +166,7 @@ async fn user_disconnected(
         .await;
     }
     write_state.peer_map.remove(current_user_id);
+    write_state.active_users.remove(current_user_id);
     logging::console::log_event(&format!(
         "User({}) disconnected from the server",
         current_user_id
