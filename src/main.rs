@@ -87,14 +87,13 @@ async fn main() {
 
     //print our ascii across win systems and unix systems
     let unix_path =
-        env::current_dir().unwrap().to_str().unwrap().to_owned() + "/ascii_art/knightascii.txt";
+        env::current_dir().unwrap().to_str().unwrap().to_owned() + "/src/ascii_art/knightascii.txt";
     let unix_result = logging::console::log_start(unix_path);
     if unix_result.is_err() {
         let win_path = env::current_dir().unwrap().to_str().unwrap().to_owned()
-            + r#"\ascii_art\knightascii.txt"#;
-        logging::console::log_start(win_path).unwrap_or_default();
+            + r#"\src\ascii_art\knightascii.txt"#;
+        logging::console::log_start(win_path).unwrap();
     }
-
     //start
     server::start_server(([127, 0, 0, 1], 3030)).await;
 }
