@@ -645,10 +645,11 @@ pub async fn update_entire_user(
                 };
                 let room_id = user.current_room_id.clone();
                 drop(user);
-                ws_fan::fan::broadcast_message_to_room(
+                ws_fan::fan::broadcast_message_to_room_excluding_user(
                     serde_json::to_string(&response).unwrap(),
                     &mut write_state,
                     room_id,
+                    requester_id.clone(),
                 )
                 .await;
             }
