@@ -117,6 +117,7 @@ pub struct UserPreview {
     pub avatar_url: String,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct UserProfileEdit {
     pub display_name: Option<String>,
     pub username: Option<String>,

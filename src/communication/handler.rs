@@ -27,6 +27,7 @@ use super::types::LooseUserPreviewRequest;
 use super::types::RoomDetails;
 use super::types::SingleUserDataResults;
 use super::types::SingleUserPermissionResults;
+use super::types::UserProfileEdit;
 use super::types::{
     BasicResponse, DeafAndMuteStatus, DeafAndMuteStatusUpdate, GenericUserId, RoomUpdate,
 };
@@ -69,7 +70,7 @@ pub async fn create_room(
         }
     }
     // If the request is invalid
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
     return Ok(());
 }
 
@@ -100,7 +101,7 @@ pub async fn block_user_from_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
     return Ok(());
 }
 
@@ -140,7 +141,7 @@ pub async fn join_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
     return Ok(());
 }
 
@@ -186,7 +187,7 @@ pub async fn add_or_remove_speaker(
             return Ok(());
         }
     }
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
     return Ok(());
 }
 
@@ -208,7 +209,7 @@ pub async fn handle_web_rtc_request(
         .await;
         return Ok(());
     }
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
     return Ok(());
 }
 
@@ -261,7 +262,7 @@ pub async fn follow_or_unfollow_user(
     }
     logging::console::log_failure(&format!("User({}) follow/unfollow failure", requester_id));
     drop(handler);
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
     return Ok(());
 }
 
@@ -358,7 +359,7 @@ pub async fn get_initial_room_data(
 
         //if encountered errors getting data needed
         if owner_data_and_chat_mode.0 {
-            send_error_response_to_requester(requester_id.clone(), &mut write_state).await;
+            send_error_response_to_requester(requester_id.clone(), &mut write_state);
             return Ok(());
         }
         let init_data = InitRoomData {
@@ -384,7 +385,7 @@ pub async fn get_initial_room_data(
             "initial_room_data".to_owned(),
         );
     }
-    send_error_response_to_requester(requester_id.clone(), &mut write_state).await;
+    send_error_response_to_requester(requester_id.clone(), &mut write_state);
     Ok(())
 }
 
@@ -412,7 +413,7 @@ pub async fn leave_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
     return Ok(());
 }
 
@@ -459,7 +460,7 @@ pub async fn raise_hand_or_lower_hand(
             return Ok(());
         }
     }
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
     return Ok(());
 }
 
@@ -509,7 +510,7 @@ pub async fn block_or_unblock_user_from_user(
         );
         return Ok(());
     }
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
     return Ok(());
 }
 
@@ -556,7 +557,7 @@ pub async fn gather_all_users_in_room(
             return Ok(());
         }
     }
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
     Ok(())
 }
 
@@ -588,7 +589,7 @@ pub async fn gather_single_user(
         );
         return Ok(());
     }
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
     Ok(())
 }
 
@@ -618,7 +619,50 @@ pub async fn gather_single_user_permission(
         );
         return Ok(());
     }
-    send_error_response_to_requester(requester_id, &mut write_state).await;
+    send_error_response_to_requester(requester_id, &mut write_state);
+    Ok(())
+}
+
+pub async fn update_entire_user(
+    request: BasicRequest,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    requester_id: i32,
+    server_state: &Arc<RwLock<ServerState>>,
+) -> Result<()> {
+    let mut write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    let data_obj: UserProfileEdit = serde_json::from_str(&request.request_containing_data)?;
+    let result = data_capturer::capture_user_update(&mut handler, &requester_id, data_obj).await;
+    if !result.encountered_error {
+        // If this user exists and is in a room
+        // we should notify the room that he is in
+        // that this user has updated their own data.
+        if let Some(user) = write_state.active_users.get_mut(&requester_id) {
+            if user.current_room_id != -1 {
+                let response = BasicResponse {
+                    response_op_code: "user_info_updated".to_owned(),
+                    response_containing_data: requester_id.to_string(),
+                };
+                let room_id = user.current_room_id.clone();
+                drop(user);
+                ws_fan::fan::broadcast_message_to_room(
+                    serde_json::to_string(&response).unwrap(),
+                    &mut write_state,
+                    room_id,
+                )
+                .await;
+            }
+        }
+        send_to_requester_channel(
+            "".to_owned(),
+            requester_id,
+            &mut write_state,
+            "profile_updated".to_owned(),
+        );
+
+        return Ok(());
+    }
+    send_error_response_to_requester(requester_id, &mut write_state);
     Ok(())
 }
 
@@ -646,12 +690,7 @@ pub async fn change_room_metadata(
         return Ok(());
     }
 
-    send_to_requester_channel(
-        "issue with request".to_owned(),
-        requester_id,
-        &mut write_state,
-        "invalid_request".to_owned(),
-    );
+    send_error_response_to_requester(requester_id, &mut write_state);
     return Ok(());
 }
 
@@ -687,12 +726,7 @@ pub async fn update_mute_and_deaf_status(
             .await;
             return Ok(());
         }
-        send_to_requester_channel(
-            "issue with request".to_owned(),
-            requester_id,
-            &mut write_state,
-            "invalid_request".to_owned(),
-        );
+        send_error_response_to_requester(requester_id, &mut write_state);
     }
     return Ok(());
 }
@@ -811,19 +845,14 @@ pub async fn send_chat_message(
             .await;
             return Ok(());
         }
-        send_to_requester_channel(
-            "issue with request".to_owned(),
-            requester_id,
-            &mut write_state,
-            "invalid_request".to_owned(),
-        );
+        send_error_response_to_requester(requester_id, &mut write_state);
     }
     Ok(())
 }
 
 pub async fn normal_invalid_request(server_state: &Arc<RwLock<ServerState>>, requester_id: i32) {
     let mut state = server_state.write().await;
-    send_error_response_to_requester(requester_id, &mut state).await;
+    send_error_response_to_requester(requester_id, &mut state);
 }
 
 pub async fn get_room_permissions_for_users(
@@ -846,7 +875,7 @@ pub async fn get_room_permissions_for_users(
     }
 }
 
-async fn send_error_response_to_requester(requester_id: i32, write_state: &mut ServerState) {
+fn send_error_response_to_requester(requester_id: i32, write_state: &mut ServerState) {
     send_to_requester_channel(
         "issue with request".to_owned(),
         requester_id,
