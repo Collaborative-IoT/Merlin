@@ -213,6 +213,10 @@ pub async fn route_msg(
             handler::gather_single_user(basic_request, execution_handler, user_id, server_state)
                 .await
         }
+        "change_user_mod_status" => {
+            handler::change_user_mod_status(basic_request, execution_handler, user_id, server_state)
+                .await
+        }
         "update_user_data" => {
             handler::update_entire_user(basic_request, execution_handler, user_id, server_state)
                 .await

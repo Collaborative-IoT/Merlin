@@ -293,3 +293,9 @@ pub struct SingleUserPermissionResults {
     pub user_id: i32,
     pub data: RoomPermissions,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct NewModStatus {
+    pub new_status: bool,
+    pub user_id: i32,
+}

@@ -24,6 +24,7 @@ use super::data_capturer::{self, CaptureResult};
 use super::types::InitRoomData;
 use super::types::JoinTypeInfo;
 use super::types::LooseUserPreviewRequest;
+use super::types::NewModStatus;
 use super::types::RoomDetails;
 use super::types::SingleUserDataResults;
 use super::types::SingleUserPermissionResults;
@@ -668,7 +669,57 @@ pub async fn update_entire_user(
 }
 
 /// Gives mod to someone in the room
-pub async fn give_mod_to_user() {}
+pub async fn change_user_mod_status(
+    request: BasicRequest,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    requester_id: i32,
+    server_state: &Arc<RwLock<ServerState>>,
+) -> Result<()> {
+    let mut write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    let data_obj: NewModStatus = serde_json::from_str(&request.request_containing_data)?;
+    if let Some(user) = write_state.active_users.get(&requester_id) {
+        let user_current_room = user.current_room_id.clone();
+        // We will need the server state again
+        // have to drop to comply with borrow rules
+        drop(user);
+        // Is this user even in a room?
+        if user_current_room != -1 {
+            let owner_and_settings =
+                data_fetcher::get_room_owner_and_settings(&mut handler, &user_current_room).await;
+            // We haven't encountered an error gathering from db
+            if !owner_and_settings.0 {
+                // Are we the owner of the room?
+                // Only the owner of the room can
+                // appoint mods
+                if owner_and_settings.1 == requester_id {
+                    let result = data_capturer::mod_or_unmod_user_capture(
+                        data_obj.new_status,
+                        &user_current_room,
+                        &data_obj.user_id,
+                        &mut handler,
+                    )
+                    .await;
+                    if !result.encountered_error {
+                        let basic_response = BasicResponse {
+                            response_op_code: type_of_mod_op(data_obj.new_status.clone()),
+                            response_containing_data: data_obj.user_id.to_string(),
+                        };
+                        ws_fan::fan::broadcast_message_to_room(
+                            serde_json::to_string(&basic_response).unwrap(),
+                            &mut write_state,
+                            user_current_room,
+                        )
+                        .await;
+                    } else {
+                        send_error_response_to_requester(requester_id, &mut write_state);
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
 
 pub async fn change_room_metadata(
     request: BasicRequest,
@@ -879,15 +930,6 @@ pub async fn get_room_permissions_for_users(
     }
 }
 
-fn send_error_response_to_requester(requester_id: i32, write_state: &mut ServerState) {
-    send_to_requester_channel(
-        "issue with request".to_owned(),
-        requester_id,
-        write_state,
-        "invalid_request".to_owned(),
-    );
-}
-
 pub fn room_is_joinable(
     read_state: &ServerState,
     peer_id: &i32,
@@ -902,4 +944,21 @@ pub fn room_is_joinable(
         }
     }
     return false;
+}
+
+fn type_of_mod_op(mod_status: bool) -> String {
+    if mod_status == true {
+        return "new_mod".to_owned();
+    } else {
+        return "removed_mod".to_owned();
+    }
+}
+
+fn send_error_response_to_requester(requester_id: i32, write_state: &mut ServerState) {
+    send_to_requester_channel(
+        "issue with request".to_owned(),
+        requester_id,
+        write_state,
+        "invalid_request".to_owned(),
+    );
 }
