@@ -344,6 +344,31 @@ pub async fn capture_new_room_permissions_update(
     );
 }
 
+pub async fn mod_or_unmod_user_capture(
+    mod_status: bool,
+    room_id: &i32,
+    user_id: &i32,
+    execution_handler: &mut ExecutionHandler,
+) -> CaptureResult {
+    let old_permissions =
+        data_fetcher::get_single_user_permissions(room_id, user_id, execution_handler).await;
+    if let Some(old) = old_permissions {
+        let new_permissions = DBRoomPermissions {
+            id: -1,
+            user_id: user_id.clone(),
+            room_id: room_id.clone(),
+            is_mod: mod_status,
+            is_speaker: old.is_speaker,
+            asked_to_speak: old.asked_to_speak,
+        };
+        return capture_new_room_permissions_update(&new_permissions, execution_handler).await;
+    }
+    return CaptureResult {
+        desc: "Issue locating previous permissions".to_owned(),
+        encountered_error: true,
+    };
+}
+
 /// Makes sure a x amount of row were successfully deleted/updated
 fn handle_removal_or_update_capture(
     success_msg: String,

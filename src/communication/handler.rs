@@ -667,6 +667,9 @@ pub async fn update_entire_user(
     Ok(())
 }
 
+/// Gives mod to someone in the room
+pub async fn give_mod_to_user() {}
+
 pub async fn change_room_metadata(
     request: BasicRequest,
     server_state: &Arc<RwLock<ServerState>>,
