@@ -6,6 +6,7 @@ use std::env;
 mod test;
 
 pub mod state {
+    pub mod owner_queue;
     pub mod state;
     pub mod types;
 }
