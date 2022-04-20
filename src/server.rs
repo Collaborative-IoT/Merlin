@@ -43,6 +43,7 @@ pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
         publish_channel.clone(),
         execution_handler.clone(),
     );
+    setup_room_queue_cleanup_task(server_state.clone());
     rabbit::setup_consume_task(&rabbit_connection, server_state.clone())
         .await
         .unwrap();
@@ -303,9 +304,9 @@ pub async fn setup_execution_handler() -> Result<ExecutionHandler, Error> {
     return Ok(handler);
 }
 
-// Make sure the rooms are being cleaned up
-// in the case that someone creates a room but
-// don't join the room within 10 seconds
+/// Make sure the rooms are being cleaned up
+/// in the case that someone creates a room but
+/// don't join the room within 10 seconds
 fn setup_room_cleanup_task(
     state: Arc<RwLock<ServerState>>,
     publish_channel: Arc<Mutex<lapin::Channel>>,
@@ -334,6 +335,19 @@ fn setup_room_cleanup_task(
     });
 }
 
+/// Make sure the queues are always cleared of
+/// users that are no longer in this room.'
+/// This helps reserve storage on the server.
+fn setup_room_queue_cleanup_task(state: Arc<RwLock<ServerState>>) {
+    tokio::spawn(async move {
+        loop {
+            sleep(Duration::from_millis(10000)).await;
+            let mut write_state = state.write().await;
+            cleanup_owner_queues(&mut write_state);
+        }
+    });
+}
+
 async fn cleanup_rooms(
     mut to_delete: Vec<i32>,
     write_state: &mut ServerState,
@@ -351,6 +365,20 @@ async fn cleanup_rooms(
         )
         .await;
         logging::console::log_event(&format!("Removed idle room:{}", room_to_delete));
+    }
+}
+
+fn cleanup_owner_queues(write_state: &mut ServerState) {
+    let mut to_delete = Vec::new();
+    for queue in write_state.owner_queues.values_mut() {
+        if queue.user_queue.len() == 0 {
+            to_delete.push(queue.room_id.clone());
+            continue;
+        }
+        queue.remove_all_invalid_users(&write_state.active_users);
+    }
+    for room_id in to_delete {
+        write_state.owner_queues.remove(&room_id);
     }
 }
 

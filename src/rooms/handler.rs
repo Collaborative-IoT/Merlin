@@ -10,6 +10,7 @@ use crate::data_store::db_models::{DBRoom, DBRoomBlock, DBRoomPermissions};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::logging;
 use crate::rabbitmq::rabbit;
+use crate::state::owner_queue::OwnerQueue;
 use crate::state::state::ServerState;
 use crate::state::types::Room;
 use crate::ws_fan::{self, fan};
@@ -17,7 +18,7 @@ use chrono::Utc;
 use futures::lock::Mutex;
 use lapin::Channel;
 use serde::Serialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, LinkedList};
 use std::mem::drop;
 use std::sync::Arc;
 pub type EncounteredError = bool;
@@ -137,7 +138,7 @@ pub async fn destroy_room(
 
     // remove from state
     server_state.rooms.remove(room_id);
-
+    server_state.owner_queues.remove(room_id);
     // remove from voice server
     let request_to_voice_server = VoiceServerDestroyRoom {
         roomId: room_id.to_string(),
@@ -219,7 +220,12 @@ pub async fn join_room(
         rabbit::publish_message(&channel, request_str)
             .await
             .unwrap_or_default();
+
+        //make sure this user is now reflected in our queue
+        //for next-in-line ownership
+        insert_user_into_owner_queue(user_id, &room_id, server_state);
         logging::console::log_success(&format!("user({}) joined room({})", requester_id, room_id));
+
         return;
     };
     logging::console::log_failure(&format!(
@@ -659,6 +665,13 @@ async fn continue_with_successful_room_creation(
     };
     let new_room_state: Room = construct_basic_room_for_state(room_id.clone(), public, name, desc);
     server_state.rooms.insert(room_id, new_room_state);
+    server_state.owner_queues.insert(
+        room_id,
+        OwnerQueue {
+            user_queue: LinkedList::new(),
+            room_id: room_id,
+        },
+    );
     let request_str =
         create_voice_server_request("create-room", &user_id.to_string(), request_to_voice_server);
     rabbit::publish_message(channel, request_str)
@@ -793,5 +806,13 @@ fn get_new_removed_speaker_permission_config(
         return permission_configs::modded_non_speaker(room_id.clone(), user_id.clone());
     } else {
         return permission_configs::regular_listener(room_id.clone(), user_id.clone());
+    }
+}
+
+fn insert_user_into_owner_queue(user_id: i32, room_id: &i32, server_state: &mut ServerState) {
+    if let Some(queue) = server_state.owner_queues.get_mut(room_id) {
+        queue.insert_new_user(user_id);
+    } else {
+        logging::console::log_failure("Issue adding user into owner queue");
     }
 }

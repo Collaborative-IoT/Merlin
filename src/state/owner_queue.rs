@@ -1,6 +1,6 @@
 use std::collections::{HashMap, LinkedList};
 
-use super::{state::ServerState, types::User};
+use super::types::User;
 
 /// The owner queue that represents who is
 /// next in line to gather the owner role
