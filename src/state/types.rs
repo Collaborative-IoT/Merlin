@@ -11,7 +11,7 @@ pub struct Board {
     //Those granted permissions by the owner
     pub users_with_permission: HashSet<String>,
 }
-
+#[derive(Default)]
 pub struct User {
     pub muted: bool,
     pub deaf: bool,

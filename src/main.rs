@@ -8,6 +8,7 @@ mod test;
 pub mod state {
     pub mod owner_queue;
     pub mod state;
+    pub mod tests;
     pub mod types;
 }
 

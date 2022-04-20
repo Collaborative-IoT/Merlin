@@ -1,6 +1,6 @@
-use std::collections::LinkedList;
+use std::collections::{HashMap, LinkedList};
 
-use super::state::ServerState;
+use super::{state::ServerState, types::User};
 
 /// The owner queue that represents who is
 /// next in line to gather the owner role
@@ -27,19 +27,20 @@ impl OwnerQueue {
         self.user_queue.push_back(user_id);
     }
 
-    pub fn remove_all_invalid_users(&mut self, server_state: &mut ServerState) {
+    pub fn remove_all_invalid_users(&mut self, active_users: &HashMap<i32, User>) {
         let mut new_normal_queue: LinkedList<i32> = LinkedList::new();
 
         for item in self.user_queue.iter() {
-            if let Some(user) = server_state.active_users.get(item) {
+            if let Some(user) = active_users.get(item) {
                 if user.current_room_id == self.room_id {
                     new_normal_queue.push_back(item.clone());
                 }
             }
         }
+        self.user_queue = new_normal_queue;
     }
 
-    pub fn find_new_owner(&mut self, server_state: &mut ServerState) -> Option<i32> {
+    pub fn find_new_owner(&mut self, active_users: &HashMap<i32, User>) -> Option<i32> {
         // Pop through all users until we find the next eligible.
         // An eligible user is someone who is in our room still.
         loop {
@@ -49,7 +50,7 @@ impl OwnerQueue {
             let next = self.user_queue.pop_front().unwrap();
 
             // If this user exists and they are in our current room.
-            if let Some(user) = server_state.active_users.get(&next) {
+            if let Some(user) = active_users.get(&next) {
                 if user.current_room_id == self.room_id {
                     return Some(next);
                 }
