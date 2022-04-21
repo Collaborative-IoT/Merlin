@@ -260,6 +260,14 @@ pub async fn leave_room(
         //disconnects too.
         if room.amount_of_users == 0 {
             destroy_room(server_state, publish_channel, execution_handler, room_id).await;
+        } else {
+            select_new_owner_if_current_user_is_owner(
+                requester_id,
+                server_state,
+                execution_handler,
+                room_id.clone(),
+            )
+            .await;
         }
         let request_to_voice_server = VoiceServerClosePeer {
             roomId: room_id.to_string(),
@@ -815,4 +823,62 @@ fn insert_user_into_owner_queue(user_id: i32, room_id: &i32, server_state: &mut 
     } else {
         logging::console::log_failure("Issue adding user into owner queue");
     }
+}
+
+async fn select_new_owner_if_current_user_is_owner(
+    requester_id: &i32,
+    server_state: &mut ServerState,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    room_id: i32,
+) {
+    // Update the room owner if this user that is leaving
+    // is the current owner and broadcast this update
+    // to the other users in the room
+    let mut handler = execution_handler.lock().await;
+    let need_to_update_room_owner =
+        user_is_owner_of_room(requester_id.clone(), &mut handler, &room_id).await;
+    if need_to_update_room_owner {
+        //need to brodcast this update to the rooms
+        let user_update_res = update_room_owner(server_state, &mut handler, &room_id).await;
+        if let Some(new_owner_id) = user_update_res {
+            let response = BasicResponse {
+                response_op_code: "new_owner".to_owned(),
+                response_containing_data: new_owner_id.to_string(),
+            };
+            ws_fan::fan::broadcast_message_to_room(
+                serde_json::to_string(&response).unwrap(),
+                server_state,
+                room_id,
+            )
+            .await;
+        }
+    }
+}
+
+async fn update_room_owner(
+    server_state: &mut ServerState,
+    execution_handler: &mut ExecutionHandler,
+    room_id: &i32,
+) -> Option<i32> {
+    if let Some(owner_queue) = server_state.owner_queues.get_mut(room_id) {
+        let new_owner = owner_queue.find_new_owner(&server_state.active_users);
+        if let Some(new_owner_id) = new_owner {
+            data_capturer::capture_new_room_owner_update(room_id, &new_owner_id, execution_handler)
+                .await;
+            return Some(new_owner_id);
+        }
+    }
+    None
+}
+
+async fn user_is_owner_of_room(
+    user_id: i32,
+    execution_handler: &mut ExecutionHandler,
+    room_id: &i32,
+) -> bool {
+    let res = data_fetcher::get_room_owner_and_settings(execution_handler, room_id).await;
+    if res.0 {
+        return false;
+    }
+    return res.1 == user_id;
 }
