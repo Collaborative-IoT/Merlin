@@ -839,23 +839,11 @@ async fn select_new_owner_if_current_user_is_owner(
         user_is_owner_of_room(requester_id.clone(), &mut handler, &room_id).await;
     if need_to_update_room_owner {
         //need to brodcast this update to the rooms
-        let user_update_res = update_room_owner(server_state, &mut handler, &room_id).await;
-        if let Some(new_owner_id) = user_update_res {
-            let response = BasicResponse {
-                response_op_code: "new_owner".to_owned(),
-                response_containing_data: new_owner_id.to_string(),
-            };
-            ws_fan::fan::broadcast_message_to_room(
-                serde_json::to_string(&response).unwrap(),
-                server_state,
-                room_id,
-            )
-            .await;
-        }
+        update_room_owner(server_state, &mut handler, &room_id).await;
     }
 }
 
-async fn update_room_owner(
+pub async fn update_room_owner(
     server_state: &mut ServerState,
     execution_handler: &mut ExecutionHandler,
     room_id: &i32,
@@ -865,13 +853,24 @@ async fn update_room_owner(
         if let Some(new_owner_id) = new_owner {
             data_capturer::capture_new_room_owner_update(room_id, &new_owner_id, execution_handler)
                 .await;
+            let response = BasicResponse {
+                response_op_code: "new_owner".to_owned(),
+                response_containing_data: new_owner_id.to_string(),
+            };
+            ws_fan::fan::broadcast_message_to_room(
+                serde_json::to_string(&response).unwrap(),
+                server_state,
+                room_id.clone(),
+            )
+            .await;
+            logging::console::log_success(&format!("New Owner for room:{}", room_id));
             return Some(new_owner_id);
         }
     }
     None
 }
 
-async fn user_is_owner_of_room(
+pub async fn user_is_owner_of_room(
     user_id: i32,
     execution_handler: &mut ExecutionHandler,
     room_id: &i32,

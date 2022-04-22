@@ -930,6 +930,41 @@ pub async fn get_room_permissions_for_users(
     }
 }
 
+pub async fn give_owner(
+    request: BasicRequest,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    requester_id: i32,
+    server_state: &Arc<RwLock<ServerState>>,
+) -> Result<()> {
+    let request_data: GenericRoomIdAndPeerId =
+        serde_json::from_str(&request.request_containing_data)?;
+    let mut write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    // Is this user in this room to even give them ownership?
+    if let Some(room) = write_state.rooms.get(&request_data.roomId) {
+        if room.user_ids.contains(&request_data.peerId) {
+            let is_owner = rooms::handler::user_is_owner_of_room(
+                requester_id,
+                &mut handler,
+                &request_data.roomId,
+            )
+            .await;
+            // Is the requester the owner? only the owner can reassign ownership
+            if is_owner {
+                rooms::handler::update_room_owner(
+                    &mut write_state,
+                    &mut handler,
+                    &request_data.roomId,
+                )
+                .await;
+                return Ok(());
+            }
+        }
+    }
+    send_error_response_to_requester(requester_id, &mut write_state);
+    Ok(())
+}
+
 pub fn room_is_joinable(
     read_state: &ServerState,
     peer_id: &i32,
