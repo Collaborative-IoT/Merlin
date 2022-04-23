@@ -20,7 +20,7 @@ pub struct BasicRequest {
     pub request_containing_data: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct BasicResponse {
     pub response_op_code: String,
     pub response_containing_data: String,

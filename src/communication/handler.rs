@@ -687,33 +687,34 @@ pub async fn change_user_mod_status(
         if user_current_room != -1 {
             let owner_and_settings =
                 data_fetcher::get_room_owner_and_settings(&mut handler, &user_current_room).await;
-            // We haven't encountered an error gathering from db
-            if !owner_and_settings.0 {
-                // Are we the owner of the room?
-                // Only the owner of the room can
-                // appoint mods
-                if owner_and_settings.1 == requester_id {
-                    let result = data_capturer::mod_or_unmod_user_capture(
-                        data_obj.new_status,
-                        &user_current_room,
-                        &data_obj.user_id,
-                        &mut handler,
+            // 1. We haven't encountered an error gathering from db
+            // 2. Are we the owner of the room?
+            // Only the owner of the room can
+            // appoint mods
+            if owner_and_settings.1 == requester_id && !owner_and_settings.0 {
+                let result = data_capturer::mod_or_unmod_user_capture(
+                    data_obj.new_status,
+                    &user_current_room,
+                    &data_obj.user_id,
+                    &mut handler,
+                )
+                .await;
+                if !result.encountered_error {
+                    let basic_response = BasicResponse {
+                        response_op_code: type_of_mod_op(data_obj.new_status.clone()),
+                        response_containing_data: data_obj.user_id.to_string(),
+                    };
+                    println!("{:?}", basic_response);
+                    ws_fan::fan::broadcast_message_to_room(
+                        serde_json::to_string(&basic_response).unwrap(),
+                        &mut write_state,
+                        user_current_room,
                     )
                     .await;
-                    if !result.encountered_error {
-                        let basic_response = BasicResponse {
-                            response_op_code: type_of_mod_op(data_obj.new_status.clone()),
-                            response_containing_data: data_obj.user_id.to_string(),
-                        };
-                        ws_fan::fan::broadcast_message_to_room(
-                            serde_json::to_string(&basic_response).unwrap(),
-                            &mut write_state,
-                            user_current_room,
-                        )
-                        .await;
-                    } else {
-                        send_error_response_to_requester(requester_id, &mut write_state);
-                    }
+                    logging::console::log_success("Mod status changed");
+                } else {
+                    send_error_response_to_requester(requester_id, &mut write_state);
+                    logging::console::log_failure("Issue with changing mod status");
                 }
             }
         }
