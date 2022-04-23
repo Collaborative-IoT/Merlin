@@ -50,11 +50,15 @@ pub async fn block_user_from_room(
     let mut handler = execution_handler.lock().await;
     let owner_gather: (bool, i32, String) =
         data_fetcher::get_room_owner_and_settings(&mut handler, &room_id).await;
+    let all_room_permissions =
+        data_fetcher::get_room_permissions_for_users(&room_id, &mut handler).await;
 
-    // ensure the requester is the owner.
-    // ensure the requester is not the requestee
-    // no errors were encountered gathering the owner
-    if owner_gather.0 == false && owner_gather.1 == requester_id && requester_id != user_id {
+    if can_block_this_user_from_room(
+        all_room_permissions.1,
+        owner_gather.1,
+        requester_id,
+        user_id,
+    ) {
         //capture new block and send request to voice server
         let new_block = DBRoomBlock {
             id: -1,
@@ -906,4 +910,33 @@ pub async fn user_is_owner_of_room(
         return false;
     }
     return res.1 == user_id;
+}
+
+pub fn can_block_this_user_from_room(
+    permissions: HashMap<i32, RoomPermissions>,
+    owner_id: i32,
+    requester_id: i32,
+    target_to_block: i32,
+) -> bool {
+    //no one can block themselves
+    if requester_id != target_to_block {
+        if let Some(requester_permissions) = permissions.get(&requester_id) {
+            if let Some(target_permissions) = permissions.get(&target_to_block) {
+                // The owner can block anyone
+                if requester_id == owner_id {
+                    return true;
+                }
+                // The requester can only block the
+                // target if they(requester) is a mod
+                // and the target is not a mod/the owner
+                if requester_permissions.is_mod
+                    && !target_permissions.is_mod
+                    && target_to_block != owner_id
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
