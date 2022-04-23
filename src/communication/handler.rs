@@ -956,6 +956,7 @@ pub async fn give_owner(
                     &mut write_state,
                     &mut handler,
                     &request_data.roomId,
+                    &request_data.peerId,
                 )
                 .await;
                 return Ok(());
