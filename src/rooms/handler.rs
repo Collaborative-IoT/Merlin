@@ -324,7 +324,13 @@ pub async fn add_speaker(
             &owner_and_settings.1,
             requester_id,
         ) {
-            let new_permission_config = permission_configs::regular_speaker(room_id, user_id);
+            let new_permission_config = permission_configs::create_non_preset(
+                room_id,
+                user_id,
+                false,
+                true,
+                requestee_permissions.is_mod,
+            );
             data_capturer::capture_new_room_permissions_update(
                 &new_permission_config,
                 &mut handler,
