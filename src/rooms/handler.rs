@@ -2,8 +2,8 @@ use super::permission_configs;
 use crate::common::response_logic::send_to_requester_channel;
 use crate::communication::data_capturer::CaptureResult;
 use crate::communication::types::{
-    BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, RoomUpdate, VoiceServerClosePeer,
-    VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRequest,
+    BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, RoomUpdate, SpecialLeaveRoomOnDestroy,
+    VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRequest,
 };
 use crate::communication::{data_capturer, data_fetcher};
 use crate::data_store::db_models::{DBRoom, DBRoomBlock, DBRoomPermissions};
@@ -263,6 +263,23 @@ pub async fn leave_room(
         //this is handled during unexpected
         //disconnects too.
         if room.amount_of_users == 0 {
+            let response = BasicResponse {
+                response_op_code: "you_left_room".to_owned(),
+                response_containing_data: serde_json::to_string(&SpecialLeaveRoomOnDestroy {
+                    roomId: room_id.to_string(),
+                })
+                .unwrap(),
+            };
+            ws_fan::fan::broadcast_message_to_single_user(
+                serde_json::to_string(&response).unwrap(),
+                server_state,
+                requester_id,
+            )
+            .await;
+            logging::console::log_success(&format!(
+                "user({}) left room({}) which resulted in destruction",
+                requester_id, room_id
+            ));
             destroy_room(server_state, publish_channel, execution_handler, room_id).await;
         } else {
             select_new_owner_if_current_user_is_owner(
@@ -272,22 +289,26 @@ pub async fn leave_room(
                 room_id.clone(),
             )
             .await;
+
+            let request_to_voice_server = VoiceServerClosePeer {
+                roomId: room_id.to_string(),
+                peerId: requester_id.to_string(),
+                kicked: false,
+            };
+            let request_str: String = create_voice_server_request(
+                "close-peer",
+                &requester_id.to_string(),
+                request_to_voice_server,
+            );
+            let channel = publish_channel.lock().await;
+            rabbit::publish_message(&channel, request_str)
+                .await
+                .unwrap_or_default();
+            logging::console::log_success(&format!(
+                "user({}) left room({})",
+                requester_id, room_id
+            ));
         }
-        let request_to_voice_server = VoiceServerClosePeer {
-            roomId: room_id.to_string(),
-            peerId: requester_id.to_string(),
-            kicked: false,
-        };
-        let request_str: String = create_voice_server_request(
-            "close-peer",
-            &requester_id.to_string(),
-            request_to_voice_server,
-        );
-        let channel = publish_channel.lock().await;
-        rabbit::publish_message(&channel, request_str)
-            .await
-            .unwrap_or_default();
-        logging::console::log_success(&format!("user({}) left room({})", requester_id, room_id));
     }
 }
 

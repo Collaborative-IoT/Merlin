@@ -299,3 +299,9 @@ pub struct NewModStatus {
     pub new_status: bool,
     pub user_id: i32,
 }
+
+#[allow(non_snake_case)]
+#[derive(Deserialize, Serialize)]
+pub struct SpecialLeaveRoomOnDestroy {
+    pub roomId: String,
+}
