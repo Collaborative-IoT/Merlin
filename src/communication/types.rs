@@ -211,7 +211,7 @@ pub struct VoiceServerClosePeer {
 }
 
 #[allow(non_snake_case)]
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct GenericRoomIdAndPeerId {
     pub roomId: i32,
     pub peerId: i32,

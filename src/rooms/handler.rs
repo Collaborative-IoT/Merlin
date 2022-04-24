@@ -314,9 +314,16 @@ pub async fn add_speaker(
         let requester_permissions: &RoomPermissions =
             all_room_permissions.1.get(requester_id).unwrap();
         let requestee_permissions: &RoomPermissions = all_room_permissions.1.get(&user_id).unwrap();
-
-        // you can only be added as a speaker if you requested.
-        if requester_permissions.is_mod && requestee_permissions.asked_to_speak {
+        let owner_and_settings =
+            data_fetcher::get_room_owner_and_settings(&mut handler, &room_id).await;
+        // Can the requester even add you as a speaker?
+        // Did you even ask to speak?
+        if requester_can_add_speaker(
+            requester_permissions,
+            requestee_permissions,
+            &owner_and_settings.1,
+            requester_id,
+        ) {
             let new_permission_config = permission_configs::regular_speaker(room_id, user_id);
             data_capturer::capture_new_room_permissions_update(
                 &new_permission_config,
@@ -359,6 +366,7 @@ pub async fn remove_speaker(
     server_state: &mut ServerState,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) {
+    println!("{:?}", request_to_voice_server);
     let mut handler = execution_handler.lock().await;
     let room_id: i32 = request_to_voice_server.roomId;
     let user_id: i32 = request_to_voice_server.peerId;
@@ -785,7 +793,8 @@ fn create_voice_server_request<T: Serialize>(op_code: &str, uid: &String, data: 
 /// - If the owner requests(doesn't matter if the user is a mod)
 /// - If the person being removed is not a mod and the requester is a mod
 ///     and the person being removed is a speaker.
-///
+/// - If the person requesting is removing themselves and they aren't
+///   the owner
 /// If none of these conditions are met, it is an invalid request.
 fn requester_can_remove_speaker(
     remover_permissions: (&i32, &RoomPermissions),
@@ -795,6 +804,10 @@ fn requester_can_remove_speaker(
     if remover_permissions.0 == owner_id && removee_permissions.0 != remover_permissions.0 {
         return true;
     }
+    // Anyone can make themselves a listener
+    if remover_permissions.0 == removee_permissions.0 && removee_permissions.1.is_speaker {
+        return true;
+    }
     if remover_permissions.1.is_mod
         && removee_permissions.1.is_mod == false
         && removee_permissions.1.is_speaker
@@ -802,6 +815,20 @@ fn requester_can_remove_speaker(
         return true;
     }
     return false;
+}
+
+fn requester_can_add_speaker(
+    requester_permissions: &RoomPermissions,
+    requestee_permissions: &RoomPermissions,
+    owner_id: &i32,
+    requester_id: &i32,
+) -> bool {
+    if requestee_permissions.asked_to_speak && requester_permissions.is_mod
+        || requester_id == owner_id
+    {
+        return true;
+    }
+    false
 }
 
 /// We know that the speaker was removed
