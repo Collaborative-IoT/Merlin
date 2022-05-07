@@ -34,7 +34,7 @@ pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
         Arc::new(Mutex::new(setup_execution_handler().await.unwrap()));
     let rabbit_connection: Connection = rabbit::setup_rabbit_connection().await.unwrap();
     let publish_channel: Arc<Mutex<lapin::Channel>> = Arc::new(Mutex::new(
-        rabbit::setup_publish_channel(&rabbit_connection)
+        rabbit::setup_voice_publish_channel(&rabbit_connection)
             .await
             .unwrap(),
     ));
@@ -44,7 +44,7 @@ pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
         execution_handler.clone(),
     );
     setup_room_queue_cleanup_task(server_state.clone());
-    rabbit::setup_consume_task(&rabbit_connection, server_state.clone())
+    rabbit::setup_voice_consume_task(&rabbit_connection, server_state.clone())
         .await
         .unwrap();
     setup_routes_and_serve(addr, server_state, execution_handler, publish_channel).await;

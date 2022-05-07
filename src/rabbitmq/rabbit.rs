@@ -17,7 +17,7 @@ pub async fn setup_rabbit_connection() -> Result<Connection> {
     return Ok(conn);
 }
 
-pub async fn setup_publish_channel(conn: &Connection) -> Result<Channel> {
+pub async fn setup_voice_publish_channel(conn: &Connection) -> Result<Channel> {
     let channel = conn.create_channel().await?;
     // declare/create new main queue
     channel
@@ -30,7 +30,7 @@ pub async fn setup_publish_channel(conn: &Connection) -> Result<Channel> {
     return Ok(channel);
 }
 
-pub async fn setup_consume_task(
+pub async fn setup_voice_consume_task(
     conn: &Connection,
     server_state: Arc<RwLock<ServerState>>,
 ) -> Result<()> {
@@ -66,7 +66,7 @@ pub async fn setup_consume_task(
     return Ok(());
 }
 
-pub async fn publish_message(publish_channel: &Channel, data: String) -> Result<bool> {
+pub async fn publish_voice_message(publish_channel: &Channel, data: String) -> Result<bool> {
     //voice server consume must be created prior aka queue declare.
     let confirm = publish_channel
         .basic_publish(

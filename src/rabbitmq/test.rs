@@ -40,7 +40,7 @@ pub async fn test_publish_and_consume() {
         .unwrap();
     let channel_two = conn.create_channel().await.unwrap();
     let data_to_publish: String = "test".to_owned();
-    let publish_result = rabbit::publish_message(&channel_one, data_to_publish.clone()).await;
+    let publish_result = rabbit::publish_voice_message(&channel_one, data_to_publish.clone()).await;
     assert_eq!(publish_result.unwrap(), true);
     let mut consumer = channel_two
         .basic_consume(

@@ -150,7 +150,7 @@ pub async fn destroy_room(
     let request_str =
         create_voice_server_request("destroy-room", &"-1".to_owned(), request_to_voice_server);
     let channel = publish_channel.lock().await;
-    rabbit::publish_message(&channel, request_str)
+    rabbit::publish_voice_message(&channel, request_str)
         .await
         .unwrap_or_default();
     logging::console::log_event(&format!("Destroyed room:{}", room_id));
@@ -173,7 +173,7 @@ pub async fn remove_user_from_room_basic(
         request_to_voice_server,
     );
     let channel = publish_channel.lock().await;
-    rabbit::publish_message(&channel, request_str)
+    rabbit::publish_voice_message(&channel, request_str)
         .await
         .unwrap_or_default();
 }
@@ -221,7 +221,7 @@ pub async fn join_room(
             request_to_voice_server,
         );
         add_user_to_room_state(&room_id, user_id, server_state);
-        rabbit::publish_message(&channel, request_str)
+        rabbit::publish_voice_message(&channel, request_str)
             .await
             .unwrap_or_default();
 
@@ -301,7 +301,7 @@ pub async fn leave_room(
                 request_to_voice_server,
             );
             let channel = publish_channel.lock().await;
-            rabbit::publish_message(&channel, request_str)
+            rabbit::publish_voice_message(&channel, request_str)
                 .await
                 .unwrap_or_default();
             logging::console::log_success(&format!(
@@ -364,7 +364,7 @@ pub async fn add_speaker(
                 request_to_voice_server,
             );
             let channel = publish_channel.lock().await;
-            rabbit::publish_message(&channel, request_str)
+            rabbit::publish_voice_message(&channel, request_str)
                 .await
                 .unwrap_or_default();
             logging::console::log_success(&format!(
@@ -426,7 +426,7 @@ pub async fn remove_speaker(
                 request_to_voice_server,
             );
             let channel = publish_channel.lock().await;
-            rabbit::publish_message(&channel, request_str)
+            rabbit::publish_voice_message(&channel, request_str)
                 .await
                 .unwrap_or_default();
 
@@ -477,7 +477,7 @@ pub async fn handle_web_rtc_specific_requests(
     let user_id = request_to_voice_server["peerId"].to_string();
     let request_str = create_voice_server_request(op_code, &user_id, request_to_voice_server);
     let channel = publish_channel.lock().await;
-    rabbit::publish_message(&channel, request_str)
+    rabbit::publish_voice_message(&channel, request_str)
         .await
         .unwrap_or_default();
 }
@@ -721,7 +721,7 @@ async fn continue_with_successful_room_creation(
     );
     let request_str =
         create_voice_server_request("create-room", &user_id.to_string(), request_to_voice_server);
-    rabbit::publish_message(channel, request_str)
+    rabbit::publish_voice_message(channel, request_str)
         .await
         .unwrap_or_default();
     logging::console::log_success(&format!(
