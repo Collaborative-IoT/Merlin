@@ -239,6 +239,19 @@ pub async fn route_msg(
             )
             .await
         }
+        "connect_hoi" => {
+            handler::create_hoi_connection(
+                basic_request,
+                //this is a safe unwrap seeing as though this
+                //op code will only be triggered in situations that
+                //provide this value.
+                integration_publish_channel.unwrap(),
+                server_state,
+                execution_handler,
+                user_id,
+            )
+            .await
+        }
 
         _ => Ok(handler::normal_invalid_request(server_state, user_id).await),
     }

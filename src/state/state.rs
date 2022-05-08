@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::state::types::{ActiveRooms, ActiveUsers, IoTServerConnections, PeerMap};
+use crate::state::types::{ActiveRooms, ActiveUsers, PeerMap};
 
 use super::owner_queue::OwnerQueue;
 

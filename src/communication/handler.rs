@@ -7,7 +7,10 @@ use crate::communication::types::{
 };
 use crate::data_store::db_models::{DBFollower, DBUserBlock};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
+use crate::integration::types::GeneralMessage;
+use crate::integration::types::HouseOfIoTCredentials;
 use crate::logging;
+use crate::rabbitmq::rabbit;
 use crate::rooms::handler::EncounteredError;
 use crate::state::state::ServerState;
 use crate::state::types::Room;
@@ -964,6 +967,46 @@ pub async fn give_owner(
         }
     }
     send_error_response_to_requester(requester_id, &mut write_state);
+    Ok(())
+}
+
+pub async fn create_hoi_connection(
+    request: BasicRequest,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    server_state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    requester_id: i32,
+) -> Result<()> {
+    let request_data: HouseOfIoTCredentials =
+        serde_json::from_str(&request.request_containing_data)?;
+    let write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    if let Some(user) = write_state.active_users.get(&requester_id) {
+        if user.current_room_id != -1 {
+            let room_permissions =
+                data_fetcher::get_room_permissions_for_users(&user.current_room_id, &mut handler)
+                    .await;
+            if let Some(permissions) = room_permissions.1.get(&requester_id) {
+                // Only mods can actually make the request to connect to a server
+                // and users can only make this request on behalf of themselves.
+                if permissions.is_mod && request_data.user_id == requester_id {
+                    let channel = integration_publish_channel.lock().await;
+                    let new_general_msg = GeneralMessage {
+                        category: "connect_hoi".to_owned(),
+                        data: serde_json::to_string(&request_data).unwrap(),
+                        server_id: "-1".to_owned(),
+                    };
+                    rabbit::publish_integration_message(
+                        &channel,
+                        serde_json::to_string(&new_general_msg).unwrap(),
+                    )
+                    .await
+                    .unwrap_or_default();
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 

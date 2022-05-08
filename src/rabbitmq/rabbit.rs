@@ -1,5 +1,5 @@
-use crate::state::state::ServerState;
 use crate::vs_response::router;
+use crate::{integration, state::state::ServerState};
 use futures_util::stream::StreamExt;
 use lapin::{
     message::Delivery, options::*, publisher_confirm::Confirmation, types::FieldTable,
@@ -109,6 +109,7 @@ pub async fn setup_integration_consume_task(
             delivery.ack(BasicAckOptions::default()).await.expect("ack");
             let message = parse_message(delivery);
             let mut state = server_state.write().await;
+            integration::router::route_msg(message, &mut state).await;
         }
     });
     return Ok(());
