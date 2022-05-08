@@ -15,7 +15,8 @@ pub async fn route_msg(
     msg: String,
     user_id: i32,
     server_state: &Arc<RwLock<ServerState>>,
-    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    voice_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    integration_publish_channel: Option<&Arc<Mutex<lapin::Channel>>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) -> Result<()> {
     let basic_request: BasicRequest = serde_json::from_str(&msg)?;
@@ -30,20 +31,25 @@ pub async fn route_msg(
             handler::create_room(
                 basic_request,
                 server_state,
-                publish_channel,
+                voice_publish_channel,
                 execution_handler,
                 user_id,
             )
             .await
         }
         "@connect-transport" | "@send-track" | "@get-recv-tracks" => {
-            handler::handle_web_rtc_request(basic_request, publish_channel, server_state, user_id)
-                .await
+            handler::handle_web_rtc_request(
+                basic_request,
+                voice_publish_channel,
+                server_state,
+                user_id,
+            )
+            .await
         }
         "add_speaker" => {
             handler::add_or_remove_speaker(
                 basic_request,
-                publish_channel,
+                voice_publish_channel,
                 user_id,
                 server_state,
                 execution_handler,
@@ -54,7 +60,7 @@ pub async fn route_msg(
         "remove_speaker" => {
             handler::add_or_remove_speaker(
                 basic_request,
-                publish_channel,
+                voice_publish_channel,
                 user_id,
                 server_state,
                 execution_handler,
@@ -68,7 +74,7 @@ pub async fn route_msg(
                 user_id,
                 server_state,
                 execution_handler,
-                publish_channel,
+                voice_publish_channel,
             )
             .await
         }
@@ -96,7 +102,7 @@ pub async fn route_msg(
             handler::join_room(
                 basic_request,
                 server_state,
-                publish_channel,
+                voice_publish_channel,
                 execution_handler,
                 user_id,
                 "join-as-speaker",
@@ -107,7 +113,7 @@ pub async fn route_msg(
             handler::join_room(
                 basic_request,
                 server_state,
-                publish_channel,
+                voice_publish_channel,
                 execution_handler,
                 user_id,
                 "join-as-new-peer",
@@ -167,7 +173,7 @@ pub async fn route_msg(
         "leave_room" => {
             handler::leave_room(
                 basic_request,
-                publish_channel,
+                voice_publish_channel,
                 server_state,
                 execution_handler,
                 user_id,

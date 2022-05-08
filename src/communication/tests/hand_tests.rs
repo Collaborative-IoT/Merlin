@@ -28,6 +28,7 @@ pub async fn users_in_room_as_listener_can_raise(
         34,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -55,6 +56,7 @@ pub async fn users_can_lower_their_own_hand(
         34,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -70,6 +72,7 @@ pub async fn users_can_lower_their_own_hand(
         34,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -99,6 +102,7 @@ pub async fn users_not_in_room_cannot_make_requests(
         35,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -121,6 +125,7 @@ pub async fn users_not_in_room_cannot_make_requests(
         35,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await

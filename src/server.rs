@@ -33,28 +33,44 @@ pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
     let execution_handler: Arc<Mutex<ExecutionHandler>> =
         Arc::new(Mutex::new(setup_execution_handler().await.unwrap()));
     let rabbit_connection: Connection = rabbit::setup_rabbit_connection().await.unwrap();
-    let publish_channel: Arc<Mutex<lapin::Channel>> = Arc::new(Mutex::new(
+    let voice_publish_channel: Arc<Mutex<lapin::Channel>> = Arc::new(Mutex::new(
         rabbit::setup_voice_publish_channel(&rabbit_connection)
+            .await
+            .unwrap(),
+    ));
+    let integration_publish_channel: Arc<Mutex<lapin::Channel>> = Arc::new(Mutex::new(
+        rabbit::setup_integration_publish_channel(&rabbit_connection)
             .await
             .unwrap(),
     ));
     setup_room_cleanup_task(
         server_state.clone(),
-        publish_channel.clone(),
+        voice_publish_channel.clone(),
         execution_handler.clone(),
     );
     setup_room_queue_cleanup_task(server_state.clone());
+    rabbit::setup_integration_consume_task(&rabbit_connection, server_state.clone())
+        .await
+        .unwrap();
     rabbit::setup_voice_consume_task(&rabbit_connection, server_state.clone())
         .await
         .unwrap();
-    setup_routes_and_serve(addr, server_state, execution_handler, publish_channel).await;
+    setup_routes_and_serve(
+        addr,
+        server_state,
+        execution_handler,
+        voice_publish_channel,
+        integration_publish_channel,
+    )
+    .await;
 }
 
 async fn user_connected(
     ws: WebSocket,
     server_state: Arc<RwLock<ServerState>>,
     execution_handler: Arc<Mutex<ExecutionHandler>>,
-    publish_channel: Arc<Mutex<lapin::Channel>>,
+    voice_publish_channel: Arc<Mutex<lapin::Channel>>,
+    integration_publish_channel: Arc<Mutex<lapin::Channel>>,
 ) {
     // Split the socket into a sender and receive of messages.
     let (mut user_ws_tx, mut user_ws_rx) = ws.split();
@@ -99,13 +115,14 @@ async fn user_connected(
         &current_user_id,
         &server_state,
         &execution_handler,
-        &publish_channel,
+        &voice_publish_channel,
+        &integration_publish_channel,
     )
     .await;
     user_disconnected(
         &current_user_id,
         &server_state,
-        &publish_channel,
+        &voice_publish_channel,
         &execution_handler,
     )
     .await;
@@ -116,7 +133,8 @@ async fn user_message(
     msg: Message,
     server_state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
-    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    voice_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) {
     // Skip any non-Text messages...
     let msg = if let Ok(s) = msg.to_str() {
@@ -128,7 +146,8 @@ async fn user_message(
         msg.to_string(),
         current_user_id.clone(),
         &server_state,
-        publish_channel,
+        voice_publish_channel,
+        Some(integration_publish_channel),
         execution_handler,
     )
     .await
@@ -239,7 +258,8 @@ async fn block_and_handle_incoming_messages(
     current_user_id: &i32,
     server_state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
-    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    voice_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) {
     while let Some(result) = user_ws_rx.next().await {
         let msg = match result {
@@ -254,7 +274,8 @@ async fn block_and_handle_incoming_messages(
             msg,
             server_state,
             execution_handler,
-            publish_channel,
+            voice_publish_channel,
+            integration_publish_channel,
         )
         .await;
     }
@@ -408,26 +429,36 @@ async fn setup_routes_and_serve<T: Into<SocketAddr>>(
     addr: T,
     server_state: Arc<RwLock<ServerState>>,
     execution_handler: Arc<Mutex<ExecutionHandler>>,
-    publish_channel: Arc<Mutex<lapin::Channel>>,
+    voice_publish_channel: Arc<Mutex<lapin::Channel>>,
+    integration_publish_channel: Arc<Mutex<lapin::Channel>>,
 ) {
     let server_state = warp::any().map(move || server_state.clone());
     let execution_handler = warp::any().map(move || execution_handler.clone());
-    let publish_channel = warp::any().map(move || publish_channel.clone());
+    let voice_publish_channel = warp::any().map(move || voice_publish_channel.clone());
+    let integration_publish_channel = warp::any().map(move || integration_publish_channel.clone());
     //GET /user-api
     let user_api_route = warp::path("user-api")
         // The `ws()` filter will prepare  Websocket handshake...
         .and(warp::ws())
         .and(server_state.clone())
         .and(execution_handler.clone())
-        .and(publish_channel.clone())
+        .and(voice_publish_channel.clone())
+        .and(integration_publish_channel)
         .map(
             |ws: warp::ws::Ws,
              server_state: Arc<RwLock<ServerState>>,
              execution_handler: Arc<Mutex<ExecutionHandler>>,
-             publish_channel: Arc<Mutex<lapin::Channel>>| {
+             voice_publish_channel: Arc<Mutex<lapin::Channel>>,
+             integration_publish_channel: Arc<Mutex<lapin::Channel>>| {
                 // This will call our function if the handshake succeeds.
                 ws.on_upgrade(move |socket| {
-                    user_connected(socket, server_state, execution_handler, publish_channel)
+                    user_connected(
+                        socket,
+                        server_state,
+                        execution_handler,
+                        voice_publish_channel,
+                        integration_publish_channel,
+                    )
                 })
             },
         );

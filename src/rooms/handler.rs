@@ -694,6 +694,7 @@ fn construct_basic_room_for_state(room_id: i32, public: bool, name: String, desc
         desc: desc,
         chat_throttle: 1000,
         created_at: Utc::now().to_string(),
+        iot_server_connections: HashMap::new(),
     };
 }
 

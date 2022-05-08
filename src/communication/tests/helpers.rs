@@ -209,6 +209,7 @@ pub mod helpers {
             user_id.clone(),
             state,
             publish_channel,
+            None,
             execution_handler,
         )
         .await
@@ -352,6 +353,7 @@ pub mod helpers {
             new_user.0.to_owned(),
             state,
             publish_channel,
+            None,
             execution_handler,
         )
         .await

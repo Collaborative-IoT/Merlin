@@ -56,7 +56,7 @@ pub async fn test_users_can_get_top_rooms(
         .user_ids
         .remove(&33);
     let request = helpers::basic_request("get_top_rooms".to_string(), "".to_string());
-    router::route_msg(request, 33, state, publish_channel, execution_handler)
+    router::route_msg(request, 33, state, publish_channel, None, execution_handler)
         .await
         .unwrap();
 
@@ -123,6 +123,7 @@ pub async fn test_getting_all_users_in_room(
         new_user.0,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -166,9 +167,16 @@ pub async fn test_invalid_webrtc_request<T: Serialize + DeserializeOwned>(
         "@get-recv-tracks".to_string(),
         serde_json::to_string(&incorrect_data).unwrap(),
     );
-    router::route_msg(basic_request, 33, state, publish_channel, execution_handler)
-        .await
-        .unwrap();
+    router::route_msg(
+        basic_request,
+        33,
+        state,
+        publish_channel,
+        None,
+        execution_handler,
+    )
+    .await
+    .unwrap();
     helpers::grab_and_assert_request_response(speaker_rx, "invalid_request", "issue with request")
         .await;
 }
@@ -282,6 +290,7 @@ pub async fn test_unfollowing_and_following_user(
         new_user.0,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -312,6 +321,7 @@ pub async fn test_unfollowing_and_following_user(
         new_user.0,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -439,6 +449,7 @@ pub async fn test_blocking_and_unblocking_user_invalid(
         new_user.0.to_owned(),
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -479,6 +490,7 @@ pub async fn test_leaving_room_without_cleanup(
         new_user.0.clone(),
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -539,7 +551,7 @@ pub async fn test_leaving_room_with_cleanup(
         "leave_room".to_owned(),
         serde_json::to_string(&GenericRoomId { room_id: 4 }).unwrap(),
     );
-    router::route_msg(request, 33, state, publish_channel, execution_handler)
+    router::route_msg(request, 33, state, publish_channel, None, execution_handler)
         .await
         .unwrap();
     helpers::grab_and_assert_request_response(user_one_rx, "invalid_request", "issue with request")
@@ -550,7 +562,7 @@ pub async fn test_leaving_room_with_cleanup(
         "leave_room".to_owned(),
         serde_json::to_string(&GenericRoomId { room_id: 3 }).unwrap(),
     );
-    router::route_msg(request, 33, state, publish_channel, execution_handler)
+    router::route_msg(request, 33, state, publish_channel, None, execution_handler)
         .await
         .unwrap();
     let destroy = VoiceServerDestroyRoom {
@@ -610,6 +622,7 @@ pub async fn test_updating_room_meta_data(
         new_user.0,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -636,9 +649,16 @@ pub async fn test_updating_room_meta_data(
         serde_json::to_string(&room_update).unwrap(),
     );
 
-    router::route_msg(basic_request, 33, state, publish_channel, execution_handler)
-        .await
-        .unwrap();
+    router::route_msg(
+        basic_request,
+        33,
+        state,
+        publish_channel,
+        None,
+        execution_handler,
+    )
+    .await
+    .unwrap();
 
     helpers::grab_and_assert_request_response(
         user_one_rx,
@@ -695,6 +715,7 @@ pub async fn test_updating_muted_and_deaf(
         33,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -710,9 +731,16 @@ pub async fn test_updating_muted_and_deaf(
         .get_mut(&33)
         .unwrap()
         .current_room_id = 3;
-    router::route_msg(basic_request, 33, state, publish_channel, execution_handler)
-        .await
-        .unwrap();
+    router::route_msg(
+        basic_request,
+        33,
+        state,
+        publish_channel,
+        None,
+        execution_handler,
+    )
+    .await
+    .unwrap();
 
     helpers::grab_and_assert_request_response(
         user_one_rx,

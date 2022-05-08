@@ -36,7 +36,7 @@ pub async fn owner_can_block_from_room(
     })
     .unwrap();
     let request = helpers::basic_request("block_user_from_room".to_string(), data.clone());
-    router::route_msg(request, 33, state, publish_channel, execution_handler)
+    router::route_msg(request, 33, state, publish_channel, None, execution_handler)
         .await
         .unwrap();
     //check result
@@ -75,7 +75,7 @@ pub async fn non_owner_can_not_block_from_room(
     })
     .unwrap();
     let request = helpers::basic_request("block_user_from_room".to_string(), data);
-    router::route_msg(request, 34, state, publish_channel, execution_handler)
+    router::route_msg(request, 34, state, publish_channel, None, execution_handler)
         .await
         .unwrap();
     helpers::grab_and_assert_request_response(listener_rx, "issue_blocking_user", "38").await;

@@ -305,3 +305,9 @@ pub struct NewModStatus {
 pub struct SpecialLeaveRoomOnDestroy {
     pub roomId: String,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct NewIoTServer {
+    pub external_id: String,
+    pub owner_id: i32,
+}

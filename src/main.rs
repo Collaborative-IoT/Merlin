@@ -33,6 +33,11 @@ pub mod data_store {
     }
 }
 
+pub mod integration {
+    pub mod router;
+    pub mod types;
+}
+
 pub mod communication {
     pub mod data_capturer;
     pub mod data_fetcher;

@@ -6,10 +6,11 @@ use warp::ws::Message;
 //.keys().cloned().collect::<Vec<_>>();
 
 pub struct Board {
-    pub room_id: String,
-    pub owner_user_id: String,
+    pub room_id: i32,
+    pub owner_user_id: i32,
     //Those granted permissions by the owner
-    pub users_with_permission: HashSet<String>,
+    pub users_with_permission: HashSet<i32>,
+    pub external_server_id: String,
 }
 #[derive(Default)]
 pub struct User {
@@ -32,6 +33,7 @@ pub struct Room {
     pub public: bool,
     pub auto_speaker: bool,
     pub created_at: String, //datetime
+    pub iot_server_connections: HashMap<String, Board>,
 }
 
 /// IoTServerConnectionId -> Permissions for the connection(represented as the board)

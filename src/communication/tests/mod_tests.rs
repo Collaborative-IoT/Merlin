@@ -18,7 +18,7 @@ pub async fn mods_can_remove_speaker(
 ) {
     let data = helpers::generic_room_and_peer_id(34, 3);
     let request = helpers::basic_request("remove_speaker".to_string(), data.clone());
-    router::route_msg(request, 33, state, publish_channel, execution_handler)
+    router::route_msg(request, 33, state, publish_channel, None, execution_handler)
         .await
         .unwrap();
     helpers::grab_and_assert_message_to_voice_server::<GenericRoomIdAndPeerId>(
@@ -47,7 +47,7 @@ pub async fn non_mods_can_not_bring_up_speakers(
     .await;
     let data = helpers::generic_room_and_peer_id(34, 3);
     let request = helpers::basic_request("add_speaker".to_owned(), data.clone());
-    router::route_msg(request, 37, state, publish_channel, execution_handler)
+    router::route_msg(request, 37, state, publish_channel, None, execution_handler)
         .await
         .unwrap();
     helpers::grab_and_assert_request_response(&mut mock_user_rx, "issue_adding_speaker", "34")
@@ -65,7 +65,7 @@ pub async fn mods_can_bring_up_speakers(
     //our actual test
     let data = helpers::generic_room_and_peer_id(34, 3);
     let request = helpers::basic_request("add_speaker".to_owned(), data.clone());
-    router::route_msg(request, 33, state, publish_channel, execution_handler)
+    router::route_msg(request, 33, state, publish_channel, None, execution_handler)
         .await
         .unwrap();
     helpers::grab_and_assert_message_to_voice_server::<GenericRoomIdAndPeerId>(
@@ -93,7 +93,7 @@ pub async fn non_mods_can_not_remove_speaker(
     .await;
     let data = helpers::generic_room_and_peer_id(34, 3);
     let request = helpers::basic_request("remove_speaker".to_string(), data);
-    router::route_msg(request, 38, state, publish_channel, execution_handler)
+    router::route_msg(request, 38, state, publish_channel, None, execution_handler)
         .await
         .unwrap();
     helpers::grab_and_assert_request_response(&mut mock_user_rx, "issue_removing_speaker", "34")
@@ -130,6 +130,7 @@ pub async fn non_mods_can_not_lower_hands(
         36,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
@@ -161,6 +162,7 @@ pub async fn mods_can_lower_hands(
         33,
         state,
         publish_channel,
+        None,
         execution_handler,
     )
     .await
