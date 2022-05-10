@@ -20,7 +20,6 @@ pub async fn route_msg(
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) -> Result<()> {
     let basic_request: BasicRequest = serde_json::from_str(&msg)?;
-
     //Route the request
     //We could use the basic_request op code for checking
     //different requests like add/remove user inside of the method
@@ -241,6 +240,19 @@ pub async fn route_msg(
         }
         "connect_hoi" => {
             handler::create_hoi_connection(
+                basic_request,
+                //this is a safe unwrap seeing as though this
+                //op code will only be triggered in situations that
+                //provide this value.
+                integration_publish_channel.unwrap(),
+                server_state,
+                execution_handler,
+                user_id,
+            )
+            .await
+        }
+        "disconnect_hoi" => {
+            handler::remove_hoi_connection(
                 basic_request,
                 //this is a safe unwrap seeing as though this
                 //op code will only be triggered in situations that

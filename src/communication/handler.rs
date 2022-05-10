@@ -7,6 +7,7 @@ use crate::communication::types::{
 };
 use crate::data_store::db_models::{DBFollower, DBUserBlock};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
+use crate::integration::types::DisconnectMsg;
 use crate::integration::types::GeneralMessage;
 use crate::integration::types::HouseOfIoTCredentials;
 use crate::logging;
@@ -979,9 +980,10 @@ pub async fn create_hoi_connection(
 ) -> Result<()> {
     let request_data: HouseOfIoTCredentials =
         serde_json::from_str(&request.request_containing_data)?;
-    let write_state = server_state.write().await;
+    let mut write_state = server_state.write().await;
     let mut handler = execution_handler.lock().await;
     if let Some(user) = write_state.active_users.get(&requester_id) {
+        //ensure our user is actually in a room
         if user.current_room_id != -1 {
             let room_permissions =
                 data_fetcher::get_room_permissions_for_users(&user.current_room_id, &mut handler)
@@ -1002,11 +1004,55 @@ pub async fn create_hoi_connection(
                     )
                     .await
                     .unwrap_or_default();
+                    return Ok(());
+                }
+            }
+        }
+    }
+    send_error_response_to_requester(requester_id, &mut write_state);
+    Ok(())
+}
+
+pub async fn remove_hoi_connection(
+    request: BasicRequest,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    server_state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    requester_id: i32,
+) -> Result<()> {
+    let request_data: DisconnectMsg = serde_json::from_str(&request.request_containing_data)?;
+    let mut write_state = server_state.write().await;
+    if let Some(user) = write_state.active_users.get(&requester_id) {
+        //ensure our user is in a room.
+        if user.current_room_id != -1 {
+            let current_room_id = user.current_room_id.clone();
+            drop(user);
+            if let Some(room) = write_state.rooms.get_mut(&current_room_id) {
+                if let Some(board) = room.iot_server_connections.get(&request_data.server_id) {
+                    // only the owner of each board can remove the connection
+                    // a board is essentially an IoT server connection and
+                    // those who hold permissions for it etc.
+                    if requester_id == board.owner_user_id {
+                        let channel = integration_publish_channel.lock().await;
+                        let new_general_msg = GeneralMessage {
+                            category: "disconnect_hoi".to_owned(),
+                            data: String::new(),
+                            server_id: request_data.server_id,
+                        };
+                        rabbit::publish_integration_message(
+                            &channel,
+                            serde_json::to_string(&new_general_msg).unwrap(),
+                        )
+                        .await
+                        .unwrap_or_default();
+                        return Ok(());
+                    }
                 }
             }
         }
     }
 
+    send_error_response_to_requester(requester_id, &mut write_state);
     Ok(())
 }
 

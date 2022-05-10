@@ -26,3 +26,8 @@ pub struct HouseOfIoTCredentials {
     pub outside_name: String,
     pub user_id: i32,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct DisconnectMsg {
+    pub server_id: String,
+}
