@@ -259,7 +259,6 @@ pub async fn route_msg(
                 //provide this value.
                 integration_publish_channel.unwrap(),
                 server_state,
-                execution_handler,
                 user_id,
             )
             .await

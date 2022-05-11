@@ -1017,7 +1017,6 @@ pub async fn remove_hoi_connection(
     request: BasicRequest,
     integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
     server_state: &Arc<RwLock<ServerState>>,
-    execution_handler: &Arc<Mutex<ExecutionHandler>>,
     requester_id: i32,
 ) -> Result<()> {
     let request_data: DisconnectMsg = serde_json::from_str(&request.request_containing_data)?;
@@ -1037,7 +1036,7 @@ pub async fn remove_hoi_connection(
                         let new_general_msg = GeneralMessage {
                             category: "disconnect_hoi".to_owned(),
                             data: String::new(),
-                            server_id: request_data.server_id,
+                            server_id: request_data.server_id.clone(),
                         };
                         rabbit::publish_integration_message(
                             &channel,
@@ -1045,6 +1044,18 @@ pub async fn remove_hoi_connection(
                         )
                         .await
                         .unwrap_or_default();
+                        // let the room know that this server has been
+                        // removed.
+                        ws_fan::fan::broadcast_message_to_room(
+                            serde_json::to_string(&BasicRequest {
+                                request_op_code: "hoi_server_disconnected".to_owned(),
+                                request_containing_data: request_data.server_id,
+                            })
+                            .unwrap(),
+                            &mut write_state,
+                            current_room_id,
+                        )
+                        .await;
                         return Ok(());
                     }
                 }
