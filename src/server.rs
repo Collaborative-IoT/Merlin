@@ -3,8 +3,8 @@ use crate::auth::authentication_handler::CodeParams;
 use crate::auth::oauth_locations;
 use crate::auth::ws_auth_handler::UserIdAndNewAuthCredentials;
 use crate::auth::{authentication_handler, ws_auth_handler};
-use crate::communication::router;
 use crate::communication::types::{AuthCredentials, AuthResponse, BasicResponse};
+use crate::communication::{self, router};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::rabbitmq::rabbit;
 use crate::state::state::ServerState;
@@ -123,6 +123,7 @@ async fn user_connected(
         &current_user_id,
         &server_state,
         &voice_publish_channel,
+        &&integration_publish_channel,
         &execution_handler,
     )
     .await;
@@ -157,10 +158,12 @@ async fn user_message(
 async fn user_disconnected(
     current_user_id: &i32,
     server_state: &Arc<RwLock<ServerState>>,
-    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    voice_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) {
     let mut write_state = server_state.write().await;
+
     //if this user is in a room handle cleanup on the
     //voice server side.
     if write_state
@@ -176,11 +179,23 @@ async fn user_disconnected(
             .unwrap()
             .current_room_id
             .clone();
+
+        // Doesn't matter if you are the
+        // mod of the room or the owner of the room
+        // if you own a connection you
+        // it will always be removed when you leave the room.
+        remove_all_owned_iot_servers(
+            &mut write_state,
+            integration_publish_channel,
+            current_user_id,
+            current_room_id,
+        )
+        .await;
         rooms::handler::leave_room(
             &mut write_state,
             current_user_id,
             &current_room_id,
-            publish_channel,
+            voice_publish_channel,
             execution_handler,
         )
         .await;
@@ -191,6 +206,35 @@ async fn user_disconnected(
         "User({}) disconnected from the server",
         current_user_id
     ));
+}
+pub async fn remove_all_owned_iot_servers(
+    write_state: &mut ServerState,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    current_user_id: &i32,
+    current_room_id: i32,
+) {
+    let owned = gather_owned_servers(write_state, current_room_id);
+    for owned_server_id in owned {
+        communication::handler::remove_hoi_connection_directly(
+            owned_server_id,
+            integration_publish_channel,
+            write_state,
+            current_user_id.clone(),
+        )
+        .await
+        .unwrap_or_default();
+    }
+}
+pub fn gather_owned_servers(write_state: &mut ServerState, current_room_id: i32) -> Vec<String> {
+    let mut owned_iot_servers_to_remove = vec![];
+    if let Some(room) = write_state.rooms.get(&current_room_id) {
+        for board in room.iot_server_connections.values() {
+            if board.owner_user_id == current_room_id {
+                owned_iot_servers_to_remove.push(board.external_server_id.clone());
+            }
+        }
+    }
+    owned_iot_servers_to_remove
 }
 
 async fn handle_authentication(

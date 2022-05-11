@@ -1021,13 +1021,38 @@ pub async fn remove_hoi_connection(
 ) -> Result<()> {
     let request_data: DisconnectMsg = serde_json::from_str(&request.request_containing_data)?;
     let mut write_state = server_state.write().await;
+    let remove_result = remove_hoi_connection_directly(
+        request_data.server_id,
+        integration_publish_channel,
+        &mut write_state,
+        requester_id,
+    )
+    .await;
+
+    if let Ok(res) = remove_result {
+        if res == false {
+            send_error_response_to_requester(requester_id, &mut write_state);
+        }
+    } else {
+        send_error_response_to_requester(requester_id, &mut write_state);
+    }
+
+    Ok(())
+}
+
+pub async fn remove_hoi_connection_directly(
+    server_id: String,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    write_state: &mut ServerState,
+    requester_id: i32,
+) -> Result<bool> {
     if let Some(user) = write_state.active_users.get(&requester_id) {
         //ensure our user is in a room.
         if user.current_room_id != -1 {
             let current_room_id = user.current_room_id.clone();
             drop(user);
             if let Some(room) = write_state.rooms.get_mut(&current_room_id) {
-                if let Some(board) = room.iot_server_connections.get(&request_data.server_id) {
+                if let Some(board) = room.iot_server_connections.get(&server_id) {
                     // only the owner of each board can remove the connection
                     // a board is essentially an IoT server connection and
                     // those who hold permissions for it etc.
@@ -1036,7 +1061,7 @@ pub async fn remove_hoi_connection(
                         let new_general_msg = GeneralMessage {
                             category: "disconnect_hoi".to_owned(),
                             data: String::new(),
-                            server_id: request_data.server_id.clone(),
+                            server_id: server_id.clone(),
                         };
                         rabbit::publish_integration_message(
                             &channel,
@@ -1049,23 +1074,25 @@ pub async fn remove_hoi_connection(
                         ws_fan::fan::broadcast_message_to_room(
                             serde_json::to_string(&BasicRequest {
                                 request_op_code: "hoi_server_disconnected".to_owned(),
-                                request_containing_data: request_data.server_id,
+                                request_containing_data: server_id,
                             })
                             .unwrap(),
-                            &mut write_state,
+                            write_state,
                             current_room_id,
                         )
                         .await;
-                        return Ok(());
+                        return Ok(true);
                     }
                 }
             }
         }
     }
-
-    send_error_response_to_requester(requester_id, &mut write_state);
-    Ok(())
+    Ok(false)
 }
+
+/// Give a users permission to control an iot server
+/// if that user is in your current room.
+pub async fn give_or_revoke_iot_permission() {}
 
 pub fn room_is_joinable(
     read_state: &ServerState,
