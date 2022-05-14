@@ -31,4 +31,3 @@ pub struct HouseOfIoTCredentials {
 pub struct DisconnectMsg {
     pub server_id: String,
 }
-
