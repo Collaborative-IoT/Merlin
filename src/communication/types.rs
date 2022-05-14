@@ -323,3 +323,10 @@ pub struct PassiveData {
     pub external_id: String,
     pub passive_data: String,
 }
+#[derive(Deserialize, Serialize)]
+pub struct ExistingIotServer {
+    pub owner_id: i32,
+    pub external_id: String,
+    pub controllers_of_room: Vec<i32>,
+    pub passive_data_snap_shot: Option<String>,
+}

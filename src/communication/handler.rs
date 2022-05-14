@@ -14,6 +14,7 @@ use crate::logging;
 use crate::rabbitmq::rabbit;
 use crate::rooms::handler::EncounteredError;
 use crate::state::state::ServerState;
+use crate::state::types::Board;
 use crate::state::types::Room;
 use crate::{rooms, ws_fan};
 use futures::lock::Mutex;
@@ -25,6 +26,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::data_capturer::{self, CaptureResult};
+use super::types::ExistingIotServer;
 use super::types::GiveOrRevokeIot;
 use super::types::InitRoomData;
 use super::types::JoinTypeInfo;
@@ -1048,42 +1050,39 @@ pub async fn remove_hoi_connection_directly(
     requester_id: i32,
 ) -> Result<bool> {
     if let Some(user) = write_state.active_users.get(&requester_id) {
-        //ensure our user is in a room.
-        if user.current_room_id != -1 {
-            let current_room_id = user.current_room_id.clone();
-            drop(user);
-            if let Some(room) = write_state.rooms.get_mut(&current_room_id) {
-                if let Some(board) = room.iot_server_connections.get(&server_id) {
-                    // only the owner of each board can remove the connection
-                    // a board is essentially an IoT server connection and
-                    // those who hold permissions for it etc.
-                    if requester_id == board.owner_user_id {
-                        let channel = integration_publish_channel.lock().await;
-                        let new_general_msg = GeneralMessage {
-                            category: "disconnect_hoi".to_owned(),
-                            data: String::new(),
-                            server_id: server_id.clone(),
-                        };
-                        rabbit::publish_integration_message(
-                            &channel,
-                            serde_json::to_string(&new_general_msg).unwrap(),
-                        )
-                        .await
-                        .unwrap_or_default();
-                        // let the room know that this server has been
-                        // removed.
-                        ws_fan::fan::broadcast_message_to_room(
-                            serde_json::to_string(&BasicResponse {
-                                response_op_code: "hoi_server_disconnected".to_owned(),
-                                response_containing_data: server_id,
-                            })
-                            .unwrap(),
-                            write_state,
-                            current_room_id,
-                        )
-                        .await;
-                        return Ok(true);
-                    }
+        let current_room_id = user.current_room_id.clone();
+        drop(user);
+        if let Some(room) = write_state.rooms.get_mut(&current_room_id) {
+            if let Some(board) = room.iot_server_connections.get(&server_id) {
+                // only the owner of each board can remove the connection
+                // a board is essentially an IoT server connection and
+                // those who hold permissions for it etc.
+                if requester_id == board.owner_user_id {
+                    let channel = integration_publish_channel.lock().await;
+                    let new_general_msg = GeneralMessage {
+                        category: "disconnect_hoi".to_owned(),
+                        data: String::new(),
+                        server_id: server_id.clone(),
+                    };
+                    rabbit::publish_integration_message(
+                        &channel,
+                        serde_json::to_string(&new_general_msg).unwrap(),
+                    )
+                    .await
+                    .unwrap_or_default();
+                    // let the room know that this server has been
+                    // removed.
+                    ws_fan::fan::broadcast_message_to_room(
+                        serde_json::to_string(&BasicResponse {
+                            response_op_code: "hoi_server_disconnected".to_owned(),
+                            response_containing_data: server_id,
+                        })
+                        .unwrap(),
+                        write_state,
+                        current_room_id,
+                    )
+                    .await;
+                    return Ok(true);
                 }
             }
         }
@@ -1106,35 +1105,32 @@ pub async fn give_or_revoke_iot_permission(
         if let Some(user) = write_state.active_users.get(&requester_id) {
             let current_room_id = user.current_room_id.clone();
             drop(user);
-            //If you are in this room and you own this board, honor the request.
-            if current_room_id != -1 {
-                if let Some(room) = write_state.rooms.get_mut(&current_room_id) {
-                    if let Some(board) = room
-                        .iot_server_connections
-                        .get_mut(&request_data.external_id)
-                    {
-                        if board.owner_user_id == requester_id {
-                            let mut outgoing_op_code = "removed_hoi_controller";
-                            if request_data.now_has_permission {
-                                board.users_with_permission.insert(request_data.user_id);
-                                outgoing_op_code = "new_hoi_controller";
-                            } else {
-                                board.users_with_permission.remove(&request_data.user_id);
-                            }
-                            //Let the room know this user has been removed
-                            //from controlling this board
-                            ws_fan::fan::broadcast_message_to_room(
-                                serde_json::to_string(&BasicResponse {
-                                    response_op_code: outgoing_op_code.to_owned(),
-                                    response_containing_data: request_data.user_id.to_string(),
-                                })
-                                .unwrap(),
-                                &mut write_state,
-                                current_room_id,
-                            )
-                            .await;
-                            return Ok(());
+            if let Some(room) = write_state.rooms.get_mut(&current_room_id) {
+                if let Some(board) = room
+                    .iot_server_connections
+                    .get_mut(&request_data.external_id)
+                {
+                    if board.owner_user_id == requester_id {
+                        let mut outgoing_op_code = "removed_hoi_controller";
+                        if request_data.now_has_permission {
+                            board.users_with_permission.insert(request_data.user_id);
+                            outgoing_op_code = "new_hoi_controller";
+                        } else {
+                            board.users_with_permission.remove(&request_data.user_id);
                         }
+                        //Let the room know this user has been removed
+                        //from controlling this board
+                        ws_fan::fan::broadcast_message_to_room(
+                            serde_json::to_string(&BasicResponse {
+                                response_op_code: outgoing_op_code.to_owned(),
+                                response_containing_data: request_data.user_id.to_string(),
+                            })
+                            .unwrap(),
+                            &mut write_state,
+                            current_room_id,
+                        )
+                        .await;
+                        return Ok(());
                     }
                 }
             }
@@ -1142,6 +1138,34 @@ pub async fn give_or_revoke_iot_permission(
     }
     send_error_response_to_requester(requester_id, &mut write_state);
     Ok(())
+}
+
+pub async fn get_passive_data_snapshot(server_state: &Arc<RwLock<ServerState>>, requester_id: i32) {
+    let mut write_state = server_state.write().await;
+    if let Some(user) = write_state.active_users.get(&requester_id) {
+        let current_room_id = user.current_room_id;
+        if let Some(room) = write_state.rooms.get(&current_room_id) {
+            let mut all_existing: Vec<ExistingIotServer> = Vec::new();
+            for server in room.iot_server_connections.values() {
+                let mut existing = ExistingIotServer {
+                    owner_id: server.owner_user_id.clone(),
+                    external_id: server.external_server_id.clone(),
+                    controllers_of_room: Vec::new(),
+                    passive_data_snap_shot: server.passive_data_snapshot.clone(),
+                };
+                for controller in server.users_with_permission.iter() {
+                    existing.controllers_of_room.push(controller.clone());
+                }
+                all_existing.push(existing);
+            }
+            send_to_requester_channel(
+                serde_json::to_string(&all_existing).unwrap(),
+                requester_id,
+                &mut write_state,
+                "existing_iot_data".to_owned(),
+            );
+        }
+    }
 }
 
 pub fn room_is_joinable(
