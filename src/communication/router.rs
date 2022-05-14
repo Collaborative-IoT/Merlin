@@ -263,6 +263,9 @@ pub async fn route_msg(
             )
             .await
         }
+        "give_or_revoke_controller_iot" => {
+            handler::give_or_revoke_iot_permission(basic_request, server_state, user_id).await
+        }
 
         _ => Ok(handler::normal_invalid_request(server_state, user_id).await),
     }

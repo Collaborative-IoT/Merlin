@@ -25,6 +25,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::data_capturer::{self, CaptureResult};
+use super::types::GiveOrRevokeIot;
 use super::types::InitRoomData;
 use super::types::JoinTypeInfo;
 use super::types::LooseUserPreviewRequest;
@@ -1072,9 +1073,9 @@ pub async fn remove_hoi_connection_directly(
                         // let the room know that this server has been
                         // removed.
                         ws_fan::fan::broadcast_message_to_room(
-                            serde_json::to_string(&BasicRequest {
-                                request_op_code: "hoi_server_disconnected".to_owned(),
-                                request_containing_data: server_id,
+                            serde_json::to_string(&BasicResponse {
+                                response_op_code: "hoi_server_disconnected".to_owned(),
+                                response_containing_data: server_id,
                             })
                             .unwrap(),
                             write_state,
@@ -1092,7 +1093,56 @@ pub async fn remove_hoi_connection_directly(
 
 /// Give a users permission to control an iot server
 /// if that user is in your current room.
-pub async fn give_or_revoke_iot_permission() {}
+pub async fn give_or_revoke_iot_permission(
+    request: BasicRequest,
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+) -> Result<()> {
+    let mut write_state = server_state.write().await;
+    let request_data: GiveOrRevokeIot = serde_json::from_str(&request.request_containing_data)?;
+    // Can't give yourself permission since you must be the owner
+    // in the beginning. You already have permission.
+    if request_data.user_id != requester_id {
+        if let Some(user) = write_state.active_users.get(&requester_id) {
+            let current_room_id = user.current_room_id.clone();
+            drop(user);
+            //If you are in this room and you own this board, honor the request.
+            if current_room_id != -1 {
+                if let Some(room) = write_state.rooms.get_mut(&current_room_id) {
+                    if let Some(board) = room
+                        .iot_server_connections
+                        .get_mut(&request_data.external_id)
+                    {
+                        if board.owner_user_id == requester_id {
+                            let mut outgoing_op_code = "removed_hoi_controller";
+                            if request_data.now_has_permission {
+                                board.users_with_permission.insert(request_data.user_id);
+                                outgoing_op_code = "new_hoi_controller";
+                            } else {
+                                board.users_with_permission.remove(&request_data.user_id);
+                            }
+                            //Let the room know this user has been removed
+                            //from controlling this board
+                            ws_fan::fan::broadcast_message_to_room(
+                                serde_json::to_string(&BasicResponse {
+                                    response_op_code: outgoing_op_code.to_owned(),
+                                    response_containing_data: request_data.user_id.to_string(),
+                                })
+                                .unwrap(),
+                                &mut write_state,
+                                current_room_id,
+                            )
+                            .await;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    send_error_response_to_requester(requester_id, &mut write_state);
+    Ok(())
+}
 
 pub fn room_is_joinable(
     read_state: &ServerState,

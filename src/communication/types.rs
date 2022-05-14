@@ -311,3 +311,10 @@ pub struct NewIoTServer {
     pub external_id: String,
     pub owner_id: i32,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct GiveOrRevokeIot {
+    pub external_id: String,
+    pub user_id: i32,
+    pub now_has_permission: bool,
+}
