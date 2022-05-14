@@ -8,9 +8,13 @@ use warp::ws::Message;
 pub struct Board {
     pub room_id: i32,
     pub owner_user_id: i32,
-    //Those granted permissions by the owner
+    /// Those granted permissions by the owner
     pub users_with_permission: HashSet<i32>,
     pub external_server_id: String,
+    /// Used for new users when they join a specific server,
+    /// because the new users need to get the most recent capture
+    /// of passive data.
+    pub passive_data_snapshot: Option<String>,
 }
 #[derive(Default)]
 pub struct User {

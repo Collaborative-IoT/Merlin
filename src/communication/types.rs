@@ -318,3 +318,8 @@ pub struct GiveOrRevokeIot {
     pub user_id: i32,
     pub now_has_permission: bool,
 }
+#[derive(Deserialize, Serialize)]
+pub struct PassiveData {
+    pub external_id: String,
+    pub passive_data: String,
+}
