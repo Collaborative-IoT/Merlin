@@ -14,7 +14,6 @@ use crate::logging;
 use crate::rabbitmq::rabbit;
 use crate::rooms::handler::EncounteredError;
 use crate::state::state::ServerState;
-use crate::state::types::Board;
 use crate::state::types::Room;
 use crate::{rooms, ws_fan};
 use futures::lock::Mutex;
