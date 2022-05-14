@@ -44,6 +44,8 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
             let external_id = msg["server_id"].to_string();
             if let Some(room_id) = state.external_servers.get(&external_id) {
                 if let Some(room) = state.rooms.get_mut(room_id) {
+                    let cloned_room_id = room_id.clone();
+                    drop(room_id);
                     room.iot_server_connections.remove(&external_id);
                     let basic_response = BasicResponse {
                         response_op_code: "hoi_server_disconnected".to_owned(),
@@ -53,7 +55,7 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
                     ws_fan::fan::broadcast_message_to_room(
                         serde_json::to_string(&basic_response).unwrap(),
                         state,
-                        room_id.clone(),
+                        cloned_room_id,
                     )
                     .await;
                     state.external_servers.remove(&external_id);
