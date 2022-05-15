@@ -25,8 +25,6 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
             let external_id = external_id[1..external_id.len() - 1].to_string();
 
             let actual_passive_data = msg["data"].to_string();
-            let actual_passive_data =
-                actual_passive_data[1..actual_passive_data.len() - 1].to_string();
             //construct and notify everyone in that room of the new
             //passive data snapshot from the server.
             let passive_data = serde_json::to_string(&BasicResponse {
