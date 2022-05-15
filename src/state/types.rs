@@ -15,6 +15,7 @@ pub struct Board {
     /// because the new users need to get the most recent capture
     /// of passive data.
     pub passive_data_snapshot: Option<String>,
+    pub outside_name: String,
 }
 #[derive(Default)]
 pub struct User {

@@ -96,11 +96,13 @@ pub async fn check_auth_and_insert(msg: serde_json::Value, state: &mut ServerSta
             let external_server_id = msg["server_id"].to_string();
             let external_server_id =
                 external_server_id[1..external_server_id.len() - 1].to_string();
+
             let user_id: Result<i32, _> = msg["user_id"].to_string().parse();
             if let Ok(user_id) = user_id {
                 if let Some(user) = state.active_users.get(&user_id) {
                     let room_id = user.current_room_id.clone();
                     if let Some(room) = state.rooms.get_mut(&room_id) {
+                        //Insert this iot server for this room
                         room.iot_server_connections.insert(
                             external_server_id.clone(),
                             crate::state::types::Board {
@@ -109,8 +111,12 @@ pub async fn check_auth_and_insert(msg: serde_json::Value, state: &mut ServerSta
                                 users_with_permission: HashSet::new(),
                                 external_server_id: external_server_id.clone(),
                                 passive_data_snapshot: None,
+                                outside_name: msg["outside_name"].to_string(),
                             },
                         );
+                        // We need to know what room links to what external server ID, since
+                        // that data isn't flowing per request. We only use the external server
+                        // ID to communicate normally.
                         state
                             .external_servers
                             .insert(external_server_id.clone(), room.room_id.clone());
@@ -119,6 +125,7 @@ pub async fn check_auth_and_insert(msg: serde_json::Value, state: &mut ServerSta
                             response_containing_data: serde_json::to_string(&NewIoTServer {
                                 external_id: external_server_id,
                                 owner_id: user_id,
+                                outside_name: msg["outside_name"].to_string(),
                             })
                             .unwrap(),
                         };

@@ -310,6 +310,7 @@ pub struct SpecialLeaveRoomOnDestroy {
 pub struct NewIoTServer {
     pub external_id: String,
     pub owner_id: i32,
+    pub outside_name: String,
 }
 
 #[derive(Deserialize, Serialize)]
