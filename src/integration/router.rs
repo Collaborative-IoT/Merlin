@@ -14,10 +14,22 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
     if msg["passed_auth"] != Value::Null {
         check_auth_and_insert(msg, state).await;
     } else if msg["category"] != Value::Null {
-        if msg["category"].to_string() == "passive_data" {
+        // using .to_string includes the trailing quotes, so your string be like
+        // "example" instead of just -> example
+        let category = msg["category"].to_string();
+        let category_corrected = category[1..category.len() - 1].to_string();
+        println!("category_corrected{}", category_corrected == "passive_data");
+
+        if category_corrected == "passive_data" {
             // Let the room know there is a new IoT Server
             let external_id = msg["server_id"].to_string();
+            let external_id = external_id[1..external_id.len() - 1].to_string();
+
             let actual_passive_data = msg["data"].to_string();
+            let actual_passive_data =
+                actual_passive_data[1..actual_passive_data.len() - 1].to_string();
+
+            println!("actual_passive:{}", actual_passive_data);
             //construct and notify everyone in that room of the new
             //passive data snapshot from the server.
             let passive_data = serde_json::to_string(&BasicResponse {
@@ -29,7 +41,9 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
                 .unwrap(),
             })
             .unwrap();
+
             //should always be Some, but just extra safety
+            println!("sending_before");
             if let Some(room_id) = state.external_servers.get(&external_id) {
                 let cloned_room_id = room_id.clone();
                 insert_new_passive_snapshot(
@@ -38,6 +52,7 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
                     cloned_room_id,
                     external_id,
                 );
+                println!("sending_before2");
                 ws_fan::fan::broadcast_message_to_room(passive_data, state, cloned_room_id).await;
             }
         } else if msg["category"].to_string() == "disconnected" {
@@ -80,10 +95,13 @@ pub fn insert_new_passive_snapshot(
 
 pub async fn check_auth_and_insert(msg: serde_json::Value, state: &mut ServerState) {
     let passed_auth = msg["passed_auth"].as_bool();
+    println!("outline0");
     if let Some(passed) = passed_auth {
         // If we passed auth insert our new server connection
         if passed {
             let external_server_id = msg["server_id"].to_string();
+            let external_server_id =
+                external_server_id[1..external_server_id.len() - 1].to_string();
             let user_id: Result<i32, _> = msg["user_id"].to_string().parse();
             if let Ok(user_id) = user_id {
                 if let Some(user) = state.active_users.get(&user_id) {
