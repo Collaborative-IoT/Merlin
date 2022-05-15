@@ -1151,6 +1151,7 @@ pub async fn get_passive_data_snapshot(server_state: &Arc<RwLock<ServerState>>, 
                     external_id: server.external_server_id.clone(),
                     controllers_of_room: Vec::new(),
                     passive_data_snap_shot: server.passive_data_snapshot.clone(),
+                    outside_name: server.outside_name.clone(),
                 };
                 for controller in server.users_with_permission.iter() {
                     existing.controllers_of_room.push(controller.clone());

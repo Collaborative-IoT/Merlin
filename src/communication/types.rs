@@ -330,4 +330,5 @@ pub struct ExistingIotServer {
     pub external_id: String,
     pub controllers_of_room: Vec<i32>,
     pub passive_data_snap_shot: Option<String>,
+    pub outside_name: String,
 }
