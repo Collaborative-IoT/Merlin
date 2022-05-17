@@ -48,7 +48,7 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
                 );
                 ws_fan::fan::broadcast_message_to_room(passive_data, state, cloned_room_id).await;
             }
-        } else if msg["category"].to_string() == "disconnected" {
+        } else if category == "disconnected" {
             let external_id = msg["server_id"].to_string();
             if let Some(room_id) = state.external_servers.get(&external_id) {
                 if let Some(room) = state.rooms.get_mut(room_id) {
@@ -68,6 +68,24 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
                     .await;
                     state.external_servers.remove(&external_id);
                 }
+            }
+        } else if category == "action_response" {
+            let external_id = msg["server_id"].to_string();
+            let external_id = external_id[1..external_id.len() - 1].to_string();
+
+            let basic_response = BasicResponse {
+                response_op_code: "action_response_iot".to_owned(),
+                response_containing_data: msg["data"].to_string(),
+            };
+
+            if let Some(room_id) = state.external_servers.get(&external_id) {
+                // Let the room know a server was disconnected
+                ws_fan::fan::broadcast_message_to_room(
+                    serde_json::to_string(&basic_response).unwrap(),
+                    state,
+                    room_id.clone(),
+                )
+                .await;
             }
         }
     }
