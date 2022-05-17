@@ -79,11 +79,13 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
             };
 
             if let Some(room_id) = state.external_servers.get(&external_id) {
+                let cloned_room_id = room_id.clone();
+                drop(room_id);
                 // Let the room know a server was disconnected
                 ws_fan::fan::broadcast_message_to_room(
                     serde_json::to_string(&basic_response).unwrap(),
                     state,
-                    room_id.clone(),
+                    cloned_room_id,
                 )
                 .await;
             }
