@@ -9,6 +9,8 @@ use crate::data_store::db_models::{DBFollower, DBUserBlock};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::integration::types::DisconnectMsg;
 use crate::integration::types::GeneralMessage;
+use crate::integration::types::HOIActionDataIncoming;
+use crate::integration::types::HOIActionDataOutgoing;
 use crate::integration::types::HouseOfIoTCredentials;
 use crate::logging;
 use crate::rabbitmq::rabbit;
@@ -1087,6 +1089,53 @@ pub async fn remove_hoi_connection_directly(
         }
     }
     Ok(false)
+}
+
+pub async fn request_hoi_action(
+    request: BasicRequest,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+) -> Result<()> {
+    let request_data: HOIActionDataIncoming =
+        serde_json::from_str(&request.request_containing_data)?;
+    let mut write_state = server_state.write().await;
+    if let Some(user) = write_state.active_users.get(&requester_id) {
+        //ensure our user is actually in a room
+        if let Some(room) = write_state.rooms.get(&user.current_room_id) {
+            // Only people with permission can make requests
+            if let Some(board) = room.iot_server_connections.get(&request_data.server_id) {
+                if board.users_with_permission.contains(&requester_id)
+                    || board.owner_user_id == requester_id
+                {
+                    logging::console::log_event(&format!(
+                        "Executing HOI Action:{:?}",
+                        request_data
+                    ));
+                    let channel = integration_publish_channel.lock().await;
+                    let new_general_msg = GeneralMessage {
+                        category: "action_hoi".to_owned(),
+                        data: serde_json::to_string(&HOIActionDataOutgoing {
+                            bot_name: request_data.bot_name,
+                            action: request_data.action,
+                        })
+                        .unwrap(),
+                        server_id: request_data.server_id,
+                    };
+                    rabbit::publish_integration_message(
+                        &channel,
+                        serde_json::to_string(&new_general_msg).unwrap(),
+                    )
+                    .await
+                    .unwrap_or_default();
+
+                    return Ok(());
+                }
+            }
+        }
+    }
+    send_error_response_to_requester(requester_id, &mut write_state);
+    Ok(())
 }
 
 /// Give a users permission to control an iot server

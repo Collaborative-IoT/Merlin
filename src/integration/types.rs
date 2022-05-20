@@ -31,3 +31,16 @@ pub struct HouseOfIoTCredentials {
 pub struct DisconnectMsg {
     pub server_id: String,
 }
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct HOIActionDataIncoming {
+    pub server_id: String,
+    pub bot_name: String,
+    pub action: String,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct HOIActionDataOutgoing {
+    pub bot_name: String,
+    pub action: String,
+}
