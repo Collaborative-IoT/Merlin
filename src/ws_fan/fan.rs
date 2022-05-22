@@ -19,18 +19,16 @@ pub async fn broadcast_message_to_room(
     server_state: &mut ServerState,
     room_id: i32,
 ) {
-    let room_users: Vec<&i32> = server_state
-        .rooms
-        .get(&room_id)
-        .unwrap()
-        .user_ids
-        .iter()
-        .collect();
-    for id in room_users {
-        let user_websocket_channel = server_state.peer_map.get(id).unwrap();
-        user_websocket_channel
-            .send(Message::text(new_msg.clone()))
-            .unwrap_or_else(|e| eprintln!("issue sending msg:{}", e));
+    if let Some(room) = server_state.rooms.get(&room_id) {
+        let room_users: Vec<&i32> = room.user_ids.iter().collect();
+        for id in room_users {
+            let user_websocket_channel = server_state.peer_map.get(id).unwrap();
+            user_websocket_channel
+                .send(Message::text(new_msg.clone()))
+                .unwrap_or_else(|e| eprintln!("issue sending msg:{}", e));
+        }
+    } else {
+        println!("Room removed before message was send: {}", new_msg);
     }
 }
 
@@ -40,19 +38,17 @@ pub async fn broadcast_message_to_room_excluding_user(
     room_id: i32,
     user_id: i32,
 ) {
-    let room_users: Vec<&i32> = server_state
-        .rooms
-        .get(&room_id)
-        .unwrap()
-        .user_ids
-        .iter()
-        .filter(|x| x != &&user_id)
-        .collect();
-    for id in room_users {
-        let user_websocket_channel = server_state.peer_map.get(id).unwrap();
-        user_websocket_channel
-            .send(Message::text(new_msg.clone()))
-            .unwrap_or_else(|e| eprintln!("issue sending msg:{}", e));
+    if let Some(room) = server_state.rooms.get(&room_id) {
+        let room_users: Vec<&i32> = room.user_ids.iter().filter(|x| x != &&user_id).collect();
+
+        for id in room_users {
+            let user_websocket_channel = server_state.peer_map.get(id).unwrap();
+            user_websocket_channel
+                .send(Message::text(new_msg.clone()))
+                .unwrap_or_else(|e| eprintln!("issue sending msg:{}", e));
+        }
+    } else {
+        println!("Room removed before message was send: {}", new_msg);
     }
 }
 
