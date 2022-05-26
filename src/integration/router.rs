@@ -8,9 +8,8 @@ use crate::{
     ws_fan,
 };
 
-pub async fn route_msg(msg: String, state: &mut ServerState) {
-    println!("{}", msg);
-    let msg: serde_json::Value = serde_json::from_str(&msg).unwrap();
+pub async fn route_msg(msg_data: String, state: &mut ServerState) {
+    let msg: serde_json::Value = serde_json::from_str(&msg_data).unwrap();
     if msg["passed_auth"] != Value::Null {
         check_auth_and_insert(msg, state).await;
     } else if msg["category"] != Value::Null {
@@ -48,7 +47,7 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
                 );
                 ws_fan::fan::broadcast_message_to_room(passive_data, state, cloned_room_id).await;
             }
-        } else if category == "disconnected" {
+        } else if category_corrected == "disconnected" {
             let external_id = msg["server_id"].to_string();
             if let Some(room_id) = state.external_servers.get(&external_id) {
                 if let Some(room) = state.rooms.get_mut(room_id) {
@@ -69,13 +68,13 @@ pub async fn route_msg(msg: String, state: &mut ServerState) {
                     state.external_servers.remove(&external_id);
                 }
             }
-        } else if category == "action_response" {
+        } else if category_corrected == "action_response" {
             let external_id = msg["server_id"].to_string();
             let external_id = external_id[1..external_id.len() - 1].to_string();
 
             let basic_response = BasicResponse {
                 response_op_code: "action_response_iot".to_owned(),
-                response_containing_data: msg["data"].to_string(),
+                response_containing_data: msg_data,
             };
 
             if let Some(room_id) = state.external_servers.get(&external_id) {
