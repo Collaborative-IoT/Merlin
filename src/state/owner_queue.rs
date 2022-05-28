@@ -52,12 +52,16 @@ impl OwnerQueue {
             // If this user exists and they are in our current room.
             if let Some(user) = active_users.get(&next) {
                 if user.current_room_id == self.room_id {
-                    //add this user back to the queue
-                    //because even though this is the current owner
-                    //they need to always be in the owner queue.
+                    // Add this user back to the queue
+                    // because even though this is the current owner
+                    // they need to always be in the owner queue.
                     //
-                    //If this owner gives the ownership to someone else
-                    //they still are in the room and should be in line.
+                    // If this owner gives the ownership to someone else
+                    // they still are in the room and should be in line for ownership.
+                    //
+                    // Meaning that if this owner gives ownership to someone else,
+                    // and the new owner that they gave ownership to leave the room
+                    // they will once again be at the tip of the owner queue.
                     self.user_queue.push_front(next.clone());
                     return Some(next);
                 }
