@@ -991,13 +991,10 @@ pub async fn create_hoi_connection(
     if let Some(user) = write_state.active_users.get(&requester_id) {
         //ensure our user is actually in a room
         if user.current_room_id != -1 {
-            let room_permissions =
-                data_fetcher::get_room_permissions_for_users(&user.current_room_id, &mut handler)
-                    .await;
-            if let Some(permissions) = room_permissions.1.get(&requester_id) {
-                // Only mods can actually make the request to connect to a server
-                // and users can only make this request on behalf of themselves.
-                if permissions.is_mod && request_data.user_id == requester_id {
+            // Only mods can actually make the request to connect to a server
+            if is_mod_or_owner(&user.current_room_id, &mut handler, &requester_id).await {
+                // Users can only make this request on behalf of themselves.
+                if request_data.user_id == requester_id {
                     let channel = integration_publish_channel.lock().await;
                     let new_general_msg = GeneralMessage {
                         category: "connect_hoi".to_owned(),
@@ -1233,6 +1230,25 @@ pub fn room_is_joinable(
         }
     }
     return false;
+}
+
+async fn is_mod_or_owner(
+    current_room_id: &i32,
+    handler: &mut ExecutionHandler,
+    requester_id: &i32,
+) -> bool {
+    let room_permissions =
+        data_fetcher::get_room_permissions_for_users(current_room_id, handler).await;
+    let room_owner = data_fetcher::get_room_owner_and_settings(handler, current_room_id).await;
+    if let Some(permissions) = room_permissions.1.get(requester_id) {
+        if permissions.is_mod {
+            return true;
+        }
+    }
+    if room_owner.1 == *requester_id {
+        return true;
+    }
+    false
 }
 
 fn type_of_mod_op(mod_status: bool) -> String {
