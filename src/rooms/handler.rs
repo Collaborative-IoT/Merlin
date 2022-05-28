@@ -5,7 +5,7 @@ use crate::communication::types::{
     BasicResponse, GenericRoomIdAndPeerId, RoomPermissions, RoomUpdate, SpecialLeaveRoomOnDestroy,
     VoiceServerClosePeer, VoiceServerCreateRoom, VoiceServerDestroyRoom, VoiceServerRequest,
 };
-use crate::communication::{data_capturer, data_fetcher};
+use crate::communication::{self, data_capturer, data_fetcher};
 use crate::data_store::db_models::{DBRoom, DBRoomBlock, DBRoomPermissions};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
 use crate::logging;
@@ -251,9 +251,17 @@ pub async fn leave_room(
     server_state: &mut ServerState,
     requester_id: &i32,
     room_id: &i32,
-    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    voice_server_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) {
+    remove_all_owned_iot_servers(
+        server_state,
+        integration_publish_channel,
+        requester_id,
+        room_id.clone(),
+    )
+    .await;
     if let Some(user) = server_state.active_users.get_mut(&requester_id) {
         user.current_room_id = -1;
         let mut room = server_state.rooms.get_mut(room_id).unwrap();
@@ -280,7 +288,13 @@ pub async fn leave_room(
                 "user({}) left room({}) which resulted in destruction",
                 requester_id, room_id
             ));
-            destroy_room(server_state, publish_channel, execution_handler, room_id).await;
+            destroy_room(
+                server_state,
+                voice_server_publish_channel,
+                execution_handler,
+                room_id,
+            )
+            .await;
         } else {
             select_new_owner_if_current_user_is_owner(
                 requester_id,
@@ -289,25 +303,8 @@ pub async fn leave_room(
                 room_id.clone(),
             )
             .await;
-
-            let request_to_voice_server = VoiceServerClosePeer {
-                roomId: room_id.to_string(),
-                peerId: requester_id.to_string(),
-                kicked: false,
-            };
-            let request_str: String = create_voice_server_request(
-                "close-peer",
-                &requester_id.to_string(),
-                request_to_voice_server,
-            );
-            let channel = publish_channel.lock().await;
-            rabbit::publish_voice_message(&channel, request_str)
-                .await
-                .unwrap_or_default();
-            logging::console::log_success(&format!(
-                "user({}) left room({})",
-                requester_id, room_id
-            ));
+            send_close_peer_request_not_kicked(room_id, requester_id, voice_server_publish_channel)
+                .await;
         }
     }
 }
@@ -955,6 +952,44 @@ pub async fn update_room_owner(
     }
 }
 
+// Doesn't matter if you are the
+// mod of the room or the owner of the room
+// if you own a connection you
+// it will always be removed when you leave the room.
+pub async fn remove_all_owned_iot_servers(
+    write_state: &mut ServerState,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    current_user_id: &i32,
+    current_room_id: i32,
+) {
+    let owned = gather_owned_servers(write_state, current_room_id, current_user_id.clone());
+    for owned_server_id in owned {
+        communication::handler::remove_hoi_connection_directly(
+            owned_server_id,
+            integration_publish_channel,
+            write_state,
+            current_user_id.clone(),
+        )
+        .await
+        .unwrap_or_default();
+    }
+}
+pub fn gather_owned_servers(
+    write_state: &mut ServerState,
+    current_room_id: i32,
+    current_user_id: i32,
+) -> Vec<String> {
+    let mut owned_iot_servers_to_remove = vec![];
+    if let Some(room) = write_state.rooms.get(&current_room_id) {
+        for board in room.iot_server_connections.values() {
+            if board.owner_user_id == current_user_id {
+                owned_iot_servers_to_remove.push(board.external_server_id.clone());
+            }
+        }
+    }
+    owned_iot_servers_to_remove
+}
+
 pub async fn user_is_owner_of_room(
     user_id: i32,
     execution_handler: &mut ExecutionHandler,
@@ -994,4 +1029,25 @@ pub fn can_block_this_user_from_room(
         }
     }
     false
+}
+async fn send_close_peer_request_not_kicked(
+    room_id: &i32,
+    requester_id: &i32,
+    voice_server_publish_channel: &Arc<Mutex<lapin::Channel>>,
+) {
+    let request_to_voice_server = VoiceServerClosePeer {
+        roomId: room_id.to_string(),
+        peerId: requester_id.to_string(),
+        kicked: false,
+    };
+    let request_str: String = create_voice_server_request(
+        "close-peer",
+        &requester_id.to_string(),
+        request_to_voice_server,
+    );
+    let channel = voice_server_publish_channel.lock().await;
+    rabbit::publish_voice_message(&channel, request_str)
+        .await
+        .unwrap_or_default();
+    logging::console::log_success(&format!("user({}) left room({})", requester_id, room_id));
 }

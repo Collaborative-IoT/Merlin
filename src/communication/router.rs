@@ -173,6 +173,7 @@ pub async fn route_msg(
             handler::leave_room(
                 basic_request,
                 voice_publish_channel,
+                integration_publish_channel.unwrap(),
                 server_state,
                 execution_handler,
                 user_id,

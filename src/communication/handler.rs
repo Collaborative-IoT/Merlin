@@ -400,7 +400,8 @@ pub async fn get_initial_room_data(
 
 pub async fn leave_room(
     request: BasicRequest,
-    publish_channel: &Arc<Mutex<lapin::Channel>>,
+    voice_server_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
     server_state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
     requester_id: i32,
@@ -414,7 +415,8 @@ pub async fn leave_room(
                 &mut write_state,
                 &requester_id,
                 &request_data.room_id,
-                publish_channel,
+                voice_server_publish_channel,
+                integration_publish_channel,
                 execution_handler,
             )
             .await;
