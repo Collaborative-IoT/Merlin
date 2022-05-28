@@ -3,7 +3,7 @@ use crate::communication::data_fetcher;
 use crate::communication::helpers;
 use crate::communication::types::{
     AllUsersInRoomResponse, BasicRequest, BasicRoomCreation, BlockUserFromRoom, CommunicationRoom,
-    GenericRoomId, GenericRoomIdAndPeerId, GetFollowList, User, UserPreview,
+    GenericRoomId, GenericRoomIdAndPeerId, GetFollowList, UnblockUserFromRoom, User, UserPreview,
 };
 use crate::data_store::db_models::{DBFollower, DBUserBlock};
 use crate::data_store::sql_execution_handler::ExecutionHandler;
@@ -113,6 +113,33 @@ pub async fn block_user_from_room(
     }
     send_error_response_to_requester(requester_id, &mut write_state);
     return Ok(());
+}
+
+pub async fn unblock_user_from_room(
+    request: BasicRequest,
+    requester_id: i32,
+    server_state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+) -> Result<()> {
+    let request_data: UnblockUserFromRoom = serde_json::from_str(&request.request_containing_data)?;
+    let write_state = server_state.write().await;
+    let mut handler = execution_handler.lock().await;
+    if let Some(room) = write_state.rooms.get(&request_data.room_id) {
+        // Make sure both users are in the room
+        // The owner checking happens in the room handler
+        if room.user_ids.contains(&requester_id) && room.user_ids.contains(&request_data.user_id) {
+            if is_mod_or_owner(&request_data.room_id, &mut handler, &requester_id).await {
+                data_capturer::capture_room_block_removal(
+                    &mut handler,
+                    &request_data.room_id,
+                    &request_data.user_id,
+                )
+                .await;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 pub async fn join_room(

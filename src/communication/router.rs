@@ -271,6 +271,10 @@ pub async fn route_msg(
         "get_room_blocked" => {
             Ok(handler::get_blocked_users_for_room(server_state, execution_handler, user_id).await)
         }
+        "unblock_user_from_room" => {
+            handler::unblock_user_from_room(basic_request, user_id, server_state, execution_handler)
+                .await
+        }
         "request_hoi_action" => {
             handler::request_hoi_action(
                 basic_request,

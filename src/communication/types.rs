@@ -137,6 +137,13 @@ pub struct BlockUserFromRoom {
     pub user_id: i32,
     pub room_id: i32,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct UnblockUserFromRoom {
+    pub user_id: i32,
+    pub room_id: i32,
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct ScheduledRoomUpdate {
     pub room_id: i32,
