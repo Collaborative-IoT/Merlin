@@ -267,6 +267,10 @@ pub async fn route_msg(
         "give_or_revoke_controller_iot" => {
             handler::give_or_revoke_iot_permission(basic_request, server_state, user_id).await
         }
+
+        "get_room_blocked" => {
+            Ok(handler::get_blocked_users_for_room(server_state, execution_handler, user_id).await)
+        }
         "request_hoi_action" => {
             handler::request_hoi_action(
                 basic_request,

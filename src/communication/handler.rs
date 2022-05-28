@@ -27,6 +27,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::data_capturer::{self, CaptureResult};
+use super::types::BlockedFromRoom;
 use super::types::ExistingIotServer;
 use super::types::GiveOrRevokeIot;
 use super::types::InitRoomData;
@@ -1212,6 +1213,42 @@ pub async fn get_passive_data_snapshot(server_state: &Arc<RwLock<ServerState>>, 
                 &mut write_state,
                 "existing_iot_data".to_owned(),
             );
+        }
+    }
+}
+
+pub async fn get_blocked_users_for_room(
+    server_state: &Arc<RwLock<ServerState>>,
+    execution_handler: &Arc<Mutex<ExecutionHandler>>,
+    requester_id: i32,
+) {
+    let mut write_state = server_state.write().await;
+    if let Some(user) = write_state.active_users.get(&requester_id) {
+        if user.current_room_id != -1 {
+            let mut handler = execution_handler.lock().await;
+
+            if is_mod_or_owner(&user.current_room_id, &mut handler, &requester_id).await {
+                let blocked_user_ids: Vec<i32> = data_fetcher::get_blocked_user_ids_for_room(
+                    &mut handler,
+                    &user.current_room_id,
+                )
+                .await
+                .1
+                .iter()
+                .cloned()
+                .collect();
+
+                let users =
+                    data_fetcher::get_users_for_user(requester_id, blocked_user_ids, &mut handler)
+                        .await;
+                let response_data = BlockedFromRoom { users: users.1 };
+                send_to_requester_channel(
+                    serde_json::to_string(&response_data).unwrap(),
+                    requester_id,
+                    &mut write_state,
+                    "users_blocked_from_room".to_owned(),
+                );
+            }
         }
     }
 }

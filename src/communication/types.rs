@@ -314,6 +314,11 @@ pub struct NewIoTServer {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct BlockedFromRoom {
+    pub users: Vec<User>,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct GiveOrRevokeIot {
     pub external_id: String,
     pub user_id: i32,
