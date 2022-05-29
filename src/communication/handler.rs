@@ -118,21 +118,17 @@ pub async fn block_user_from_room(
 pub async fn unblock_user_from_room(
     request: BasicRequest,
     requester_id: i32,
-    server_state: &Arc<RwLock<ServerState>>,
     execution_handler: &Arc<Mutex<ExecutionHandler>>,
 ) -> Result<()> {
     let request_data: UnblockUserFromRoom = serde_json::from_str(&request.request_containing_data)?;
-    let write_state = server_state.write().await;
     let mut handler = execution_handler.lock().await;
-    if let Some(room) = write_state.rooms.get(&request_data.room_id) {
-        if is_mod_or_owner(&request_data.room_id, &mut handler, &requester_id).await {
-            data_capturer::capture_room_block_removal(
-                &mut handler,
-                &request_data.room_id,
-                &request_data.user_id,
-            )
-            .await;
-        }
+    if is_mod_or_owner(&request_data.room_id, &mut handler, &requester_id).await {
+        data_capturer::capture_room_block_removal(
+            &mut handler,
+            &request_data.room_id,
+            &request_data.user_id,
+        )
+        .await;
     }
 
     Ok(())
