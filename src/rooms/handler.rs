@@ -899,6 +899,7 @@ async fn select_new_owner_if_current_user_is_owner(
     // Update the room owner if this user that is leaving
     // is the current owner and broadcast this update
     // to the other users in the room
+    println!("selecting new owner");
     let mut handler = execution_handler.lock().await;
     let need_to_update_room_owner =
         user_is_owner_of_room(requester_id.clone(), &mut handler, &room_id).await;
@@ -929,7 +930,10 @@ pub async fn update_room_owner_in_line(
                 room_id.clone(),
             )
             .await;
-            logging::console::log_success(&format!("New Owner for room:{}", room_id));
+            logging::console::log_success(&format!(
+                "New Owner for room:{} , owner:{}",
+                room_id, new_owner_id
+            ));
             return Some(new_owner_id);
         }
     }
