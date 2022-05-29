@@ -340,25 +340,31 @@ pub async fn get_top_rooms(
     let mut handler = execution_handler.lock().await;
     let mut communication_rooms: Vec<CommunicationRoom> = Vec::new();
     for room in all_rooms {
-        let all_room_user_ids: Vec<i32> = room.user_ids.iter().cloned().collect();
-        let previews: (EncounteredError, HashMap<i32, UserPreview>) =
-            data_fetcher::get_user_previews_for_users(all_room_user_ids, &mut handler).await;
+        let blocked_users =
+            data_fetcher::get_blocked_user_ids_for_room(&mut handler, &room.room_id).await;
+        //if we aren't blocked from this room and we didn't encounter an error
+        //gathering the blocked data
+        if !blocked_users.1.contains(&requester_id) && blocked_users.0 != true {
+            let all_room_user_ids: Vec<i32> = room.user_ids.iter().cloned().collect();
+            let previews: (EncounteredError, HashMap<i32, UserPreview>) =
+                data_fetcher::get_user_previews_for_users(all_room_user_ids, &mut handler).await;
 
-        let owner_data_and_chat_mode: (bool, i32, String) =
-            data_fetcher::get_room_owner_and_settings(&mut handler, &room.room_id).await;
+            let owner_data_and_chat_mode: (bool, i32, String) =
+                data_fetcher::get_room_owner_and_settings(&mut handler, &room.room_id).await;
 
-        //if encountered errors getting data needed
-        if previews.0 || owner_data_and_chat_mode.0 {
-            continue;
+            //if encountered errors getting data needed
+            if previews.0 || owner_data_and_chat_mode.0 {
+                continue;
+            }
+
+            helpers::construct_communication_room(
+                previews.1,
+                room,
+                &mut communication_rooms,
+                owner_data_and_chat_mode.1,
+                owner_data_and_chat_mode.2,
+            );
         }
-
-        helpers::construct_communication_room(
-            previews.1,
-            room,
-            &mut communication_rooms,
-            owner_data_and_chat_mode.1,
-            owner_data_and_chat_mode.2,
-        );
     }
     //clean up old mutexes and send the response
     drop(handler);

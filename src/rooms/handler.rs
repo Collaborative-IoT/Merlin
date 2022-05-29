@@ -161,12 +161,21 @@ pub async fn remove_user_from_room_basic(
     server_state: &mut ServerState,
     publish_channel: &Arc<Mutex<lapin::Channel>>,
 ) {
-    server_state
+    if let Some(room) = server_state
         .rooms
         .get_mut(&request_to_voice_server.roomId.parse().unwrap())
-        .unwrap()
-        .user_ids
-        .remove(&request_to_voice_server.peerId.parse().unwrap());
+    {
+        room.user_ids
+            .remove(&request_to_voice_server.peerId.parse().unwrap());
+        room.amount_of_users -= 1;
+    }
+
+    if let Some(user) = server_state
+        .active_users
+        .get_mut(&request_to_voice_server.peerId.parse().unwrap())
+    {
+        user.current_room_id = -1;
+    }
     let request_str: String = create_voice_server_request(
         "close-peer",
         &request_to_voice_server.peerId.clone(),
