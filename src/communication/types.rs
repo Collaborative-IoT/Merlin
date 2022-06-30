@@ -344,3 +344,10 @@ pub struct ExistingIotServer {
     pub passive_data_snap_shot: Option<String>,
     pub outside_name: String,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct RelationModification {
+    pub modification_op: String,
+    pub data: String,
+    pub server_id: String,
+}

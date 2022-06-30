@@ -34,6 +34,7 @@ use super::types::InitRoomData;
 use super::types::JoinTypeInfo;
 use super::types::LooseUserPreviewRequest;
 use super::types::NewModStatus;
+use super::types::RelationModification;
 use super::types::RoomDetails;
 use super::types::SingleUserDataResults;
 use super::types::SingleUserPermissionResults;
@@ -1003,6 +1004,38 @@ pub async fn give_owner(
     Ok(())
 }
 
+pub async fn add_or_remove_relation_for_hoi(
+    request: BasicRequest,
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    server_state: &Arc<RwLock<ServerState>>,
+    requester_id: i32,
+) -> Result<()> {
+    let request_data: RelationModification =
+        serde_json::from_str(&request.request_containing_data)?;
+    let mut write_state = server_state.write().await;
+    if let Some(user) = write_state.active_users.get(&requester_id) {
+        let current_room_id = user.current_room_id.clone();
+        drop(user);
+        if let Some(room) = write_state.rooms.get_mut(&current_room_id) {
+            if let Some(board) = room.iot_server_connections.get(&request_data.server_id) {
+                // only the owner of each board can add/remove relations
+                if requester_id == board.owner_user_id {
+                    send_request_to_integration_server(
+                        integration_publish_channel,
+                        serde_json::to_string(&request_data).unwrap(),
+                        request_data.modification_op,
+                        request_data.server_id,
+                    )
+                    .await;
+                    return Ok(());
+                }
+            }
+        }
+    }
+    send_error_response_to_requester(requester_id, &mut write_state);
+    Ok(())
+}
+
 pub async fn create_hoi_connection(
     request: BasicRequest,
     integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
@@ -1021,18 +1054,13 @@ pub async fn create_hoi_connection(
             if is_mod_or_owner(&user.current_room_id, &mut handler, &requester_id).await {
                 // Users can only make this request on behalf of themselves.
                 if request_data.user_id == requester_id {
-                    let channel = integration_publish_channel.lock().await;
-                    let new_general_msg = GeneralMessage {
-                        category: "connect_hoi".to_owned(),
-                        data: serde_json::to_string(&request_data).unwrap(),
-                        server_id: "-1".to_owned(),
-                    };
-                    rabbit::publish_integration_message(
-                        &channel,
-                        serde_json::to_string(&new_general_msg).unwrap(),
+                    send_request_to_integration_server(
+                        integration_publish_channel,
+                        serde_json::to_string(&request_data).unwrap(),
+                        "connect_hoi".to_owned(),
+                        "-1".to_owned(),
                     )
-                    .await
-                    .unwrap_or_default();
+                    .await;
                     return Ok(());
                 }
             }
@@ -1040,6 +1068,23 @@ pub async fn create_hoi_connection(
     }
     send_error_response_to_requester(requester_id, &mut write_state);
     Ok(())
+}
+
+pub async fn send_request_to_integration_server(
+    integration_publish_channel: &Arc<Mutex<lapin::Channel>>,
+    data: String,
+    category: String,
+    server_id: String,
+) {
+    let channel = integration_publish_channel.lock().await;
+    let new_general_msg = GeneralMessage {
+        category,
+        data,
+        server_id,
+    };
+    rabbit::publish_integration_message(&channel, serde_json::to_string(&new_general_msg).unwrap())
+        .await
+        .unwrap_or_default();
 }
 
 pub async fn remove_hoi_connection(
