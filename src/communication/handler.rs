@@ -1129,18 +1129,13 @@ pub async fn remove_hoi_connection_directly(
                 // a board is essentially an IoT server connection and
                 // those who hold permissions for it etc.
                 if requester_id == board.owner_user_id {
-                    let channel = integration_publish_channel.lock().await;
-                    let new_general_msg = GeneralMessage {
-                        category: "disconnect_hoi".to_owned(),
-                        data: String::new(),
-                        server_id: server_id.clone(),
-                    };
-                    rabbit::publish_integration_message(
-                        &channel,
-                        serde_json::to_string(&new_general_msg).unwrap(),
+                    send_request_to_integration_server(
+                        integration_publish_channel,
+                        String::new(),
+                        "disconnect_hoi".to_owned(),
+                        server_id.clone(),
                     )
-                    .await
-                    .unwrap_or_default();
+                    .await;
                     // let the room know that this server has been
                     // removed.
                     ws_fan::fan::broadcast_message_to_room(
@@ -1182,23 +1177,17 @@ pub async fn request_hoi_action(
                         "Executing HOI Action:{:?}",
                         request_data
                     ));
-                    let channel = integration_publish_channel.lock().await;
-                    let new_general_msg = GeneralMessage {
-                        category: "action_hoi".to_owned(),
-                        data: serde_json::to_string(&HOIActionDataOutgoing {
+                    send_request_to_integration_server(
+                        integration_publish_channel,
+                        serde_json::to_string(&HOIActionDataOutgoing {
                             bot_name: request_data.bot_name,
                             action: request_data.action,
                         })
                         .unwrap(),
-                        server_id: request_data.server_id,
-                    };
-                    rabbit::publish_integration_message(
-                        &channel,
-                        serde_json::to_string(&new_general_msg).unwrap(),
+                        "action_hoi".to_owned(),
+                        request_data.server_id,
                     )
-                    .await
-                    .unwrap_or_default();
-
+                    .await;
                     return Ok(());
                 }
             }
