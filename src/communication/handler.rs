@@ -33,8 +33,10 @@ use super::types::GiveOrRevokeIot;
 use super::types::InitRoomData;
 use super::types::JoinTypeInfo;
 use super::types::LooseUserPreviewRequest;
+use super::types::NewIoTController;
 use super::types::NewModStatus;
 use super::types::RelationModification;
+use super::types::RemovedIoTController;
 use super::types::RoomDetails;
 use super::types::SingleUserDataResults;
 use super::types::SingleUserPermissionResults;
@@ -1199,6 +1201,7 @@ pub async fn request_hoi_action(
 
 /// Give a users permission to control an iot server
 /// if that user is in your current room.
+/// TODO:Break this method up
 pub async fn give_or_revoke_iot_permission(
     request: BasicRequest,
     server_state: &Arc<RwLock<ServerState>>,
@@ -1217,20 +1220,37 @@ pub async fn give_or_revoke_iot_permission(
                     .iot_server_connections
                     .get_mut(&request_data.external_id)
                 {
+                    //only owners can give permission
                     if board.owner_user_id == requester_id {
+                        //default -> revoke permissions
                         let mut outgoing_op_code = "removed_hoi_controller";
+                        let mut outgoing_response_data =
+                            serde_json::to_string(&RemovedIoTController {
+                                external_id: request_data.external_id.clone(),
+                                user_id: request_data.user_id.clone(),
+                            })
+                            .unwrap();
+
+                        //if we are giving permission
                         if request_data.now_has_permission {
                             board.users_with_permission.insert(request_data.user_id);
                             outgoing_op_code = "new_hoi_controller";
+                            outgoing_response_data = serde_json::to_string(&NewIoTController {
+                                external_id: request_data.external_id,
+                                user_id: request_data.user_id,
+                                outside_name: board.outside_name.clone(),
+                            })
+                            .unwrap();
                         } else {
                             board.users_with_permission.remove(&request_data.user_id);
                         }
+
                         //Let the room know this user has been removed
                         //from controlling this board
                         ws_fan::fan::broadcast_message_to_room(
                             serde_json::to_string(&BasicResponse {
                                 response_op_code: outgoing_op_code.to_owned(),
-                                response_containing_data: request_data.user_id.to_string(),
+                                response_containing_data: outgoing_response_data,
                             })
                             .unwrap(),
                             &mut write_state,

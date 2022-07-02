@@ -346,6 +346,19 @@ pub struct ExistingIotServer {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct NewIoTController {
+    pub external_id: String,
+    pub user_id: i32,
+    pub outside_name: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct RemovedIoTController {
+    pub external_id: String,
+    pub user_id: i32,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct RelationModification {
     pub modification_op: String,
     pub data: String,
