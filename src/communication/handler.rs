@@ -1228,6 +1228,7 @@ pub async fn give_or_revoke_iot_permission(
                             serde_json::to_string(&RemovedIoTController {
                                 external_id: request_data.external_id.clone(),
                                 user_id: request_data.user_id.clone(),
+                                outside_name: board.outside_name.clone(),
                             })
                             .unwrap();
 

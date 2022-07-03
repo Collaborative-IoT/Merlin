@@ -356,6 +356,7 @@ pub struct NewIoTController {
 pub struct RemovedIoTController {
     pub external_id: String,
     pub user_id: i32,
+    pub outside_name: String,
 }
 
 #[derive(Deserialize, Serialize)]
