@@ -1,7 +1,7 @@
 extern crate chrono;
 extern crate reqwest;
 extern crate warp;
-use std::env;
+use std::{env, net::SocketAddr};
 #[allow(dead_code)]
 mod test;
 
@@ -101,6 +101,9 @@ async fn main() {
             + r#"\src\ascii_art\knightascii.txt"#;
         logging::console::log_start(win_path).unwrap();
     }
+    let addr: SocketAddr = env::var("MERLIN_LOCATION").unwrap().parse().unwrap();
+    let tls_or_not = env::var("MERLIN_TLS_OR_NOT").unwrap();
+
     //start
-    server::start_server(([127, 0, 0, 1], 3030)).await;
+    server::start_server(addr, tls_or_not).await;
 }

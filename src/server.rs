@@ -26,7 +26,8 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 use warp::Filter;
 
-pub async fn start_server<T: Into<SocketAddr>>(addr: T) {
+pub async fn start_server<T: Into<SocketAddr>>(addr: T, tls_or_not: String) {
+    println!("tls OR NOT -> {}", tls_or_not);
     //these should never panic, if they do then the server is
     //100% in fault and can't run anyway.
     let server_state: Arc<RwLock<ServerState>> = Arc::new(RwLock::new(ServerState::new()));
