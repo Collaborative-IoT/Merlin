@@ -1024,7 +1024,7 @@ pub async fn add_or_remove_relation_for_hoi(
                 if requester_id == board.owner_user_id {
                     send_request_to_integration_server(
                         integration_publish_channel,
-                        serde_json::to_string(&request_data).unwrap(),
+                        request_data.data,
                         request_data.modification_op,
                         request_data.server_id,
                     )
